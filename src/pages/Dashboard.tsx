@@ -1,12 +1,17 @@
-import { Plus, Box, Palette, Image, ArrowRight, Sparkles, TrendingUp, Download } from "lucide-react";
+import { Plus, Box, Palette, Image, ArrowRight, Sparkles, TrendingUp, Download, PartyPopper, Gift, Cake } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import heroParty from "@/assets/hero-party.png";
+import themeSafari from "@/assets/theme-safari.png";
+import themeUnicornio from "@/assets/theme-unicornio.png";
+import themePrincesas from "@/assets/theme-princesas.png";
+import themeFazendinha from "@/assets/theme-fazendinha.png";
 
 const recentProjects = [
-  { id: 1, name: "Kit Safari - Pedro", theme: "Safari", mold: "Caixinha Milk", date: "Hoje" },
-  { id: 2, name: "Unicórnio - Maria", theme: "Unicórnio", mold: "Sacolinha", date: "Ontem" },
-  { id: 3, name: "Princesas - Ana", theme: "Princesas", mold: "Topo de Bolo", date: "3 dias" },
+  { id: 1, name: "Kit Safari - Pedro", theme: "Safari", mold: "Caixinha Milk", date: "Hoje", emoji: "🦁" },
+  { id: 2, name: "Unicórnio - Maria", theme: "Unicórnio", mold: "Sacolinha", date: "Ontem", emoji: "🦄" },
+  { id: 3, name: "Princesas - Ana", theme: "Princesas", mold: "Topo de Bolo", date: "3 dias", emoji: "👑" },
 ];
 
 const popularMolds = [
@@ -17,30 +22,55 @@ const popularMolds = [
 ];
 
 const trendingThemes = [
-  { name: "Safari", color: "bg-peach" },
-  { name: "Unicórnio", color: "bg-lilac" },
-  { name: "Princesas", color: "bg-rose-light" },
-  { name: "Fazendinha", color: "bg-mint" },
+  { name: "Safari", image: themeSafari },
+  { name: "Unicórnio", image: themeUnicornio },
+  { name: "Princesas", image: themePrincesas },
+  { name: "Fazendinha", image: themeFazendinha },
 ];
 
 const stats = [
-  { label: "Projetos", value: "24", icon: Box, trend: "+3 esta semana" },
+  { label: "Projetos Criados", value: "24", icon: Gift, trend: "+3 esta semana" },
   { label: "Downloads", value: "156", icon: Download, trend: "+12 este mês" },
-  { label: "Mockups", value: "48", icon: Image, trend: "+5 esta semana" },
+  { label: "Mockups Gerados", value: "48", icon: Image, trend: "+5 esta semana" },
 ];
 
 export default function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in max-w-6xl">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">
-          Olá, bem-vinda! ✨
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Crie artes incríveis prontas para imprimir e divulgar.
-        </p>
-      </div>
+      {/* Hero Banner */}
+      <Card className="border-border/50 overflow-hidden gradient-card">
+        <CardContent className="p-0">
+          <div className="flex flex-col md:flex-row items-center">
+            <div className="flex-1 p-6 md:p-8 space-y-3">
+              <div className="flex items-center gap-2 text-primary">
+                <PartyPopper className="h-5 w-5" />
+                <span className="text-sm font-semibold">Bem-vinda ao MoldePronto!</span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground leading-tight">
+                Crie personalizados lindos<br />para suas festas ✨
+              </h1>
+              <p className="text-muted-foreground text-sm max-w-md">
+                Escolha o molde, aplique o tema e exporte pronto para imprimir. Simples assim!
+              </p>
+              <div className="flex gap-3 pt-2">
+                <Link to="/moldes">
+                  <Button className="gradient-hero border-0 text-primary-foreground">
+                    <Cake className="h-4 w-4 mr-2" /> Criar Nova Arte
+                  </Button>
+                </Link>
+                <Link to="/mockups">
+                  <Button variant="outline" className="border-border/50">
+                    <Sparkles className="h-4 w-4 mr-2" /> Gerar Mockup
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="md:w-80 p-4">
+              <img src={heroParty} alt="Personalizados para festas" width={1024} height={512} className="w-full h-auto object-contain" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -52,7 +82,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">Escolher Molde</p>
-                <p className="text-xs text-muted-foreground">14 moldes disponíveis</p>
+                <p className="text-xs text-muted-foreground">Caixinhas, sacolas, toppers...</p>
               </div>
             </CardContent>
           </Card>
@@ -65,7 +95,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">Escolher Tema</p>
-                <p className="text-xs text-muted-foreground">11 temas incríveis</p>
+                <p className="text-xs text-muted-foreground">Safari, Unicórnio, Princesas...</p>
               </div>
             </CardContent>
           </Card>
@@ -78,7 +108,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">Criar Arte</p>
-                <p className="text-xs text-muted-foreground">Começar novo projeto</p>
+                <p className="text-xs text-muted-foreground">Personalizar e exportar</p>
               </div>
             </CardContent>
           </Card>
@@ -99,8 +129,8 @@ export default function Dashboard() {
                     {stat.trend}
                   </p>
                 </div>
-                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                  <stat.icon className="h-4 w-4 text-muted-foreground" />
+                <div className="h-10 w-10 rounded-lg gradient-accent flex items-center justify-center">
+                  <stat.icon className="h-4 w-4 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -113,7 +143,7 @@ export default function Dashboard() {
         <Card className="border-border/50">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-lg text-foreground">Projetos Recentes</h2>
+              <h2 className="font-display font-semibold text-lg text-foreground">🎉 Projetos Recentes</h2>
               <Link to="/projetos">
                 <Button variant="ghost" size="sm" className="text-primary text-xs">
                   Ver todos <ArrowRight className="h-3 w-3 ml-1" />
@@ -123,9 +153,12 @@ export default function Dashboard() {
             <div className="space-y-3">
               {recentProjects.map((project) => (
                 <div key={project.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                  <div>
-                    <p className="font-medium text-sm text-foreground">{project.name}</p>
-                    <p className="text-xs text-muted-foreground">{project.mold} · {project.theme}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{project.emoji}</span>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">{project.name}</p>
+                      <p className="text-xs text-muted-foreground">{project.mold} · {project.theme}</p>
+                    </div>
                   </div>
                   <span className="text-xs text-muted-foreground">{project.date}</span>
                 </div>
@@ -138,7 +171,7 @@ export default function Dashboard() {
         <Card className="border-border/50">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-lg text-foreground">Moldes Populares</h2>
+              <h2 className="font-display font-semibold text-lg text-foreground">🏆 Moldes Populares</h2>
               <Link to="/moldes">
                 <Button variant="ghost" size="sm" className="text-primary text-xs">
                   Ver todos <ArrowRight className="h-3 w-3 ml-1" />
@@ -146,11 +179,16 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="space-y-3">
-              {popularMolds.map((mold) => (
+              {popularMolds.map((mold, i) => (
                 <div key={mold.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{mold.emoji}</span>
-                    <p className="font-medium text-sm text-foreground">{mold.name}</p>
+                    <div className="h-8 w-8 rounded-lg gradient-accent flex items-center justify-center text-sm font-bold text-primary">
+                      {i + 1}º
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{mold.emoji}</span>
+                      <p className="font-medium text-sm text-foreground">{mold.name}</p>
+                    </div>
                   </div>
                   <span className="text-xs text-muted-foreground">{mold.uses} usos</span>
                 </div>
@@ -164,8 +202,7 @@ export default function Dashboard() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display font-semibold text-lg text-foreground flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Temas em Alta
+            🔥 Temas em Alta
           </h2>
           <Link to="/temas">
             <Button variant="ghost" size="sm" className="text-primary text-xs">
@@ -173,18 +210,27 @@ export default function Dashboard() {
             </Button>
           </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {trendingThemes.map((theme) => (
-            <Card key={theme.name} className="group cursor-pointer border-border/50 hover:shadow-soft transition-all hover:-translate-y-0.5 overflow-hidden">
-              <CardContent className="p-0">
-                <div className={`h-24 ${theme.color} flex items-center justify-center`}>
-                  <span className="text-3xl">🎉</span>
-                </div>
-                <div className="p-3">
-                  <p className="font-medium text-sm text-foreground text-center">{theme.name}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link to="/temas" key={theme.name}>
+              <Card className="group cursor-pointer border-border/50 hover:shadow-soft transition-all hover:-translate-y-1 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="h-32 bg-card flex items-center justify-center p-2 overflow-hidden">
+                    <img
+                      src={theme.image}
+                      alt={theme.name}
+                      loading="lazy"
+                      width={512}
+                      height={512}
+                      className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-3 gradient-accent">
+                    <p className="font-semibold text-sm text-foreground text-center">{theme.name}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
