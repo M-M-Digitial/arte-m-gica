@@ -345,6 +345,7 @@ export default function Criar() {
           corDominante: corDominante || undefined,
           fonteEstilo,
           desenhoEstilo,
+          densidadeVisual,
         },
       });
       if (error) throw error;
