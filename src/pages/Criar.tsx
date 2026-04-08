@@ -591,6 +591,7 @@ export default function Criar() {
     setFrase("");
     setCorDominante("");
     setFonteEstilo("divertida");
+    setDesenhoEstilo("cartoon");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
     setMockupImage(null);
