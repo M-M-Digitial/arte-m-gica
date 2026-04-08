@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo } = await req.json();
+    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual } = await req.json();
 
     if (!moldeName || !temaNome || !nome) {
       return new Response(

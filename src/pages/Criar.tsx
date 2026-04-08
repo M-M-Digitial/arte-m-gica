@@ -1154,6 +1154,10 @@ export default function Criar() {
                     <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
                       {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
                     </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
+                      {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
