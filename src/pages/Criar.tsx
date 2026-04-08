@@ -336,6 +336,7 @@ export default function Criar() {
           frase: frase.trim() || undefined,
           corDominante: corDominante || undefined,
           fonteEstilo,
+          desenhoEstilo,
         },
       });
       if (error) throw error;
