@@ -258,11 +258,24 @@ const STEPS = [
 ];
 
 const FONT_STYLES = [
-  { id: "divertida", label: "Divertida", desc: "Arredondada e lúdica" },
-  { id: "elegante", label: "Elegante", desc: "Fina e sofisticada" },
-  { id: "negrito", label: "Negrito", desc: "Grossa e impactante" },
-  { id: "manuscrita", label: "Manuscrita", desc: "Escrita à mão" },
-  { id: "fantasia", label: "Fantasia", desc: "Decorativa e temática" },
+  { id: "divertida", label: "🎈 Divertida", desc: "Arredondada e lúdica" },
+  { id: "elegante", label: "✨ Elegante", desc: "Fina e sofisticada" },
+  { id: "negrito", label: "💪 Negrito", desc: "Grossa e impactante" },
+  { id: "manuscrita", label: "✍️ Manuscrita", desc: "Escrita à mão" },
+  { id: "fantasia", label: "🦄 Fantasia", desc: "Decorativa e temática" },
+  { id: "minimalista", label: "🔲 Minimalista", desc: "Clean e moderna" },
+  { id: "retro", label: "📺 Retrô", desc: "Vintage e nostálgica" },
+];
+
+const DRAW_STYLES = [
+  { id: "cartoon", label: "🎨 Cartoon", desc: "Desenho animado colorido" },
+  { id: "aquarela", label: "🖌️ Aquarela", desc: "Pintura suave e artística" },
+  { id: "flat", label: "📐 Flat Design", desc: "Vetorial limpo e moderno" },
+  { id: "realista", label: "📷 Realista", desc: "Ilustração detalhada" },
+  { id: "kawaii", label: "🌸 Kawaii", desc: "Fofo estilo japonês" },
+  { id: "handdrawn", label: "✏️ Desenhado à mão", desc: "Traço manual e artesanal" },
+  { id: "3d", label: "🧊 3D", desc: "Volume e profundidade" },
+  { id: "pixel", label: "👾 Pixel Art", desc: "Retro pixelado" },
 ];
 
 const COR_PRESETS = [
@@ -281,6 +294,7 @@ export default function Criar() {
   const [frase, setFrase] = useState("");
   const [corDominante, setCorDominante] = useState("");
   const [fonteEstilo, setFonteEstilo] = useState("divertida");
+  const [desenhoEstilo, setDesenhoEstilo] = useState("cartoon");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
@@ -322,6 +336,7 @@ export default function Criar() {
           frase: frase.trim() || undefined,
           corDominante: corDominante || undefined,
           fonteEstilo,
+          desenhoEstilo,
         },
       });
       if (error) throw error;
@@ -576,6 +591,7 @@ export default function Criar() {
     setFrase("");
     setCorDominante("");
     setFonteEstilo("divertida");
+    setDesenhoEstilo("cartoon");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
     setMockupImage(null);
@@ -648,6 +664,16 @@ export default function Criar() {
               className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
             >
               Fonte: {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )}
+          {/* Desenho chip */}
+          {step >= 4 && (
+            <button
+              onClick={() => setStep(3)}
+              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
               <span className="text-muted-foreground ml-0.5">✎</span>
             </button>
           )}
@@ -1000,6 +1026,40 @@ export default function Criar() {
               </CardContent>
             </Card>
 
+            {/* Estilo de desenho */}
+            <Card className="shadow-card border-border/20 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-cyan-200 via-teal-200 to-emerald-200" />
+              <CardContent className="p-5 space-y-4">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  Estilo de desenho
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {DRAW_STYLES.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => setDesenhoEstilo(d.id)}
+                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                        desenhoEstilo === d.id
+                          ? "border-primary bg-primary/5 shadow-soft"
+                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
+                      }`}
+                    >
+                      {desenhoEstilo === d.id && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                      <p className="text-sm font-bold text-foreground">{d.label}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Preview */}
             {nome.trim() && (
               <Card className="shadow-elevated border-primary/15 gradient-card overflow-hidden">
@@ -1033,7 +1093,11 @@ export default function Criar() {
                     )}
                     <span className="text-muted-foreground">·</span>
                     <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
-                      Fonte {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+                      {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
+                      {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
                     </span>
                   </div>
                 </CardContent>

@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo } = await req.json();
+    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo } = await req.json();
 
     if (!moldeName || !temaNome || !nome) {
       return new Response(
@@ -42,8 +42,22 @@ serve(async (req) => {
       negrito: "fonte grossa, bold e impactante tipo poster",
       manuscrita: "fonte manuscrita/cursiva como escrita à mão",
       fantasia: "fonte decorativa e fantasiosa combinando com o tema",
+      minimalista: "fonte clean, sans-serif moderna e minimalista",
+      retro: "fonte vintage/retrô com estilo nostálgico",
     };
     const fonteDesc = fonteMap[fonteEstilo || "divertida"] || fonteMap.divertida;
+
+    const drawMap: Record<string, string> = {
+      cartoon: "estilo cartoon colorido, desenho animado vibrante com contornos definidos",
+      aquarela: "estilo aquarela artístico com pinceladas suaves, tons delicados e textura de papel",
+      flat: "estilo flat design vetorial, formas geométricas limpas, cores sólidas, sem sombras",
+      realista: "estilo realista com ilustrações detalhadas, texturas e sombras naturais",
+      kawaii: "estilo kawaii japonês, personagens fofos com olhos grandes, cores pastel suaves",
+      handdrawn: "estilo desenhado à mão, traço manual irregular, visual artesanal e autêntico",
+      "3d": "estilo 3D com volume, profundidade, sombras e efeitos de perspectiva",
+      pixel: "estilo pixel art retro, pixels visíveis, paleta limitada, visual de jogo clássico",
+    };
+    const drawDesc = drawMap[desenhoEstilo || "cartoon"] || drawMap.cartoon;
 
     const prompt = `Crie uma arte COMPLETA para lembrancinha de festa, já aplicada no molde planificado, pronta para imprimir, recortar e montar.
 
@@ -53,6 +67,7 @@ NOME: ${nome}${idadeText}
 ${colorsDesc}
 ${fraseText}
 ESTILO DE FONTE: Use ${fonteDesc} para o nome "${nome}" e demais textos.
+ESTILO DE DESENHO/ILUSTRAÇÃO: ${drawDesc}. Todo o visual artístico do molde deve seguir este estilo.
 
 REGRAS OBRIGATÓRIAS:
 1. A imagem deve mostrar o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como um padrão de recorte)
