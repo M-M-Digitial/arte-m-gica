@@ -22,9 +22,10 @@ import {
 
 const mainItems = [
   { title: "Início", url: "/", icon: LayoutDashboard },
+  { title: "✨ Criar com IA", url: "/criar", icon: Sparkles },
   { title: "Moldes", url: "/moldes", icon: Box },
   { title: "Temas", url: "/temas", icon: Palette },
-  { title: "Criar Arte", url: "/editor", icon: PenTool },
+  { title: "Editor Manual", url: "/editor", icon: PenTool },
   { title: "Mockups", url: "/mockups", icon: Image },
 ];
 
