@@ -819,9 +819,9 @@ export default function Criar() {
           </section>
         )}
 
-        {/* ─── STEP 3: NOME ─── */}
+        {/* ─── STEP 3: PERSONALIZAR ─── */}
         {step === 3 && (
-          <section className="max-w-md mx-auto space-y-6 animate-in fade-in duration-300">
+          <section className="max-w-lg mx-auto space-y-5 animate-in fade-in duration-300">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setStep(2)}
@@ -831,57 +831,149 @@ export default function Criar() {
               </button>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Personalizar</h1>
-                <p className="text-sm text-muted-foreground">Só falta o nome!</p>
+                <p className="text-sm text-muted-foreground">Deixe do jeitinho que você quer</p>
               </div>
             </div>
 
-            {/* Selected items summary */}
-            <div className="flex gap-2">
-              <div className="flex-1 flex items-center gap-2 bg-card rounded-lg px-3 py-2.5 shadow-card">
-                {themeImages[selectedTema?.name] && (
-                  <img src={themeImages[selectedTema.name]} alt="" className="h-9 w-9 rounded-md object-cover" />
-                )}
-                <div className="min-w-0">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Tema</p>
-                  <p className="text-sm font-semibold text-foreground truncate">{selectedTema?.name}</p>
+            {/* Nome e Idade */}
+            <Card className="shadow-card border-border/30">
+              <CardContent className="p-4 space-y-4">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Type className="h-4 w-4 text-primary" /> Dados do homenageado
+                </h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-semibold text-muted-foreground">Nome *</label>
+                    <Input
+                      placeholder="Ex: Maria Clara"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      className="mt-1 h-11 text-base bg-background border-border/60 focus:border-primary"
+                      maxLength={50}
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground">Idade</label>
+                    <Input
+                      placeholder="Ex: 5"
+                      value={idade}
+                      onChange={(e) => setIdade(e.target.value)}
+                      className="mt-1 h-11 bg-background border-border/60"
+                      maxLength={3}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 flex items-center gap-2 bg-card rounded-lg px-3 py-2.5 shadow-card">
-                {moldImages[selectedMolde?.name] && (
-                  <img src={moldImages[selectedMolde.name]} alt="" className="h-9 w-9 object-contain" />
-                )}
-                <div className="min-w-0">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Molde</p>
-                  <p className="text-sm font-semibold text-foreground truncate">{selectedMolde?.name}</p>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Frase personalizada (opcional)
+                  </label>
+                  <Input
+                    placeholder="Ex: Obrigada por celebrar comigo!"
+                    value={frase}
+                    onChange={(e) => setFrase(e.target.value)}
+                    className="mt-1 bg-background border-border/60"
+                    maxLength={80}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Aparecerá na face secundária do molde</p>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-foreground">
-                  Nome da criança / homenageado(a) *
-                </label>
-                <Input
-                  placeholder="Ex: Maria Clara"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="mt-1.5 h-12 text-base bg-card border-border/60 focus:border-primary shadow-card"
-                  maxLength={50}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Idade (opcional)</label>
-                <Input
-                  placeholder="Ex: 5"
-                  value={idade}
-                  onChange={(e) => setIdade(e.target.value)}
-                  className="mt-1.5 bg-card border-border/60 shadow-card"
-                  maxLength={3}
-                />
-              </div>
-            </div>
+            {/* Cor dominante */}
+            <Card className="shadow-card border-border/30">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-primary" /> Cor dominante
+                  <span className="text-[10px] text-muted-foreground font-normal">(opcional — sobrepõe a paleta do tema)</span>
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {/* Clear option */}
+                  <button
+                    onClick={() => setCorDominante("")}
+                    className={`h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                      !corDominante ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-muted-foreground"
+                    }`}
+                    title="Automático (cores do tema)"
+                  >
+                    <span className="text-xs text-muted-foreground">Auto</span>
+                  </button>
+                  {COR_PRESETS.map((cor) => (
+                    <button
+                      key={cor}
+                      onClick={() => setCorDominante(cor)}
+                      className={`h-8 w-8 rounded-full border-2 transition-all ${
+                        corDominante === cor
+                          ? "border-foreground ring-2 ring-primary/30 scale-110"
+                          : "border-transparent hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: cor }}
+                      title={cor}
+                    />
+                  ))}
+                </div>
+                {/* Custom color */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground">Ou escolha exata:</label>
+                  <input
+                    type="color"
+                    value={corDominante || "#FF69B4"}
+                    onChange={(e) => setCorDominante(e.target.value)}
+                    className="h-8 w-10 rounded cursor-pointer border border-border"
+                  />
+                  {corDominante && (
+                    <span className="text-xs font-mono text-muted-foreground">{corDominante}</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Estilo de fonte */}
+            <Card className="shadow-card border-border/30">
+              <CardContent className="p-4 space-y-3">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <Type className="h-4 w-4 text-primary" /> Estilo da fonte
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {FONT_STYLES.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setFonteEstilo(f.id)}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        fonteEstilo === f.id
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-border/50 bg-card hover:border-primary/30"
+                      }`}
+                    >
+                      <p className="text-xs font-bold text-foreground">{f.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preview resumo */}
+            {nome.trim() && (
+              <Card className="shadow-card border-primary/20 bg-primary/[0.03]">
+                <CardContent className="p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Prévia do que será gerado:</p>
+                  <p className="text-sm text-foreground">
+                    <span className="font-bold">{selectedTema?.name}</span>
+                    {" · "}
+                    <span>{selectedMolde?.name}</span>
+                    {" · "}
+                    <span className="font-semibold" style={corDominante ? { color: corDominante } : undefined}>
+                      {nome}
+                    </span>
+                    {idade && <span className="text-muted-foreground"> ({idade} anos)</span>}
+                    {frase && <span className="text-muted-foreground italic"> — "{frase}"</span>}
+                    {" · Fonte "}
+                    <span className="font-medium">{FONT_STYLES.find(f => f.id === fonteEstilo)?.label}</span>
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <Button
               onClick={handleGenerate}
