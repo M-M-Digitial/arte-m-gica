@@ -252,9 +252,24 @@ const themeImages: Record<string, string> = {
 const STEPS = [
   { key: "tema", label: "Tema", icon: Palette },
   { key: "molde", label: "Molde", icon: Box },
-  { key: "nome", label: "Nome", icon: Type },
+  { key: "personalizar", label: "Personalizar", icon: Type },
   { key: "arte", label: "Arte", icon: Sparkles },
   { key: "mockup", label: "Mockup", icon: Camera },
+];
+
+const FONT_STYLES = [
+  { id: "divertida", label: "Divertida", desc: "Arredondada e lúdica" },
+  { id: "elegante", label: "Elegante", desc: "Fina e sofisticada" },
+  { id: "negrito", label: "Negrito", desc: "Grossa e impactante" },
+  { id: "manuscrita", label: "Manuscrita", desc: "Escrita à mão" },
+  { id: "fantasia", label: "Fantasia", desc: "Decorativa e temática" },
+];
+
+const COR_PRESETS = [
+  "#FF69B4", "#FF1493", "#E91E63", "#F44336", "#FF5722",
+  "#FF9800", "#FFC107", "#FFEB3B", "#8BC34A", "#4CAF50",
+  "#009688", "#00BCD4", "#03A9F4", "#2196F3", "#3F51B5",
+  "#673AB7", "#9C27B0", "#E040FB", "#795548", "#607D8B",
 ];
 
 export default function Criar() {
@@ -263,6 +278,9 @@ export default function Criar() {
   const [selectedMolde, setSelectedMolde] = useState<any>(null);
   const [nome, setNome] = useState("");
   const [idade, setIdade] = useState("");
+  const [frase, setFrase] = useState("");
+  const [corDominante, setCorDominante] = useState("");
+  const [fonteEstilo, setFonteEstilo] = useState("divertida");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
@@ -270,6 +288,7 @@ export default function Criar() {
   const [mockupImage, setMockupImage] = useState<string | null>(null);
   const [mockupImageBase64, setMockupImageBase64] = useState<string | null>(null);
   const [mockupFormato, setMockupFormato] = useState<"feed" | "story">("feed");
+  const [editingField, setEditingField] = useState<string | null>(null);
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
