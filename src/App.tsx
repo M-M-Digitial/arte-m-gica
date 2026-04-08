@@ -9,6 +9,7 @@ import Moldes from "./pages/Moldes";
 import Temas from "./pages/Temas";
 import Editor from "./pages/Editor";
 import Mockups from "./pages/Mockups";
+import Criar from "./pages/Criar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route path="/criar" element={<AppLayout><Criar /></AppLayout>} />
           <Route path="/moldes" element={<AppLayout><Moldes /></AppLayout>} />
           <Route path="/temas" element={<AppLayout><Temas /></AppLayout>} />
           <Route path="/editor" element={<AppLayout><Editor /></AppLayout>} />
