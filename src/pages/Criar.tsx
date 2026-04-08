@@ -363,25 +363,28 @@ export default function Criar() {
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageW = 210;
       const pageH = 297;
-      const margin = 10;
+      const margin = 12;
       const contentW = pageW - margin * 2;
-      const contentH = pageH - margin * 2 - 20; // space for header/footer
+      const contentH = pageH - margin * 2 - 28;
 
-      // Header
+      // ── Header ──
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(13);
+      doc.setTextColor(60, 60, 60);
       doc.text("MoldePronto", margin, margin + 5);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(140, 140, 140);
+      doc.setFontSize(8);
+      doc.setTextColor(130, 130, 130);
       doc.text(
         `${selectedTema?.name} · ${selectedMolde?.name} · ${nome}${idade ? ` (${idade} anos)` : ""}`,
-        margin,
-        margin + 11
+        margin, margin + 11
       );
+      // Thin separator line
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(margin, margin + 14, pageW - margin, margin + 14);
 
-      // Load image
+      // ── Load image ──
       const img = new Image();
       img.crossOrigin = "anonymous";
       await new Promise<void>((resolve, reject) => {
@@ -390,41 +393,151 @@ export default function Criar() {
         img.src = generatedImageBase64!;
       });
 
-      // Calculate aspect ratio to fit content area
       const imgRatio = img.width / img.height;
-      let drawW = contentW;
+      let drawW = contentW - 14; // leave space for rulers
       let drawH = drawW / imgRatio;
       if (drawH > contentH) {
         drawH = contentH;
         drawW = drawH * imgRatio;
       }
-      const offsetX = margin + (contentW - drawW) / 2;
-      const offsetY = margin + 16;
+      const rulerSpace = 7;
+      const offsetX = margin + rulerSpace + (contentW - rulerSpace - drawW) / 2;
+      const offsetY = margin + 20;
 
+      // ── Rulers ──
+      const rulerColor = { r: 180, g: 180, b: 180 };
+      const rulerTickSmall = 1.5;
+      const rulerTickBig = 3;
+
+      // Left ruler (vertical, cm)
+      doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
+      doc.setLineWidth(0.2);
+      const rulerX = offsetX - 4;
+      doc.line(rulerX, offsetY, rulerX, offsetY + drawH);
+      const cmCountV = Math.floor(drawH / 10);
+      for (let i = 0; i <= cmCountV * 10; i++) {
+        const y = offsetY + i;
+        if (y > offsetY + drawH) break;
+        const isCm = i % 10 === 0;
+        const isHalf = i % 5 === 0;
+        const tickLen = isCm ? rulerTickBig : isHalf ? 2 : rulerTickSmall;
+        doc.line(rulerX - tickLen, y, rulerX, y);
+        if (isCm && i > 0) {
+          doc.setFontSize(5);
+          doc.setTextColor(rulerColor.r, rulerColor.g, rulerColor.b);
+          doc.text(`${i / 10}`, rulerX - tickLen - 3.5, y + 1);
+        }
+      }
+
+      // Top ruler (horizontal, cm)
+      const rulerY = offsetY - 4;
+      doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
+      doc.line(offsetX, rulerY, offsetX + drawW, rulerY);
+      const cmCountH = Math.floor(drawW / 10);
+      for (let i = 0; i <= cmCountH * 10; i++) {
+        const x = offsetX + i;
+        if (x > offsetX + drawW) break;
+        const isCm = i % 10 === 0;
+        const isHalf = i % 5 === 0;
+        const tickLen = isCm ? rulerTickBig : isHalf ? 2 : rulerTickSmall;
+        doc.line(x, rulerY - tickLen, x, rulerY);
+        if (isCm && i > 0) {
+          doc.setFontSize(5);
+          doc.setTextColor(rulerColor.r, rulerColor.g, rulerColor.b);
+          doc.text(`${i / 10}`, x - 1.5, rulerY - tickLen - 1);
+        }
+      }
+
+      // ── Image ──
       doc.addImage(generatedImageBase64!, "PNG", offsetX, offsetY, drawW, drawH);
 
-      // Cut line markers (corner marks around image)
-      const markLen = 5;
+      // ── Cut marks (corner crop marks) ──
+      const markLen = 6;
+      const markGap = 2;
       doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.3);
+      doc.setLineWidth(0.35);
       // Top-left
-      doc.line(offsetX - 3, offsetY, offsetX - 3 - markLen, offsetY);
-      doc.line(offsetX, offsetY - 3, offsetX, offsetY - 3 - markLen);
+      doc.line(offsetX - markGap, offsetY, offsetX - markGap - markLen, offsetY);
+      doc.line(offsetX, offsetY - markGap, offsetX, offsetY - markGap - markLen);
       // Top-right
-      doc.line(offsetX + drawW + 3, offsetY, offsetX + drawW + 3 + markLen, offsetY);
-      doc.line(offsetX + drawW, offsetY - 3, offsetX + drawW, offsetY - 3 - markLen);
+      doc.line(offsetX + drawW + markGap, offsetY, offsetX + drawW + markGap + markLen, offsetY);
+      doc.line(offsetX + drawW, offsetY - markGap, offsetX + drawW, offsetY - markGap - markLen);
       // Bottom-left
-      doc.line(offsetX - 3, offsetY + drawH, offsetX - 3 - markLen, offsetY + drawH);
-      doc.line(offsetX, offsetY + drawH + 3, offsetX, offsetY + drawH + 3 + markLen);
+      doc.line(offsetX - markGap, offsetY + drawH, offsetX - markGap - markLen, offsetY + drawH);
+      doc.line(offsetX, offsetY + drawH + markGap, offsetX, offsetY + drawH + markGap + markLen);
       // Bottom-right
-      doc.line(offsetX + drawW + 3, offsetY + drawH, offsetX + drawW + 3 + markLen, offsetY + drawH);
-      doc.line(offsetX + drawW, offsetY + drawH + 3, offsetX + drawW, offsetY + drawH + 3 + markLen);
+      doc.line(offsetX + drawW + markGap, offsetY + drawH, offsetX + drawW + markGap + markLen, offsetY + drawH);
+      doc.line(offsetX + drawW, offsetY + drawH + markGap, offsetX + drawW, offsetY + drawH + markGap + markLen);
 
-      // Footer instructions
-      const footerY = pageH - margin;
+      // ── Fold lines (dashed cross in center of image) ──
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.25);
+      const dashLen = 3;
+      const gapLen = 2;
+
+      // Horizontal center fold
+      const foldY = offsetY + drawH / 2;
+      let cx = offsetX;
+      while (cx < offsetX + drawW) {
+        const end = Math.min(cx + dashLen, offsetX + drawW);
+        doc.line(cx, foldY, end, foldY);
+        cx += dashLen + gapLen;
+      }
+
+      // Vertical center fold
+      const foldX = offsetX + drawW / 2;
+      let cy = offsetY;
+      while (cy < offsetY + drawH) {
+        const end = Math.min(cy + dashLen, offsetY + drawH);
+        doc.line(foldX, cy, foldX, end);
+        cy += dashLen + gapLen;
+      }
+
+      // ── Dimensions label ──
+      doc.setFontSize(6);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `${Math.round(drawW / 10 * 10) / 10} × ${Math.round(drawH / 10 * 10) / 10} cm`,
+        offsetX + drawW + 3, offsetY + drawH + 5
+      );
+
+      // ── Legend ──
+      const legendY = offsetY + drawH + 12;
       doc.setFontSize(7);
-      doc.setTextColor(160, 160, 160);
-      doc.text("✂ Recorte nas linhas contínuas  ·  - - - Dobre nas linhas pontilhadas  ·  Imprima em A4 sem margens", margin, footerY);
+      doc.setTextColor(100, 100, 100);
+
+      // Cut line legend
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.4);
+      doc.line(margin, legendY, margin + 12, legendY);
+      doc.text("Linha de corte (recortar)", margin + 14, legendY + 1);
+
+      // Fold line legend
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.25);
+      let lx = margin;
+      const ly = legendY + 6;
+      for (let i = 0; i < 4; i++) {
+        doc.line(lx, ly, lx + 2, ly);
+        lx += 3.5;
+      }
+      doc.text("Linha de dobra (dobrar)", margin + 14, ly + 1);
+
+      // Ruler legend
+      doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
+      doc.setLineWidth(0.2);
+      doc.line(margin, legendY + 12, margin + 12, legendY + 12);
+      for (let i = 0; i <= 12; i += 3) {
+        doc.line(margin + i, legendY + 12 - 1.5, margin + i, legendY + 12);
+      }
+      doc.text("Régua em centímetros (cm)", margin + 14, legendY + 13);
+
+      // ── Footer ──
+      const footerY = pageH - margin;
+      doc.setFontSize(6.5);
+      doc.setTextColor(170, 170, 170);
+      doc.text("Imprima em A4 · Escala 100% · Sem ajuste de página · Qualidade: Alta", margin, footerY);
+      doc.text("MoldePronto.com", pageW - margin, footerY, { align: "right" });
 
       doc.save(`molde-${selectedTema?.name}-${selectedMolde?.name}-${nome}.pdf`);
       toast.success("PDF salvo!");
