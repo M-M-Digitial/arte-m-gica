@@ -4,11 +4,9 @@ import {
   Palette,
   PenTool,
   Image,
-  CreditCard,
   Sparkles,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -30,40 +28,9 @@ const mainItems = [
   { title: "Mockups", url: "/mockups", icon: Image },
 ];
 
-const otherItems = [
-  { title: "Planos", url: "/planos", icon: CreditCard },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-
-  const renderGroup = (label: string, items: typeof mainItems) => (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-muted-foreground/70 text-xs uppercase tracking-wider">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <NavLink
-                  to={item.url}
-                  end={item.url === "/"}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
-                  activeClassName="bg-primary/10 text-primary font-semibold"
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span>{item.title}</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
@@ -80,8 +47,30 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {renderGroup("Criar", mainItems)}
-        {renderGroup("Conta", otherItems)}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-muted-foreground/70 text-xs uppercase tracking-wider">
+            Criar
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/"}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
+                      activeClassName="bg-primary/10 text-primary font-semibold"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
