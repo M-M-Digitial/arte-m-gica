@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { moldeName, temaNome, temaColors, nome, idade } = await req.json();
+    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo } = await req.json();
 
     if (!moldeName || !temaNome || !nome) {
       return new Response(
@@ -27,11 +27,23 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const colorsDesc = temaColors?.length
-      ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
-      : "";
+    const colorsDesc = corDominante
+      ? `Cor dominante/principal: ${corDominante}. Use esta cor como destaque principal.`
+      : temaColors?.length
+        ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
+        : "";
 
     const idadeText = idade ? ` (${idade} anos)` : "";
+    const fraseText = frase ? `\nFRASE PERSONALIZADA: "${frase}" — incluir na face secundária do molde com destaque.` : "";
+
+    const fonteMap: Record<string, string> = {
+      divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
+      elegante: "fonte fina, serifada e sofisticada",
+      negrito: "fonte grossa, bold e impactante tipo poster",
+      manuscrita: "fonte manuscrita/cursiva como escrita à mão",
+      fantasia: "fonte decorativa e fantasiosa combinando com o tema",
+    };
+    const fonteDesc = fonteMap[fonteEstilo || "divertida"] || fonteMap.divertida;
 
     const prompt = `Crie uma arte COMPLETA para lembrancinha de festa, já aplicada no molde planificado, pronta para imprimir, recortar e montar.
 
@@ -39,6 +51,8 @@ MOLDE: ${moldeName} — gere o molde planificado (aberto, flat) com todas as aba
 TEMA: ${temaNome}
 NOME: ${nome}${idadeText}
 ${colorsDesc}
+${fraseText}
+ESTILO DE FONTE: Use ${fonteDesc} para o nome "${nome}" e demais textos.
 
 REGRAS OBRIGATÓRIAS:
 1. A imagem deve mostrar o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como um padrão de recorte)
