@@ -362,17 +362,36 @@ export default function Criar() {
             })}
           </nav>
 
-          {step > 1 && step <= 3 && (
+          <div className="flex items-center gap-1">
+            {step > 1 && step <= 3 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="text-muted-foreground text-xs"
+              >
+                Recomeçar
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleReset}
-              className="text-muted-foreground text-xs"
+              onClick={() => navigate("/historico")}
+              className="text-muted-foreground text-xs gap-1"
             >
-              Recomeçar
+              <Clock className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Histórico</span>
             </Button>
-          )}
-          {(step > 3 || step === 1) && <div className="w-20" />}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={signOut}
+              className="text-muted-foreground h-8 w-8"
+              title="Sair"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </header>
 
