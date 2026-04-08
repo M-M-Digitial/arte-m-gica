@@ -697,7 +697,7 @@ export default function Criar() {
               {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
               <span className="text-muted-foreground ml-0.5">✎</span>
             </button>
-          )
+          )}
         </div>
       </div>
     );
