@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo } = await req.json();
+    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual } = await req.json();
 
     if (!moldeName || !temaNome || !nome) {
       return new Response(
@@ -59,6 +59,14 @@ serve(async (req) => {
     };
     const drawDesc = drawMap[desenhoEstilo || "cartoon"] || drawMap.cartoon;
 
+    const densityMap: Record<string, string> = {
+      minimalista: "design MINIMALISTA — poucos elementos, muito espaço em branco, clean e elegante, apenas o essencial",
+      equilibrado: "design EQUILIBRADO — quantidade moderada de elementos decorativos, nem vazio nem cheio demais",
+      decorado: "design DECORADO — bastante detalhes, enfeites, padrões e elementos decorativos em todas as faces",
+      maximalista: "design MAXIMALISTA — extremamente cheio de elementos, cores vibrantes, padrões complexos, sem espaço vazio, muitos detalhes e enfeites por toda parte",
+    };
+    const densityDesc = densityMap[densidadeVisual || "equilibrado"] || densityMap.equilibrado;
+
     const prompt = `Crie uma arte COMPLETA para lembrancinha de festa, já aplicada no molde planificado, pronta para imprimir, recortar e montar.
 
 MOLDE: ${moldeName} — gere o molde planificado (aberto, flat) com todas as abas de colagem e linhas de dobra pontilhadas.
@@ -68,6 +76,7 @@ ${colorsDesc}
 ${fraseText}
 ESTILO DE FONTE: Use ${fonteDesc} para o nome "${nome}" e demais textos.
 ESTILO DE DESENHO/ILUSTRAÇÃO: ${drawDesc}. Todo o visual artístico do molde deve seguir este estilo.
+DENSIDADE VISUAL: ${densityDesc}.
 
 REGRAS OBRIGATÓRIAS:
 1. A imagem deve mostrar o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como um padrão de recorte)

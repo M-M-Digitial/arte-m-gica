@@ -278,6 +278,13 @@ const DRAW_STYLES = [
   { id: "pixel", label: "👾 Pixel Art", desc: "Retro pixelado" },
 ];
 
+const DENSITY_STYLES = [
+  { id: "minimalista", label: "🪷 Minimalista", desc: "Poucos elementos, clean e elegante" },
+  { id: "equilibrado", label: "⚖️ Equilibrado", desc: "Quantidade moderada de elementos" },
+  { id: "decorado", label: "🎀 Decorado", desc: "Bastante detalhes e enfeites" },
+  { id: "maximalista", label: "🎆 Maximalista", desc: "Cheio de elementos, cores e padrões" },
+];
+
 const COR_PRESETS = [
   "#FF69B4", "#FF1493", "#E91E63", "#F44336", "#FF5722",
   "#FF9800", "#FFC107", "#FFEB3B", "#8BC34A", "#4CAF50",
@@ -295,6 +302,7 @@ export default function Criar() {
   const [corDominante, setCorDominante] = useState("");
   const [fonteEstilo, setFonteEstilo] = useState("divertida");
   const [desenhoEstilo, setDesenhoEstilo] = useState("cartoon");
+  const [densidadeVisual, setDensidadeVisual] = useState("equilibrado");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
@@ -337,6 +345,7 @@ export default function Criar() {
           corDominante: corDominante || undefined,
           fonteEstilo,
           desenhoEstilo,
+          densidadeVisual,
         },
       });
       if (error) throw error;
@@ -593,6 +602,7 @@ export default function Criar() {
     setCorDominante("");
     setFonteEstilo("divertida");
     setDesenhoEstilo("cartoon");
+    setDensidadeVisual("equilibrado");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
     setMockupImage(null);
@@ -675,6 +685,16 @@ export default function Criar() {
               className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
             >
               {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )}
+          {/* Densidade chip */}
+          {step >= 4 && (
+            <button
+              onClick={() => setStep(3)}
+              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
               <span className="text-muted-foreground ml-0.5">✎</span>
             </button>
           )}
@@ -1061,6 +1081,40 @@ export default function Criar() {
               </CardContent>
             </Card>
 
+            {/* Densidade visual */}
+            <Card className="shadow-card border-border/20 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-indigo-200 via-fuchsia-200 to-pink-200" />
+              <CardContent className="p-5 space-y-4">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  Quantidade de elementos
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {DENSITY_STYLES.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => setDensidadeVisual(d.id)}
+                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                        densidadeVisual === d.id
+                          ? "border-primary bg-primary/5 shadow-soft"
+                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
+                      }`}
+                    >
+                      {densidadeVisual === d.id && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                      <p className="text-sm font-bold text-foreground">{d.label}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Preview */}
             {nome.trim() && (
               <Card className="shadow-elevated border-primary/15 gradient-card overflow-hidden">
@@ -1099,6 +1153,10 @@ export default function Criar() {
                     <span className="text-muted-foreground">·</span>
                     <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
                       {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
+                      {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
                     </span>
                   </div>
                 </CardContent>
