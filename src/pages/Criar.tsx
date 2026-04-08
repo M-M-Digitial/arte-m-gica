@@ -22,6 +22,7 @@ import {
   Type,
   Clock,
   LogOut,
+  FileText,
 } from "lucide-react";
 
 // Mold images
@@ -308,6 +309,84 @@ export default function Criar() {
     link.href = base64;
     link.download = `${prefix}-${selectedTema?.name}-${selectedMolde?.name}-${nome}.png`;
     link.click();
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!generatedImageBase64) return;
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = 210;
+      const pageH = 297;
+      const margin = 10;
+      const contentW = pageW - margin * 2;
+      const contentH = pageH - margin * 2 - 20; // space for header/footer
+
+      // Header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(80, 80, 80);
+      doc.text("MoldePronto", margin, margin + 5);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(140, 140, 140);
+      doc.text(
+        `${selectedTema?.name} · ${selectedMolde?.name} · ${nome}${idade ? ` (${idade} anos)` : ""}`,
+        margin,
+        margin + 11
+      );
+
+      // Load image
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = generatedImageBase64!;
+      });
+
+      // Calculate aspect ratio to fit content area
+      const imgRatio = img.width / img.height;
+      let drawW = contentW;
+      let drawH = drawW / imgRatio;
+      if (drawH > contentH) {
+        drawH = contentH;
+        drawW = drawH * imgRatio;
+      }
+      const offsetX = margin + (contentW - drawW) / 2;
+      const offsetY = margin + 16;
+
+      doc.addImage(generatedImageBase64!, "PNG", offsetX, offsetY, drawW, drawH);
+
+      // Cut line markers (corner marks around image)
+      const markLen = 5;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.3);
+      // Top-left
+      doc.line(offsetX - 3, offsetY, offsetX - 3 - markLen, offsetY);
+      doc.line(offsetX, offsetY - 3, offsetX, offsetY - 3 - markLen);
+      // Top-right
+      doc.line(offsetX + drawW + 3, offsetY, offsetX + drawW + 3 + markLen, offsetY);
+      doc.line(offsetX + drawW, offsetY - 3, offsetX + drawW, offsetY - 3 - markLen);
+      // Bottom-left
+      doc.line(offsetX - 3, offsetY + drawH, offsetX - 3 - markLen, offsetY + drawH);
+      doc.line(offsetX, offsetY + drawH + 3, offsetX, offsetY + drawH + 3 + markLen);
+      // Bottom-right
+      doc.line(offsetX + drawW + 3, offsetY + drawH, offsetX + drawW + 3 + markLen, offsetY + drawH);
+      doc.line(offsetX + drawW, offsetY + drawH + 3, offsetX + drawW, offsetY + drawH + 3 + markLen);
+
+      // Footer instructions
+      const footerY = pageH - margin;
+      doc.setFontSize(7);
+      doc.setTextColor(160, 160, 160);
+      doc.text("✂ Recorte nas linhas contínuas  ·  - - - Dobre nas linhas pontilhadas  ·  Imprima em A4 sem margens", margin, footerY);
+
+      doc.save(`molde-${selectedTema?.name}-${selectedMolde?.name}-${nome}.pdf`);
+      toast.success("PDF salvo!");
+    } catch (err) {
+      console.error("Erro PDF:", err);
+      toast.error("Erro ao gerar PDF");
+    }
   };
 
   const handleReset = () => {
@@ -616,13 +695,25 @@ export default function Criar() {
                       title="Baixar Arte"
                       description="Molde pronto para imprimir em A4"
                     >
-                      <Button
-                        onClick={() => handleDownload(generatedImageBase64, "arte")}
-                        className="w-full gradient-hero border-0 text-white font-semibold shadow-soft"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Baixar PNG
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => handleDownload(generatedImageBase64, "arte")}
+                          className="gradient-hero border-0 text-white font-semibold shadow-soft"
+                          size="sm"
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          PNG
+                        </Button>
+                        <Button
+                          onClick={handleDownloadPDF}
+                          variant="outline"
+                          className="font-semibold border-primary/30 text-primary hover:bg-primary/5"
+                          size="sm"
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          PDF A4
+                        </Button>
+                      </div>
                     </ActionCard>
 
                     <ActionCard
