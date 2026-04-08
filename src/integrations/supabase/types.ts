@@ -14,7 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      moldes: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          emoji: string | null
+          id: string
+          image_url: string | null
+          name: string
+          popular: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          popular?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          popular?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      projetos: {
+        Row: {
+          created_at: string
+          id: string
+          molde_id: string | null
+          name: string
+          personalization: Json
+          preview_url: string | null
+          status: string
+          tema_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          molde_id?: string | null
+          name: string
+          personalization?: Json
+          preview_url?: string | null
+          status?: string
+          tema_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          molde_id?: string | null
+          name?: string
+          personalization?: Json
+          preview_url?: string | null
+          status?: string
+          tema_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projetos_molde_id_fkey"
+            columns: ["molde_id"]
+            isOneToOne: false
+            referencedRelation: "moldes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projetos_tema_id_fkey"
+            columns: ["tema_id"]
+            isOneToOne: false
+            referencedRelation: "temas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temas: {
+        Row: {
+          category: string
+          colors: string[]
+          created_at: string
+          emoji: string | null
+          id: string
+          image_url: string | null
+          name: string
+          sort_order: number
+          trending: boolean
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          colors?: string[]
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          sort_order?: number
+          trending?: boolean
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          colors?: string[]
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          sort_order?: number
+          trending?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
