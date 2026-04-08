@@ -55,6 +55,7 @@ export type Database = {
       }
       projetos: {
         Row: {
+          arte_url: string | null
           created_at: string
           id: string
           molde_id: string | null
@@ -67,6 +68,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          arte_url?: string | null
           created_at?: string
           id?: string
           molde_id?: string | null
@@ -79,6 +81,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          arte_url?: string | null
           created_at?: string
           id?: string
           molde_id?: string | null
