@@ -12,15 +12,36 @@ import moldMilkBox from "@/assets/mold-milk-box.png";
 import moldSacolinha from "@/assets/mold-sacolinha.png";
 import moldTopper from "@/assets/mold-topper.png";
 import moldPiramide from "@/assets/mold-piramide.png";
+import moldSextavada from "@/assets/molds/mold-caixa-sextavada.png";
+import moldTravesseiro from "@/assets/molds/mold-caixa-travesseiro.png";
+import moldCone from "@/assets/molds/mold-cone.png";
+import moldCachepot from "@/assets/molds/mold-cachepot.png";
+import moldCanudo from "@/assets/molds/mold-caixa-canudo.png";
+import moldCoracao from "@/assets/molds/mold-caixa-coracao.png";
+import moldEnvelope from "@/assets/molds/mold-caixa-envelope.png";
+import moldTopoBolo from "@/assets/molds/mold-topo-bolo.png";
+import moldSacolinhaNew from "@/assets/molds/mold-sacolinha.png";
+import moldPiramideNew from "@/assets/molds/mold-piramide.png";
 
 const localImages: Record<string, string> = {
   "Caixinha Milk": moldMilkBox,
+  "Sacolinha de Papel": moldSacolinhaNew,
+  "Caixa Pirâmide": moldPiramideNew,
+  "Caixa Sextavada": moldSextavada,
+  "Caixa Travesseiro": moldTravesseiro,
+  "Cone de Guloseimas": moldCone,
+  "Cachepot / Bandeja": moldCachepot,
+  "Caixa Canudo": moldCanudo,
+  "Caixa Coração": moldCoracao,
+  "Caixa Envelope": moldEnvelope,
+  "Topo de Bolo": moldTopoBolo,
+  "Porta-bis": moldMilkBox,
+  // Legacy
   "Sacolinha": moldSacolinha,
   "Topo de Bolo": moldTopper,
-  "Caixa Pirâmide": moldPiramide,
 };
 
-const categories = ["Todos", "Caixas", "Embalagens", "Decoração", "Convites", "Rótulos"];
+const categories = ["Todos", "Caixas", "Embalagens", "Decoração"];
 
 export default function Moldes() {
   const [search, setSearch] = useState("");
@@ -37,7 +58,7 @@ export default function Moldes() {
     <div className="space-y-6 animate-fade-in max-w-6xl">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">🎁 Biblioteca de Moldes</h1>
-        <p className="text-muted-foreground mt-1">Escolha o molde perfeito para sua lembrancinha de festa</p>
+        <p className="text-muted-foreground mt-1">Moldes reais para imprimir em tamanho real — caixas, embalagens e decorações para festa</p>
       </div>
 
       <div className="relative max-w-md">
