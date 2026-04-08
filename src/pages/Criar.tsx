@@ -258,8 +258,7 @@ const STEPS = [
 ];
 
 export default function Criar() {
-  const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const [step, setStep] = useState(1);
   const [step, setStep] = useState(1);
   const [selectedTema, setSelectedTema] = useState<any>(null);
   const [selectedMolde, setSelectedMolde] = useState<any>(null);
