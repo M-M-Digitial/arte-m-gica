@@ -1016,6 +1016,40 @@ export default function Criar() {
               </CardContent>
             </Card>
 
+            {/* Estilo de desenho */}
+            <Card className="shadow-card border-border/20 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-cyan-200 via-teal-200 to-emerald-200" />
+              <CardContent className="p-5 space-y-4">
+                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  Estilo de desenho
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {DRAW_STYLES.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => setDesenhoEstilo(d.id)}
+                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                        desenhoEstilo === d.id
+                          ? "border-primary bg-primary/5 shadow-soft"
+                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
+                      }`}
+                    >
+                      {desenhoEstilo === d.id && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                      <p className="text-sm font-bold text-foreground">{d.label}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Preview */}
             {nome.trim() && (
               <Card className="shadow-elevated border-primary/15 gradient-card overflow-hidden">
@@ -1049,7 +1083,11 @@ export default function Criar() {
                     )}
                     <span className="text-muted-foreground">·</span>
                     <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
-                      Fonte {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+                      {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
+                      {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
                     </span>
                   </div>
                 </CardContent>
