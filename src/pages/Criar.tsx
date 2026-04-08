@@ -602,6 +602,7 @@ export default function Criar() {
     setCorDominante("");
     setFonteEstilo("divertida");
     setDesenhoEstilo("cartoon");
+    setDensidadeVisual("equilibrado");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
     setMockupImage(null);
