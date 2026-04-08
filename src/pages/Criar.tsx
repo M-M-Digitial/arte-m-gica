@@ -278,6 +278,13 @@ const DRAW_STYLES = [
   { id: "pixel", label: "👾 Pixel Art", desc: "Retro pixelado" },
 ];
 
+const DENSITY_STYLES = [
+  { id: "minimalista", label: "🪷 Minimalista", desc: "Poucos elementos, clean e elegante" },
+  { id: "equilibrado", label: "⚖️ Equilibrado", desc: "Quantidade moderada de elementos" },
+  { id: "decorado", label: "🎀 Decorado", desc: "Bastante detalhes e enfeites" },
+  { id: "maximalista", label: "🎆 Maximalista", desc: "Cheio de elementos, cores e padrões" },
+];
+
 const COR_PRESETS = [
   "#FF69B4", "#FF1493", "#E91E63", "#F44336", "#FF5722",
   "#FF9800", "#FFC107", "#FFEB3B", "#8BC34A", "#4CAF50",
