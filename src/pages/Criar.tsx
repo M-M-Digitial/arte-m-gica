@@ -22,6 +22,7 @@ import {
   Type,
   Clock,
   LogOut,
+  FileText,
 } from "lucide-react";
 
 // Mold images
