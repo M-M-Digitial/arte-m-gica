@@ -2,12 +2,11 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Sparkles, Download, Loader2, Check, RefreshCw } from "lucide-react";
+import { ArrowLeft, Sparkles, Download, Loader2, Check, RefreshCw, Camera, ImageIcon } from "lucide-react";
 
 import moldMilkBox from "@/assets/mold-milk-box.png";
 import moldSacolinha from "@/assets/mold-sacolinha.png";
@@ -112,6 +111,12 @@ export default function Criar() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
 
+  // Mockup state
+  const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
+  const [mockupImage, setMockupImage] = useState<string | null>(null);
+  const [mockupImageBase64, setMockupImageBase64] = useState<string | null>(null);
+  const [mockupFormato, setMockupFormato] = useState<"feed" | "story">("feed");
+
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
 
@@ -159,11 +164,44 @@ export default function Criar() {
     }
   };
 
-  const handleDownload = () => {
-    if (!generatedImageBase64) return;
+  const handleGenerateMockup = async (formato: "feed" | "story") => {
+    setMockupFormato(formato);
+    setIsGeneratingMockup(true);
+    setStep(5);
+    setMockupImage(null);
+    setMockupImageBase64(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("gerar-mockup", {
+        body: {
+          arteImageUrl: generatedImage,
+          moldeName: selectedMolde.name,
+          temaNome: selectedTema.name,
+          nome: nome.trim(),
+          formato,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setMockupImage(data.mockupUrl);
+      setMockupImageBase64(data.mockupBase64);
+      toast.success("Mockup pronto! 📸");
+    } catch (err: any) {
+      console.error("Erro ao gerar mockup:", err);
+      toast.error(err.message || "Erro ao gerar o mockup. Tente novamente.");
+      setStep(4);
+    } finally {
+      setIsGeneratingMockup(false);
+    }
+  };
+
+  const handleDownload = (base64: string | null, prefix: string) => {
+    if (!base64) return;
     const link = document.createElement("a");
-    link.href = generatedImageBase64;
-    link.download = `${selectedTema?.name}-${selectedMolde?.name}-${nome}.png`;
+    link.href = base64;
+    link.download = `${prefix}-${selectedTema?.name}-${selectedMolde?.name}-${nome}.png`;
     link.click();
   };
 
@@ -175,20 +213,20 @@ export default function Criar() {
     setIdade("");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
+    setMockupImage(null);
+    setMockupImageBase64(null);
   };
 
-  const stepLabels = ["Tema", "Molde", "Nome", "Pronto!"];
+  const stepLabels = ["Tema", "Molde", "Nome", "Arte", "Mockup"];
 
   return (
     <div className="space-y-5 animate-fade-in max-w-5xl">
-      {/* Compact step indicator */}
-      <div className="flex items-center gap-1">
+      {/* Step indicator */}
+      <div className="flex items-center gap-1 flex-wrap">
         {stepLabels.map((label, i) => (
           <div key={i} className="flex items-center gap-1">
             <button
-              onClick={() => {
-                if (i + 1 < step) setStep(i + 1);
-              }}
+              onClick={() => { if (i + 1 < step) setStep(i + 1); }}
               disabled={i + 1 >= step}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 step === i + 1
@@ -198,7 +236,7 @@ export default function Criar() {
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {step > i + 1 ? <Check className="h-3 w-3 inline" /> : null} {label}
+              {step > i + 1 ? <Check className="h-3 w-3 inline mr-0.5" /> : null}{label}
             </button>
             {i < stepLabels.length - 1 && (
               <span className="text-muted-foreground text-xs">›</span>
@@ -233,11 +271,7 @@ export default function Criar() {
                     <CardContent className="p-0">
                       <div className="aspect-square bg-card overflow-hidden">
                         {image ? (
-                          <img
-                            src={image}
-                            alt={tema.name}
-                            className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
+                          <img src={image} alt={tema.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center">
                             <span className="text-3xl">{tema.emoji || "🎉"}</span>
@@ -266,7 +300,7 @@ export default function Criar() {
             <div>
               <h1 className="text-2xl font-display font-bold text-foreground">📦 Escolha o molde</h1>
               <p className="text-sm text-muted-foreground">
-                Tema: <span className="text-primary font-medium">{selectedTema?.name}</span> — Agora escolha a embalagem
+                Tema: <span className="text-primary font-medium">{selectedTema?.name}</span>
               </p>
             </div>
           </div>
@@ -289,11 +323,7 @@ export default function Criar() {
                     <CardContent className="p-0">
                       <div className="aspect-square bg-card flex items-center justify-center p-3">
                         {image ? (
-                          <img
-                            src={image}
-                            alt={mold.name}
-                            className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300"
-                          />
+                          <img src={image} alt={mold.name} className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300" />
                         ) : (
                           <span className="text-3xl">{mold.emoji || "📦"}</span>
                         )}
@@ -323,22 +353,17 @@ export default function Criar() {
             </div>
           </div>
 
-          {/* Mini summary */}
           <div className="flex gap-3">
             <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 text-sm">
               {themeImages[selectedTema?.name] ? (
                 <img src={themeImages[selectedTema?.name]} alt="" className="h-8 w-8 rounded object-cover" />
-              ) : (
-                <span>{selectedTema?.emoji || "🎨"}</span>
-              )}
+              ) : <span>{selectedTema?.emoji || "🎨"}</span>}
               <span className="font-medium text-foreground">{selectedTema?.name}</span>
             </div>
             <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 text-sm">
               {moldImages[selectedMolde?.name] ? (
                 <img src={moldImages[selectedMolde?.name]} alt="" className="h-8 w-8 object-contain" />
-              ) : (
-                <span>{selectedMolde?.emoji || "📦"}</span>
-              )}
+              ) : <span>{selectedMolde?.emoji || "📦"}</span>}
               <span className="font-medium text-foreground">{selectedMolde?.name}</span>
             </div>
           </div>
@@ -378,7 +403,7 @@ export default function Criar() {
         </div>
       )}
 
-      {/* Step 4: Result */}
+      {/* Step 4: Art Result + Mockup CTA */}
       {step === 4 && (
         <div className="space-y-5">
           {isGenerating ? (
@@ -398,42 +423,199 @@ export default function Criar() {
               </CardContent>
             </Card>
           ) : generatedImage ? (
-            <div className="space-y-4">
-              <h1 className="text-2xl font-display font-bold text-foreground">🎉 Sua arte está pronta!</h1>
-              <Card className="border-border/50 overflow-hidden">
-                <CardContent className="p-0">
-                  <img
-                    src={generatedImage}
-                    alt={`${selectedTema?.name} - ${selectedMolde?.name} - ${nome}`}
-                    className="w-full h-auto"
-                  />
-                </CardContent>
-              </Card>
+            <div className="space-y-5">
+              <h1 className="text-2xl font-display font-bold text-foreground">🎉 Arte pronta!</h1>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Button
-                  onClick={handleDownload}
-                  className="gradient-hero border-0 text-primary-foreground h-11"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Baixar PNG
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Art preview */}
+                <Card className="border-border/50 overflow-hidden">
+                  <CardContent className="p-0">
+                    <img
+                      src={generatedImage}
+                      alt={`${selectedTema?.name} - ${selectedMolde?.name} - ${nome}`}
+                      className="w-full h-auto"
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Actions panel */}
+                <div className="space-y-4">
+                  {/* Download art */}
+                  <Card className="border-border/50">
+                    <CardContent className="p-4 space-y-3">
+                      <h3 className="font-semibold text-foreground flex items-center gap-2">
+                        <Download className="h-4 w-4" /> Baixar Arte
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Molde planificado pronto para imprimir, recortar e montar.
+                      </p>
+                      <Button
+                        onClick={() => handleDownload(generatedImageBase64, "arte")}
+                        className="w-full gradient-hero border-0 text-primary-foreground"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar PNG
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Generate mockup CTA */}
+                  <Card className="border-primary/30 bg-primary/5">
+                    <CardContent className="p-4 space-y-3">
+                      <h3 className="font-semibold text-foreground flex items-center gap-2">
+                        <Camera className="h-4 w-4" /> Gerar Mockup para Divulgação
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        A IA cria uma foto realista do produto montado, pronta pra você postar no Instagram!
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => handleGenerateMockup("feed")}
+                          variant="outline"
+                          className="border-primary/30 hover:bg-primary/10"
+                        >
+                          <ImageIcon className="h-4 w-4 mr-1" />
+                          Feed (1:1)
+                        </Button>
+                        <Button
+                          onClick={() => handleGenerateMockup("story")}
+                          variant="outline"
+                          className="border-primary/30 hover:bg-primary/10"
+                        >
+                          <Camera className="h-4 w-4 mr-1" />
+                          Story (9:16)
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Other actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleGenerate}
+                      className="flex-1 border-border/50"
+                      size="sm"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Nova versão
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      className="flex-1 border-border/50"
+                      size="sm"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Nova arte
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Step 5: Mockup Result */}
+      {step === 5 && (
+        <div className="space-y-5">
+          {isGeneratingMockup ? (
+            <Card className="border-border/50">
+              <CardContent className="p-12 flex flex-col items-center gap-4">
+                <div className="relative">
+                  <Loader2 className="h-16 w-16 text-primary animate-spin" />
+                  <Camera className="h-6 w-6 text-primary absolute -top-1 -right-1 animate-pulse" />
+                </div>
+                <div className="text-center space-y-2">
+                  <p className="font-semibold text-foreground text-lg">Criando mockup...</p>
+                  <p className="text-sm text-muted-foreground">
+                    Montando {selectedMolde?.name} com tema {selectedTema?.name} em cenário de festa
+                  </p>
+                  <p className="text-xs text-muted-foreground">Pode levar até 30 segundos</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : mockupImage ? (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="icon" onClick={() => setStep(4)} className="shrink-0">
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleGenerate}
-                  className="border-border/50 h-11"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Gerar outra versão
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  className="border-border/50 h-11"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Nova arte
-                </Button>
+                <h1 className="text-2xl font-display font-bold text-foreground">📸 Mockup pronto para divulgar!</h1>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Mockup preview */}
+                <Card className="border-border/50 overflow-hidden">
+                  <CardContent className="p-0">
+                    <img
+                      src={mockupImage}
+                      alt={`Mockup ${selectedTema?.name} - ${selectedMolde?.name}`}
+                      className="w-full h-auto"
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Actions */}
+                <div className="space-y-4">
+                  <Card className="border-border/50">
+                    <CardContent className="p-4 space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Mockup {mockupFormato === "feed" ? "quadrado (Feed)" : "vertical (Story)"} do produto montado, pronto pra postar!
+                      </p>
+                      <Button
+                        onClick={() => handleDownload(mockupImageBase64, "mockup")}
+                        className="w-full gradient-hero border-0 text-primary-foreground"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar Mockup
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleGenerateMockup("feed")}
+                      className="border-border/50"
+                      size="sm"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Novo Feed
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleGenerateMockup("story")}
+                      className="border-border/50"
+                      size="sm"
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Novo Story
+                    </Button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setStep(4)}
+                      className="flex-1 border-border/50"
+                      size="sm"
+                    >
+                      <ArrowLeft className="h-3 w-3 mr-1" />
+                      Voltar à arte
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      className="flex-1 border-border/50"
+                      size="sm"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Nova arte
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
