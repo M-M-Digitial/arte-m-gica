@@ -1157,24 +1157,35 @@ export default function Criar() {
                       title="Baixar Arte"
                       description="Molde pronto para imprimir em A4"
                     >
-                      <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-2">
                         <Button
                           onClick={() => handleDownload(generatedImageBase64, "arte")}
-                          className="gradient-hero border-0 text-primary-foreground font-semibold shadow-soft rounded-xl"
+                          className="w-full gradient-hero border-0 text-primary-foreground font-semibold shadow-soft rounded-xl"
                           size="sm"
                         >
                           <Download className="h-3.5 w-3.5 mr-1.5" />
-                          PNG
+                          Baixar PNG
                         </Button>
-                        <Button
-                          onClick={handleDownloadPDF}
-                          variant="outline"
-                          className="font-semibold border-primary/25 text-primary hover:bg-primary/5 rounded-xl"
-                          size="sm"
-                        >
-                          <FileText className="h-3.5 w-3.5 mr-1.5" />
-                          PDF A4
-                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            onClick={() => handleDownloadPDF("landscape")}
+                            variant="outline"
+                            className="font-semibold border-primary/25 text-primary hover:bg-primary/5 rounded-xl text-[11px]"
+                            size="sm"
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-1" />
+                            PDF Horizontal
+                          </Button>
+                          <Button
+                            onClick={() => handleDownloadPDF("portrait")}
+                            variant="outline"
+                            className="font-semibold border-primary/25 text-primary hover:bg-primary/5 rounded-xl text-[11px]"
+                            size="sm"
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-1" />
+                            PDF Vertical
+                          </Button>
+                        </div>
                       </div>
                     </ActionCard>
 
