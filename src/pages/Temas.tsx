@@ -8,16 +8,75 @@ import { Link } from "react-router-dom";
 import { useTemas } from "@/hooks/use-catalog";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import themeSafari from "@/assets/theme-safari.png";
-import themeUnicornio from "@/assets/theme-unicornio.png";
-import themePrincesas from "@/assets/theme-princesas.png";
-import themeFazendinha from "@/assets/theme-fazendinha.png";
+// Infantil Menina
+import themePrincesas from "@/assets/themes/theme-princesas.jpg";
+import themeBarbie from "@/assets/themes/theme-barbie.jpg";
+import themeMinnie from "@/assets/themes/theme-minnie.jpg";
+import themeUnicornio from "@/assets/themes/theme-unicornio.jpg";
+import themeJardim from "@/assets/themes/theme-jardim.jpg";
+import themeSereia from "@/assets/themes/theme-sereia.jpg";
+import themeFrozen from "@/assets/themes/theme-frozen.jpg";
+import themeEncanto from "@/assets/themes/theme-encanto.jpg";
+import themeMoranguinho from "@/assets/themes/theme-moranguinho.jpg";
+
+// Infantil Menino
+import themePatrulha from "@/assets/themes/theme-patrulha.jpg";
+import themeDinossauros from "@/assets/themes/theme-dinossauros.jpg";
+import themeHerois from "@/assets/themes/theme-herois.jpg";
+import themeAranha from "@/assets/themes/theme-aranha.jpg";
+import themeCarros from "@/assets/themes/theme-carros.jpg";
+import themeSafari from "@/assets/themes/theme-safari.jpg";
+import themeAstronauta from "@/assets/themes/theme-astronauta.jpg";
+import themeSonic from "@/assets/themes/theme-sonic.jpg";
+import themeMickey from "@/assets/themes/theme-mickey.jpg";
+
+// Infantil Unissex
+import themeStitch from "@/assets/themes/theme-stitch.jpg";
+import themeCirco from "@/assets/themes/theme-circo.jpg";
+import themeFazendinha from "@/assets/themes/theme-fazendinha.jpg";
+import themeMonica from "@/assets/themes/theme-monica.jpg";
+import themeGalinha from "@/assets/themes/theme-galinha.jpg";
+import themeCocomelon from "@/assets/themes/theme-cocomelon.jpg";
+
+// Datas Especiais
+import themeChaRevelacao from "@/assets/themes/theme-cha-revelacao.jpg";
+import themeDiaMaes from "@/assets/themes/theme-dia-maes.jpg";
+import themeChaBebe from "@/assets/themes/theme-cha-bebe.jpg";
+import themeBatizado from "@/assets/themes/theme-batizado.jpg";
+import themeFestaJunina from "@/assets/themes/theme-festa-junina.jpg";
+import themeNatal from "@/assets/themes/theme-natal.jpg";
 
 const localImages: Record<string, string> = {
-  "Safari": themeSafari,
-  "Unicórnio": themeUnicornio,
   "Princesas Disney": themePrincesas,
+  "Barbie": themeBarbie,
+  "Minnie Rosa": themeMinnie,
+  "Unicórnio": themeUnicornio,
+  "Jardim Encantado": themeJardim,
+  "Sereia / Fundo do Mar": themeSereia,
+  "Frozen": themeFrozen,
+  "Encanto": themeEncanto,
+  "Moranguinho": themeMoranguinho,
+  "Patrulha Canina": themePatrulha,
+  "Dinossauros": themeDinossauros,
+  "Super-Heróis": themeHerois,
+  "Homem-Aranha": themeAranha,
+  "Carros / McQueen": themeCarros,
+  "Safari": themeSafari,
+  "Astronauta / Espaço": themeAstronauta,
+  "Sonic": themeSonic,
+  "Mickey": themeMickey,
+  "Stitch": themeStitch,
+  "Circo": themeCirco,
   "Fazendinha": themeFazendinha,
+  "Turma da Mônica": themeMonica,
+  "Galinha Pintadinha": themeGalinha,
+  "Cocomelon": themeCocomelon,
+  "Chá Revelação": themeChaRevelacao,
+  "Dia das Mães": themeDiaMaes,
+  "Chá de Bebê": themeChaBebe,
+  "Batizado": themeBatizado,
+  "Festa Junina": themeFestaJunina,
+  "Natal": themeNatal,
 };
 
 const categories = ["Todos", "Infantil Menina", "Infantil Menino", "Infantil Unissex", "Datas Especiais"];
@@ -37,7 +96,7 @@ export default function Temas() {
     <div className="space-y-6 animate-fade-in max-w-6xl">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">🎨 Biblioteca de Temas</h1>
-        <p className="text-muted-foreground mt-1">Escolha um tema lindo para sua festa</p>
+        <p className="text-muted-foreground mt-1">30 temas reais para personalizar suas lembrancinhas de festa</p>
       </div>
 
       <div className="relative max-w-md">
@@ -55,6 +114,8 @@ export default function Temas() {
         ))}
       </div>
 
+      <p className="text-xs text-muted-foreground">{filtered.length} temas encontrados</p>
+
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -68,10 +129,10 @@ export default function Temas() {
             return (
               <Card key={theme.id} className="group cursor-pointer border-border/50 hover:shadow-soft transition-all hover:-translate-y-1 overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="h-40 bg-card flex items-center justify-center relative overflow-hidden p-2">
+                  <div className="h-40 bg-card flex items-center justify-center relative overflow-hidden">
                     {image ? (
-                      <img src={image} alt={theme.name} loading="lazy" width={512} height={512}
-                        className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300" />
+                      <img src={image} alt={theme.name} loading="lazy" width={512} height={384}
+                        className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                     ) : (
                       <span className="text-5xl group-hover:scale-110 transition-transform">{theme.emoji || '🎉'}</span>
                     )}
@@ -83,10 +144,13 @@ export default function Temas() {
                   </div>
                   <div className="p-4 space-y-3">
                     <h3 className="font-semibold text-sm text-foreground">{theme.name}</h3>
-                    <div className="flex gap-1.5">
-                      {(theme.colors || []).map((color, i) => (
-                        <div key={i} className="h-5 w-5 rounded-full border border-border/50 shadow-sm" style={{ backgroundColor: color }} />
-                      ))}
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        {(theme.colors || []).map((color, i) => (
+                          <div key={i} className="h-5 w-5 rounded-full border border-border/50 shadow-sm" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] ml-auto">{theme.category}</Badge>
                     </div>
                     <Link to="/editor">
                       <Button size="sm" className="w-full gradient-hero border-0 text-primary-foreground text-xs">🎉 Aplicar tema</Button>
