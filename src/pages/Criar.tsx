@@ -695,13 +695,25 @@ export default function Criar() {
                       title="Baixar Arte"
                       description="Molde pronto para imprimir em A4"
                     >
-                      <Button
-                        onClick={() => handleDownload(generatedImageBase64, "arte")}
-                        className="w-full gradient-hero border-0 text-white font-semibold shadow-soft"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Baixar PNG
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => handleDownload(generatedImageBase64, "arte")}
+                          className="gradient-hero border-0 text-white font-semibold shadow-soft"
+                          size="sm"
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          PNG
+                        </Button>
+                        <Button
+                          onClick={handleDownloadPDF}
+                          variant="outline"
+                          className="font-semibold border-primary/30 text-primary hover:bg-primary/5"
+                          size="sm"
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          PDF A4
+                        </Button>
+                      </div>
                     </ActionCard>
 
                     <ActionCard
