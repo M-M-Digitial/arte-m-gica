@@ -359,7 +359,6 @@ export default function Criar() {
       setMockupImage(data.mockupUrl);
       setMockupImageBase64(data.mockupBase64);
       toast.success("Mockup pronto!");
-      toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
       toast.error(err.message || "Erro ao gerar mockup. Tente novamente.");
