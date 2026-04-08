@@ -676,7 +676,7 @@ export default function Criar() {
               {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
               <span className="text-muted-foreground ml-0.5">✎</span>
             </button>
-          )
+          )}
         </div>
       </div>
     );
