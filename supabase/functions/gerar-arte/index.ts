@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { moldeName, temaNome, temaColors, nome, idade, frase } = await req.json();
+    const { moldeName, temaNome, temaColors, nome, idade } = await req.json();
 
     if (!moldeName || !temaNome || !nome) {
       return new Response(
@@ -27,30 +27,28 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const colorsDescription = temaColors?.length
-      ? `usando a paleta de cores: ${temaColors.join(", ")}`
+    const colorsDesc = temaColors?.length
+      ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
       : "";
 
-    const idadeText = idade ? `, idade ${idade} anos` : "";
-    const fraseText = frase ? `, com a frase "${frase}"` : "";
+    const idadeText = idade ? ` (${idade} anos)` : "";
 
-    const prompt = `Crie uma arte personalizada para lembrancinha de festa infantil brasileira.
+    const prompt = `Crie uma arte COMPLETA para lembrancinha de festa, já aplicada no molde planificado, pronta para imprimir, recortar e montar.
 
-Tipo de embalagem: ${moldeName} (molde planificado, aberto, pronto para impressão e recorte)
-Tema da festa: ${temaNome}
-Personalização: Nome "${nome}"${idadeText}${fraseText}
-${colorsDescription}
+MOLDE: ${moldeName} — gere o molde planificado (aberto, flat) com todas as abas de colagem e linhas de dobra pontilhadas.
+TEMA: ${temaNome}
+NOME: ${nome}${idadeText}
+${colorsDesc}
 
-INSTRUÇÕES IMPORTANTES:
-- A arte deve ser um MOLDE PLANIFICADO (aberto, flat, como se fosse recortado e montado depois)
-- Deve ter linhas de corte e dobra claramente visíveis
-- O design deve cobrir todas as faces do molde com o tema "${temaNome}"
-- O nome "${nome}" deve aparecer de forma proeminente e legível
-- Use elementos decorativos do tema (personagens estilizados, padrões, ícones temáticos)
-- Todos os textos devem estar em PORTUGUÊS DO BRASIL
-- A arte deve ser colorida, vibrante e festiva
-- Estilo profissional de papelaria personalizada para festa
-- Resolução alta, pronta para impressão em papel A4`;
+REGRAS OBRIGATÓRIAS:
+1. A imagem deve mostrar o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como um padrão de recorte)
+2. Linhas de corte = traço contínuo. Linhas de dobra = traço pontilhado.
+3. O tema "${temaNome}" deve decorar TODAS as faces com padrões, ilustrações e cores do tema
+4. O nome "${nome}" deve aparecer grande e legível na face principal
+5. Todos os textos em PORTUGUÊS DO BRASIL
+6. Estilo profissional de papelaria de festa — colorido, vibrante, alegre
+7. Fundo branco ao redor do molde (área de corte)
+8. Alta resolução, pronto para impressão em A4`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -68,35 +66,32 @@ INSTRUÇÕES IMPORTANTES:
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }),
+          JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos e tente de novo." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos esgotados. Adicione créditos na sua conta." }),
+          JSON.stringify({ error: "Créditos esgotados. Adicione créditos para continuar." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error(`Erro no serviço de IA: ${response.status}`);
     }
 
     const data = await response.json();
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    const textResponse = data.choices?.[0]?.message?.content || "";
 
     if (!imageData) {
-      throw new Error("A IA não retornou uma imagem. Tente novamente.");
+      throw new Error("A IA não gerou a imagem. Tente novamente.");
     }
 
-    // Upload image to storage
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Convert base64 to binary
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
     const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
 
@@ -112,7 +107,7 @@ INSTRUÇÕES IMPORTANTES:
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      throw new Error("Erro ao salvar a arte gerada.");
+      throw new Error("Erro ao salvar a arte.");
     }
 
     const { data: publicUrl } = supabase.storage
@@ -123,7 +118,6 @@ INSTRUÇÕES IMPORTANTES:
       JSON.stringify({
         imageUrl: publicUrl.publicUrl,
         imageBase64: imageData,
-        description: textResponse,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

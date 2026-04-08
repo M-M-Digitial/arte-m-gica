@@ -7,13 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Sparkles, Download, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Sparkles, Download, Loader2, Check, RefreshCw } from "lucide-react";
 
-// Import mold images
 import moldMilkBox from "@/assets/mold-milk-box.png";
 import moldSacolinha from "@/assets/mold-sacolinha.png";
-import moldTopper from "@/assets/mold-topper.png";
-import moldPiramide from "@/assets/mold-piramide.png";
 import moldSextavada from "@/assets/molds/mold-caixa-sextavada.png";
 import moldTravesseiro from "@/assets/molds/mold-caixa-travesseiro.png";
 import moldCone from "@/assets/molds/mold-cone.png";
@@ -25,7 +22,6 @@ import moldTopoBolo from "@/assets/molds/mold-topo-bolo.png";
 import moldSacolinhaNew from "@/assets/molds/mold-sacolinha.png";
 import moldPiramideNew from "@/assets/molds/mold-piramide.png";
 
-// Import theme images
 import themePrincesas from "@/assets/themes/theme-princesas.jpg";
 import themeBarbie from "@/assets/themes/theme-barbie.jpg";
 import themeMinnie from "@/assets/themes/theme-minnie.jpg";
@@ -106,20 +102,12 @@ const themeImages: Record<string, string> = {
   "Natal": themeNatal,
 };
 
-const steps = [
-  { number: 1, title: "Escolha o Molde", emoji: "📦" },
-  { number: 2, title: "Escolha o Tema", emoji: "🎨" },
-  { number: 3, title: "Personalize", emoji: "✍️" },
-  { number: 4, title: "Arte Pronta!", emoji: "🎉" },
-];
-
 export default function Criar() {
   const [step, setStep] = useState(1);
-  const [selectedMolde, setSelectedMolde] = useState<any>(null);
   const [selectedTema, setSelectedTema] = useState<any>(null);
+  const [selectedMolde, setSelectedMolde] = useState<any>(null);
   const [nome, setNome] = useState("");
   const [idade, setIdade] = useState("");
-  const [frase, setFrase] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
@@ -127,14 +115,21 @@ export default function Criar() {
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
 
-  const canProceed = () => {
-    if (step === 1) return !!selectedMolde;
-    if (step === 2) return !!selectedTema;
-    if (step === 3) return nome.trim().length > 0;
-    return false;
+  const handleSelectTema = (tema: any) => {
+    setSelectedTema(tema);
+    setStep(2);
+  };
+
+  const handleSelectMolde = (mold: any) => {
+    setSelectedMolde(mold);
+    setStep(3);
   };
 
   const handleGenerate = async () => {
+    if (!nome.trim()) {
+      toast.error("Digite o nome para personalizar a arte");
+      return;
+    }
     setIsGenerating(true);
     setStep(4);
 
@@ -146,19 +141,15 @@ export default function Criar() {
           temaColors: selectedTema.colors,
           nome: nome.trim(),
           idade: idade.trim() || undefined,
-          frase: frase.trim() || undefined,
         },
       });
 
       if (error) throw error;
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (data?.error) throw new Error(data.error);
 
       setGeneratedImage(data.imageUrl);
       setGeneratedImageBase64(data.imageBase64);
-      toast.success("Arte gerada com sucesso! 🎉");
+      toast.success("Arte pronta! 🎉");
     } catch (err: any) {
       console.error("Erro ao gerar arte:", err);
       toast.error(err.message || "Erro ao gerar a arte. Tente novamente.");
@@ -168,144 +159,79 @@ export default function Criar() {
     }
   };
 
-  const handleDownloadImage = () => {
+  const handleDownload = () => {
     if (!generatedImageBase64) return;
     const link = document.createElement("a");
     link.href = generatedImageBase64;
-    link.download = `arte-${selectedTema?.name}-${nome}.png`;
+    link.download = `${selectedTema?.name}-${selectedMolde?.name}-${nome}.png`;
     link.click();
   };
 
-  const handleNewArt = () => {
+  const handleReset = () => {
     setStep(1);
-    setSelectedMolde(null);
     setSelectedTema(null);
+    setSelectedMolde(null);
     setNome("");
     setIdade("");
-    setFrase("");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
   };
 
-  return (
-    <div className="space-y-6 animate-fade-in max-w-5xl">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">✨ Criar Arte com IA</h1>
-        <p className="text-muted-foreground mt-1">
-          A inteligência artificial cria a arte personalizada já aplicada no molde, pronta pra imprimir
-        </p>
-      </div>
+  const stepLabels = ["Tema", "Molde", "Nome", "Pronto!"];
 
-      {/* Step Indicator */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {steps.map((s, i) => (
-          <div key={s.number} className="flex items-center gap-2 shrink-0">
-            <div
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                step === s.number
+  return (
+    <div className="space-y-5 animate-fade-in max-w-5xl">
+      {/* Compact step indicator */}
+      <div className="flex items-center gap-1">
+        {stepLabels.map((label, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                if (i + 1 < step) setStep(i + 1);
+              }}
+              disabled={i + 1 >= step}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                step === i + 1
                   ? "gradient-hero text-primary-foreground"
-                  : step > s.number
-                  ? "bg-primary/20 text-primary"
+                  : step > i + 1
+                  ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {step > s.number ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <span>{s.emoji}</span>
-              )}
-              <span className="hidden sm:inline">{s.title}</span>
-              <span className="sm:hidden">{s.number}</span>
-            </div>
-            {i < steps.length - 1 && (
-              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              {step > i + 1 ? <Check className="h-3 w-3 inline" /> : null} {label}
+            </button>
+            {i < stepLabels.length - 1 && (
+              <span className="text-muted-foreground text-xs">›</span>
             )}
           </div>
         ))}
       </div>
 
-      {/* Step 1: Choose Mold */}
+      {/* Step 1: Choose Theme */}
       {step === 1 && (
-        <div className="space-y-4">
-          <h2 className="font-display font-semibold text-lg">📦 Qual molde você quer usar?</h2>
-          {loadingMoldes ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-48 rounded-lg" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {(moldes ?? []).map((mold) => {
-                const image = mold.image_url || moldImages[mold.name];
-                const isSelected = selectedMolde?.id === mold.id;
-                return (
-                  <Card
-                    key={mold.id}
-                    onClick={() => setSelectedMolde(mold)}
-                    className={`group cursor-pointer transition-all hover:-translate-y-1 overflow-hidden ${
-                      isSelected
-                        ? "ring-2 ring-primary shadow-lg"
-                        : "border-border/50 hover:shadow-soft"
-                    }`}
-                  >
-                    <CardContent className="p-0">
-                      <div className="h-32 bg-card flex items-center justify-center p-3">
-                        {image ? (
-                          <img
-                            src={image}
-                            alt={mold.name}
-                            className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300"
-                          />
-                        ) : (
-                          <span className="text-4xl">{mold.emoji || "📦"}</span>
-                        )}
-                      </div>
-                      <div className="p-3 text-center">
-                        <h3 className="font-semibold text-sm text-foreground">{mold.name}</h3>
-                        {isSelected && (
-                          <Badge className="mt-1 gradient-hero border-0 text-[10px]">
-                            Selecionado ✓
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 2: Choose Theme */}
-      {step === 2 && (
-        <div className="space-y-4">
-          <h2 className="font-display font-semibold text-lg">🎨 Qual o tema da festa?</h2>
+        <div className="space-y-3">
+          <div>
+            <h1 className="text-2xl font-display font-bold text-foreground">🎨 Qual o tema da festa?</h1>
+            <p className="text-sm text-muted-foreground">Toque no tema para continuar</p>
+          </div>
           {loadingTemas ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-48 rounded-lg" />
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 15 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-xl" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
               {(temas ?? []).map((tema) => {
                 const image = tema.image_url || themeImages[tema.name];
-                const isSelected = selectedTema?.id === tema.id;
                 return (
                   <Card
                     key={tema.id}
-                    onClick={() => setSelectedTema(tema)}
-                    className={`group cursor-pointer transition-all hover:-translate-y-1 overflow-hidden ${
-                      isSelected
-                        ? "ring-2 ring-primary shadow-lg"
-                        : "border-border/50 hover:shadow-soft"
-                    }`}
+                    onClick={() => handleSelectTema(tema)}
+                    className="group cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg overflow-hidden border-border/30"
                   >
                     <CardContent className="p-0">
-                      <div className="h-32 bg-card flex items-center justify-center overflow-hidden">
+                      <div className="aspect-square bg-card overflow-hidden">
                         {image ? (
                           <img
                             src={image}
@@ -313,25 +239,13 @@ export default function Criar() {
                             className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
                           />
                         ) : (
-                          <span className="text-4xl">{tema.emoji || "🎉"}</span>
+                          <div className="h-full w-full flex items-center justify-center">
+                            <span className="text-3xl">{tema.emoji || "🎉"}</span>
+                          </div>
                         )}
                       </div>
-                      <div className="p-3 text-center">
-                        <h3 className="font-semibold text-sm text-foreground">{tema.name}</h3>
-                        <div className="flex justify-center gap-1 mt-1">
-                          {(tema.colors || []).slice(0, 4).map((color, i) => (
-                            <div
-                              key={i}
-                              className="h-3 w-3 rounded-full border border-border/50"
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
-                        </div>
-                        {isSelected && (
-                          <Badge className="mt-1 gradient-hero border-0 text-[10px]">
-                            Selecionado ✓
-                          </Badge>
-                        )}
+                      <div className="p-2 text-center">
+                        <h3 className="font-semibold text-xs text-foreground leading-tight">{tema.name}</h3>
                       </div>
                     </CardContent>
                   </Card>
@@ -342,56 +256,107 @@ export default function Criar() {
         </div>
       )}
 
-      {/* Step 3: Personalize */}
-      {step === 3 && (
-        <div className="space-y-6 max-w-lg">
-          <h2 className="font-display font-semibold text-lg">✍️ Personalize sua arte</h2>
+      {/* Step 2: Choose Mold */}
+      {step === 2 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setStep(1)} className="shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">📦 Escolha o molde</h1>
+              <p className="text-sm text-muted-foreground">
+                Tema: <span className="text-primary font-medium">{selectedTema?.name}</span> — Agora escolha a embalagem
+              </p>
+            </div>
+          </div>
+          {loadingMoldes ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {(moldes ?? []).map((mold) => {
+                const image = mold.image_url || moldImages[mold.name];
+                return (
+                  <Card
+                    key={mold.id}
+                    onClick={() => handleSelectMolde(mold)}
+                    className="group cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg overflow-hidden border-border/30"
+                  >
+                    <CardContent className="p-0">
+                      <div className="aspect-square bg-card flex items-center justify-center p-3">
+                        {image ? (
+                          <img
+                            src={image}
+                            alt={mold.name}
+                            className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <span className="text-3xl">{mold.emoji || "📦"}</span>
+                        )}
+                      </div>
+                      <div className="p-2 text-center">
+                        <h3 className="font-semibold text-xs text-foreground leading-tight">{mold.name}</h3>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
-          {/* Summary of selections */}
-          <div className="flex gap-4">
-            <Card className="flex-1 border-border/50">
-              <CardContent className="p-3 flex items-center gap-3">
-                {moldImages[selectedMolde?.name] ? (
-                  <img src={moldImages[selectedMolde?.name]} alt="" className="h-10 w-10 object-contain" />
-                ) : (
-                  <span className="text-2xl">{selectedMolde?.emoji || "📦"}</span>
-                )}
-                <div>
-                  <p className="text-xs text-muted-foreground">Molde</p>
-                  <p className="text-sm font-medium">{selectedMolde?.name}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="flex-1 border-border/50">
-              <CardContent className="p-3 flex items-center gap-3">
-                {themeImages[selectedTema?.name] ? (
-                  <img src={themeImages[selectedTema?.name]} alt="" className="h-10 w-10 object-cover rounded" />
-                ) : (
-                  <span className="text-2xl">{selectedTema?.emoji || "🎨"}</span>
-                )}
-                <div>
-                  <p className="text-xs text-muted-foreground">Tema</p>
-                  <p className="text-sm font-medium">{selectedTema?.name}</p>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Step 3: Name + Generate */}
+      {step === 3 && (
+        <div className="space-y-5 max-w-md">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setStep(2)} className="shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-display font-bold text-foreground">✍️ Personalizar</h1>
+              <p className="text-sm text-muted-foreground">Só falta o nome!</p>
+            </div>
           </div>
 
-          <div className="space-y-4">
+          {/* Mini summary */}
+          <div className="flex gap-3">
+            <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 text-sm">
+              {themeImages[selectedTema?.name] ? (
+                <img src={themeImages[selectedTema?.name]} alt="" className="h-8 w-8 rounded object-cover" />
+              ) : (
+                <span>{selectedTema?.emoji || "🎨"}</span>
+              )}
+              <span className="font-medium text-foreground">{selectedTema?.name}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 text-sm">
+              {moldImages[selectedMolde?.name] ? (
+                <img src={moldImages[selectedMolde?.name]} alt="" className="h-8 w-8 object-contain" />
+              ) : (
+                <span>{selectedMolde?.emoji || "📦"}</span>
+              )}
+              <span className="font-medium text-foreground">{selectedMolde?.name}</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-foreground">
-                Nome da criança / homenageado(a) *
-              </label>
+              <label className="text-sm font-medium text-foreground">Nome *</label>
               <Input
                 placeholder="Ex: Maria Clara"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                className="mt-1 bg-card border-border/50"
+                className="mt-1 bg-card border-border/50 text-lg h-12"
                 maxLength={50}
+                autoFocus
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground">Idade (opcional)</label>
+              <label className="text-sm font-medium text-muted-foreground">Idade (opcional)</label>
               <Input
                 placeholder="Ex: 5"
                 value={idade}
@@ -400,27 +365,22 @@ export default function Criar() {
                 maxLength={3}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Frase especial (opcional)</label>
-              <Input
-                placeholder="Ex: Obrigada por fazer parte da minha festa!"
-                value={frase}
-                onChange={(e) => setFrase(e.target.value)}
-                className="mt-1 bg-card border-border/50"
-                maxLength={100}
-              />
-            </div>
           </div>
+
+          <Button
+            onClick={handleGenerate}
+            disabled={!nome.trim()}
+            className="w-full gradient-hero border-0 text-primary-foreground h-12 text-base font-semibold"
+          >
+            <Sparkles className="h-5 w-5 mr-2" />
+            Gerar Arte com IA
+          </Button>
         </div>
       )}
 
       {/* Step 4: Result */}
       {step === 4 && (
-        <div className="space-y-6">
-          <h2 className="font-display font-semibold text-lg">
-            {isGenerating ? "⏳ Gerando sua arte..." : "🎉 Sua arte está pronta!"}
-          </h2>
-
+        <div className="space-y-5">
           {isGenerating ? (
             <Card className="border-border/50">
               <CardContent className="p-12 flex flex-col items-center gap-4">
@@ -429,86 +389,54 @@ export default function Criar() {
                   <Sparkles className="h-6 w-6 text-primary absolute -top-1 -right-1 animate-pulse" />
                 </div>
                 <div className="text-center space-y-2">
-                  <p className="font-semibold text-foreground">A IA está criando sua arte</p>
+                  <p className="font-semibold text-foreground text-lg">Criando sua arte...</p>
                   <p className="text-sm text-muted-foreground">
-                    Gerando {selectedMolde?.name} com tema {selectedTema?.name} para {nome}...
+                    {selectedTema?.name} + {selectedMolde?.name} para {nome}
                   </p>
-                  <p className="text-xs text-muted-foreground">Isso pode levar até 30 segundos</p>
+                  <p className="text-xs text-muted-foreground">Pode levar até 30 segundos</p>
                 </div>
               </CardContent>
             </Card>
           ) : generatedImage ? (
             <div className="space-y-4">
+              <h1 className="text-2xl font-display font-bold text-foreground">🎉 Sua arte está pronta!</h1>
               <Card className="border-border/50 overflow-hidden">
                 <CardContent className="p-0">
                   <img
                     src={generatedImage}
-                    alt={`Arte ${selectedTema?.name} - ${nome}`}
+                    alt={`${selectedTema?.name} - ${selectedMolde?.name} - ${nome}`}
                     className="w-full h-auto"
                   />
                 </CardContent>
               </Card>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Button
-                  onClick={handleDownloadImage}
-                  className="gradient-hero border-0 text-primary-foreground flex-1"
+                  onClick={handleDownload}
+                  className="gradient-hero border-0 text-primary-foreground h-11"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Baixar Imagem (PNG)
+                  Baixar PNG
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleGenerate}
-                  className="flex-1 border-border/50"
+                  className="border-border/50 h-11"
                 >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Gerar Nova Versão
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Gerar outra versão
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={handleNewArt}
-                  className="flex-1 border-border/50"
+                  onClick={handleReset}
+                  className="border-border/50 h-11"
                 >
-                  Criar Outra Arte
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Nova arte
                 </Button>
               </div>
             </div>
           ) : null}
-        </div>
-      )}
-
-      {/* Navigation Buttons */}
-      {step < 4 && (
-        <div className="flex justify-between pt-4 border-t border-border/50">
-          <Button
-            variant="outline"
-            onClick={() => setStep((s) => Math.max(1, s - 1))}
-            disabled={step === 1}
-            className="border-border/50"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          {step === 3 ? (
-            <Button
-              onClick={handleGenerate}
-              disabled={!canProceed()}
-              className="gradient-hero border-0 text-primary-foreground"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Gerar Arte com IA
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!canProceed()}
-              className="gradient-hero border-0 text-primary-foreground"
-            >
-              Próximo
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
         </div>
       )}
     </div>
