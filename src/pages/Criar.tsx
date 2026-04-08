@@ -688,6 +688,16 @@ export default function Criar() {
               <span className="text-muted-foreground ml-0.5">✎</span>
             </button>
           )}
+          {/* Densidade chip */}
+          {step >= 4 && (
+            <button
+              onClick={() => setStep(3)}
+              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )
         </div>
       </div>
     );
