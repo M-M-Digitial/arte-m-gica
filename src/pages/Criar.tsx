@@ -657,102 +657,113 @@ export default function Criar() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg gradient-hero flex items-center justify-center">
+    <div className="min-h-screen gradient-surface">
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-50 bg-card/70 glass border-b border-border/40">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-foreground">
-              MoldePronto
-            </span>
+            <div>
+              <span className="font-bold text-lg tracking-tight text-foreground">
+                Molde<span className="text-gradient">Pronto</span>
+              </span>
+            </div>
           </div>
 
-          {/* Step pills */}
-          <nav className="hidden sm:flex items-center gap-1">
+          {/* Step indicators */}
+          <nav className="hidden sm:flex items-center gap-0.5">
             {STEPS.map((s, i) => {
               const StepIcon = s.icon;
               const isActive = step === i + 1;
               const isDone = step > i + 1;
               return (
-                <button
-                  key={s.key}
-                  onClick={() => { if (isDone) setStep(i + 1); }}
-                  disabled={!isDone}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    isActive
-                      ? "gradient-hero text-white shadow-soft"
-                      : isDone
-                      ? "bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {isDone ? <Check className="h-3 w-3" /> : <StepIcon className="h-3 w-3" />}
-                  {s.label}
-                </button>
+                <div key={s.key} className="flex items-center">
+                  <button
+                    onClick={() => { if (isDone) setStep(i + 1); }}
+                    disabled={!isDone && !isActive}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                      isActive
+                        ? "gradient-hero text-primary-foreground shadow-soft"
+                        : isDone
+                        ? "bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
+                        : "text-muted-foreground/50"
+                    }`}
+                  >
+                    {isDone ? (
+                      <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Check className="h-2.5 w-2.5" />
+                      </div>
+                    ) : (
+                      <StepIcon className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden md:inline">{s.label}</span>
+                  </button>
+                  {i < STEPS.length - 1 && (
+                    <div className={`w-4 h-px mx-0.5 ${isDone ? "bg-primary/30" : "bg-border"}`} />
+                  )}
+                </div>
               );
             })}
           </nav>
 
-          <div className="flex items-center gap-1">
-            {step > 1 && step <= 3 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleReset}
-                className="text-muted-foreground text-xs"
-              >
-                Recomeçar
-              </Button>
-            )}
+          {/* Mobile step indicator */}
+          <div className="sm:hidden flex items-center gap-2">
+            <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+              {step}/5
+            </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {/* ── Editable selections panel ── */}
         <EditableSelectionsPanel />
+
         {/* ─── STEP 1: TEMA ─── */}
         {step === 1 && (
-          <section className="space-y-5 animate-in fade-in duration-300">
-            <div className="text-center max-w-lg mx-auto">
-              <h1 className="text-2xl font-bold text-foreground">
+          <section className="animate-fade-in space-y-8">
+            <div className="text-center max-w-md mx-auto space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">Passo 1 de 5</p>
+              <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground">
                 Qual o tema da festa?
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Escolha o tema e a IA faz toda a arte pra você
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Escolha o tema e a IA cria toda a arte personalizada
               </p>
             </div>
+
             {loadingTemas ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                 {Array.from({ length: 18 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-xl" />
+                  <Skeleton key={i} className="aspect-square rounded-2xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                 {(temas ?? []).map((tema) => {
                   const image = tema.image_url || themeImages[tema.name];
                   return (
                     <button
                       key={tema.id}
                       onClick={() => handleSelectTema(tema)}
-                      className="group relative aspect-square rounded-xl overflow-hidden bg-card shadow-card hover:shadow-soft transition-all hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="group relative aspect-square rounded-2xl overflow-hidden bg-card shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
                     >
                       {image ? (
                         <img
                           src={image}
                           alt={tema.name}
-                          className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-accent/30">
+                        <div className="absolute inset-0 flex items-center justify-center gradient-card">
                           <span className="text-3xl">{tema.emoji || "🎉"}</span>
                         </div>
                       )}
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-2 pt-6">
-                        <span className="text-white text-[11px] font-semibold leading-tight block">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                      <div className="absolute inset-x-0 bottom-0 p-2.5">
+                        <span className="text-primary-foreground text-[11px] sm:text-xs font-semibold leading-tight drop-shadow-sm">
                           {tema.name}
                         </span>
                       </div>
@@ -766,50 +777,53 @@ export default function Criar() {
 
         {/* ─── STEP 2: MOLDE ─── */}
         {step === 2 && (
-          <section className="space-y-5 animate-in fade-in duration-300">
-            <div className="flex items-center gap-3">
+          <section className="animate-fade-in space-y-8">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setStep(1)}
-                className="h-9 w-9 rounded-full bg-card shadow-card flex items-center justify-center hover:bg-accent/50 transition-colors"
+                className="h-10 w-10 rounded-xl bg-card shadow-card flex items-center justify-center hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
               >
                 <ArrowLeft className="h-4 w-4 text-foreground" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Escolha o molde</h1>
-                <p className="text-sm text-muted-foreground">
-                  Tema: <span className="text-primary font-semibold">{selectedTema?.name}</span>
-                </p>
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Passo 2 de 5</p>
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                  Escolha o molde
+                </h1>
               </div>
             </div>
+
             {loadingMoldes ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-[3/4] rounded-xl" />
+                  <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                 {(moldes ?? []).map((mold) => {
                   const image = mold.image_url || moldImages[mold.name];
                   return (
                     <button
                       key={mold.id}
                       onClick={() => handleSelectMolde(mold)}
-                      className="group bg-card rounded-xl shadow-card overflow-hidden hover:shadow-soft transition-all hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="group bg-card rounded-2xl shadow-card overflow-hidden hover:shadow-elevated transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
                     >
-                      <div className="aspect-square flex items-center justify-center p-4 bg-muted/30">
+                      <div className="aspect-square flex items-center justify-center p-5 gradient-card">
                         {image ? (
                           <img
                             src={image}
                             alt={mold.name}
-                            className="h-full w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                            className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-500"
                           />
                         ) : (
                           <span className="text-4xl">{mold.emoji || "📦"}</span>
                         )}
                       </div>
-                      <div className="p-2.5 text-center border-t border-border/30">
-                        <span className="text-xs font-semibold text-foreground">{mold.name}</span>
+                      <div className="px-3 py-2.5 text-center border-t border-border/20">
+                        <span className="text-[11px] sm:text-xs font-semibold text-foreground leading-tight">
+                          {mold.name}
+                        </span>
                       </div>
                     </button>
                   );
@@ -821,156 +835,207 @@ export default function Criar() {
 
         {/* ─── STEP 3: PERSONALIZAR ─── */}
         {step === 3 && (
-          <section className="max-w-lg mx-auto space-y-5 animate-in fade-in duration-300">
-            <div className="flex items-center gap-3">
+          <section className="max-w-lg mx-auto animate-fade-in space-y-6">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setStep(2)}
-                className="h-9 w-9 rounded-full bg-card shadow-card flex items-center justify-center hover:bg-accent/50 transition-colors"
+                className="h-10 w-10 rounded-xl bg-card shadow-card flex items-center justify-center hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
               >
                 <ArrowLeft className="h-4 w-4 text-foreground" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Personalizar</h1>
-                <p className="text-sm text-muted-foreground">Deixe do jeitinho que você quer</p>
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Passo 3 de 5</p>
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                  Personalizar
+                </h1>
               </div>
             </div>
 
-            {/* Nome e Idade */}
-            <Card className="shadow-card border-border/30">
-              <CardContent className="p-4 space-y-4">
+            {/* Dados */}
+            <Card className="shadow-card border-border/20 overflow-hidden">
+              <div className="h-1 gradient-hero" />
+              <CardContent className="p-5 space-y-4">
                 <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Type className="h-4 w-4 text-primary" /> Dados do homenageado
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Type className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  Dados do homenageado
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground">Nome *</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Nome *
+                    </label>
                     <Input
                       placeholder="Ex: Maria Clara"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      className="mt-1 h-11 text-base bg-background border-border/60 focus:border-primary"
+                      className="mt-1.5 h-12 text-base bg-background border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl"
                       maxLength={50}
                       autoFocus
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground">Idade</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Idade
+                    </label>
                     <Input
                       placeholder="Ex: 5"
                       value={idade}
                       onChange={(e) => setIdade(e.target.value)}
-                      className="mt-1 h-11 bg-background border-border/60"
+                      className="mt-1.5 h-12 bg-background border-border/50 rounded-xl"
                       maxLength={3}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Frase personalizada (opcional)
+                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    Frase personalizada
                   </label>
                   <Input
                     placeholder="Ex: Obrigada por celebrar comigo!"
                     value={frase}
                     onChange={(e) => setFrase(e.target.value)}
-                    className="mt-1 bg-background border-border/60"
+                    className="mt-1.5 bg-background border-border/50 rounded-xl"
                     maxLength={80}
                   />
-                  <p className="text-[10px] text-muted-foreground mt-1">Aparecerá na face secundária do molde</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-1.5 ml-0.5">
+                    Aparecerá na face secundária do molde
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Cor dominante */}
-            <Card className="shadow-card border-border/30">
-              <CardContent className="p-4 space-y-3">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-primary" /> Cor dominante
-                  <span className="text-[10px] text-muted-foreground font-normal">(opcional — sobrepõe a paleta do tema)</span>
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {/* Clear option */}
+            <Card className="shadow-card border-border/20 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-pink-300 via-purple-300 to-blue-300" />
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Palette className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    Cor dominante
+                  </h3>
+                  <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    opcional
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5">
                   <button
                     onClick={() => setCorDominante("")}
-                    className={`h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                      !corDominante ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-muted-foreground"
+                    className={`h-9 px-3 rounded-full border-2 flex items-center justify-center gap-1.5 transition-all text-xs font-medium ${
+                      !corDominante
+                        ? "border-primary bg-primary/10 text-primary shadow-soft"
+                        : "border-border/50 text-muted-foreground hover:border-primary/30"
                     }`}
-                    title="Automático (cores do tema)"
                   >
-                    <span className="text-xs text-muted-foreground">Auto</span>
+                    <Sparkles className="h-3 w-3" />
+                    Auto
                   </button>
                   {COR_PRESETS.map((cor) => (
                     <button
                       key={cor}
                       onClick={() => setCorDominante(cor)}
-                      className={`h-8 w-8 rounded-full border-2 transition-all ${
+                      className={`h-9 w-9 rounded-full border-2 transition-all duration-200 ${
                         corDominante === cor
-                          ? "border-foreground ring-2 ring-primary/30 scale-110"
-                          : "border-transparent hover:scale-105"
+                          ? "border-foreground scale-110 shadow-elevated ring-2 ring-primary/20"
+                          : "border-white/60 hover:scale-110 hover:shadow-card"
                       }`}
                       style={{ backgroundColor: cor }}
-                      title={cor}
                     />
                   ))}
                 </div>
-                {/* Custom color */}
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-muted-foreground">Ou escolha exata:</label>
-                  <input
-                    type="color"
-                    value={corDominante || "#FF69B4"}
-                    onChange={(e) => setCorDominante(e.target.value)}
-                    className="h-8 w-10 rounded cursor-pointer border border-border"
-                  />
+                <div className="flex items-center gap-3 pt-1">
+                  <label className="text-xs text-muted-foreground">Cor exata:</label>
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={corDominante || "#FF69B4"}
+                      onChange={(e) => setCorDominante(e.target.value)}
+                      className="h-8 w-12 rounded-lg cursor-pointer border border-border/50 bg-card"
+                    />
+                  </div>
                   {corDominante && (
-                    <span className="text-xs font-mono text-muted-foreground">{corDominante}</span>
+                    <span className="text-[11px] font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      {corDominante}
+                    </span>
                   )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Estilo de fonte */}
-            <Card className="shadow-card border-border/30">
-              <CardContent className="p-4 space-y-3">
+            <Card className="shadow-card border-border/20 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-amber-200 via-rose-200 to-violet-200" />
+              <CardContent className="p-5 space-y-4">
                 <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <Type className="h-4 w-4 text-primary" /> Estilo da fonte
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Type className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  Estilo da fonte
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {FONT_STYLES.map((f) => (
                     <button
                       key={f.id}
                       onClick={() => setFonteEstilo(f.id)}
-                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
                         fonteEstilo === f.id
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                          : "border-border/50 bg-card hover:border-primary/30"
+                          ? "border-primary bg-primary/5 shadow-soft"
+                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
                       }`}
                     >
-                      <p className="text-xs font-bold text-foreground">{f.label}</p>
-                      <p className="text-[10px] text-muted-foreground">{f.desc}</p>
+                      {fonteEstilo === f.id && (
+                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                      <p className="text-sm font-bold text-foreground">{f.label}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{f.desc}</p>
                     </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Preview resumo */}
+            {/* Preview */}
             {nome.trim() && (
-              <Card className="shadow-card border-primary/20 bg-primary/[0.03]">
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Prévia do que será gerado:</p>
-                  <p className="text-sm text-foreground">
-                    <span className="font-bold">{selectedTema?.name}</span>
-                    {" · "}
-                    <span>{selectedMolde?.name}</span>
-                    {" · "}
-                    <span className="font-semibold" style={corDominante ? { color: corDominante } : undefined}>
-                      {nome}
-                    </span>
-                    {idade && <span className="text-muted-foreground"> ({idade} anos)</span>}
-                    {frase && <span className="text-muted-foreground italic"> — "{frase}"</span>}
-                    {" · Fonte "}
-                    <span className="font-medium">{FONT_STYLES.find(f => f.id === fonteEstilo)?.label}</span>
+              <Card className="shadow-elevated border-primary/15 gradient-card overflow-hidden">
+                <CardContent className="p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-primary mb-2">
+                    Prévia do que será gerado
                   </p>
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm text-foreground">
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card font-bold text-xs">
+                      {selectedTema?.name}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs font-medium">
+                      {selectedMolde?.name}
+                    </span>
+                    <span className="text-muted-foreground">·</span>
+                    <span
+                      className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs font-bold"
+                      style={corDominante ? { color: corDominante } : undefined}
+                    >
+                      {nome}
+                      {idade && <span className="text-muted-foreground font-normal"> ({idade} anos)</span>}
+                    </span>
+                    {frase && (
+                      <>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs italic text-muted-foreground">
+                          "{frase}"
+                        </span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground">·</span>
+                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
+                      Fonte {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -978,7 +1043,7 @@ export default function Criar() {
             <Button
               onClick={handleGenerate}
               disabled={!nome.trim()}
-              className="w-full h-13 text-base font-bold gradient-hero border-0 text-white shadow-soft hover:opacity-95 transition-opacity"
+              className="w-full h-14 text-base font-bold gradient-hero border-0 text-primary-foreground shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200 rounded-xl disabled:opacity-40"
             >
               <Sparkles className="h-5 w-5 mr-2" />
               Gerar Arte com IA
@@ -988,26 +1053,29 @@ export default function Criar() {
 
         {/* ─── STEP 4: ARTE GERADA ─── */}
         {step === 4 && (
-          <section className="animate-in fade-in duration-300">
+          <section className="animate-fade-in">
             {isGenerating ? (
               <LoadingState
                 title="Criando sua arte..."
                 subtitle={`${selectedTema?.name} + ${selectedMolde?.name} para ${nome}`}
-                icon={<Sparkles className="h-5 w-5 text-primary absolute -top-1 -right-1 animate-pulse" />}
               />
             ) : generatedImage ? (
-              <div className="space-y-5">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-foreground">Arte pronta! 🎉</h1>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Molde planificado pronto para imprimir, recortar e montar
+              <div className="space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold">
+                    <Check className="h-4 w-4" /> Arte gerada
+                  </div>
+                  <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                    Ficou linda! 🎉
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Molde pronto para imprimir, recortar e montar
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-                  {/* Image */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                   <div className="lg:col-span-3">
-                    <Card className="overflow-hidden shadow-card border-border/30">
+                    <Card className="overflow-hidden shadow-elevated border-border/20 rounded-2xl">
                       <CardContent className="p-0">
                         <img
                           src={generatedImage}
@@ -1018,29 +1086,28 @@ export default function Criar() {
                     </Card>
                   </div>
 
-                  {/* Actions */}
                   <div className="lg:col-span-2 space-y-4">
                     <ActionCard
                       icon={<Download className="h-5 w-5 text-primary" />}
                       title="Baixar Arte"
                       description="Molde pronto para imprimir em A4"
                     >
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2.5">
                         <Button
                           onClick={() => handleDownload(generatedImageBase64, "arte")}
-                          className="gradient-hero border-0 text-white font-semibold shadow-soft"
+                          className="gradient-hero border-0 text-primary-foreground font-semibold shadow-soft rounded-xl"
                           size="sm"
                         >
-                          <Download className="h-3.5 w-3.5 mr-1" />
+                          <Download className="h-3.5 w-3.5 mr-1.5" />
                           PNG
                         </Button>
                         <Button
                           onClick={handleDownloadPDF}
                           variant="outline"
-                          className="font-semibold border-primary/30 text-primary hover:bg-primary/5"
+                          className="font-semibold border-primary/25 text-primary hover:bg-primary/5 rounded-xl"
                           size="sm"
                         >
-                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          <FileText className="h-3.5 w-3.5 mr-1.5" />
                           PDF A4
                         </Button>
                       </div>
@@ -1049,42 +1116,42 @@ export default function Criar() {
                     <ActionCard
                       icon={<Camera className="h-5 w-5 text-primary" />}
                       title="Gerar Mockup"
-                      description="Foto realista do produto montado pra divulgar no Instagram"
+                      description="Foto realista pra divulgar no Instagram"
                       highlight
                     >
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2.5">
                         <Button
                           onClick={() => handleGenerateMockup("feed")}
-                          className="gradient-hero border-0 text-white font-semibold"
+                          className="gradient-hero border-0 text-primary-foreground font-semibold rounded-xl"
                           size="sm"
                         >
-                          <ImageIcon className="h-3.5 w-3.5 mr-1" />
+                          <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
                           Feed
                         </Button>
                         <Button
                           onClick={() => handleGenerateMockup("story")}
-                          className="gradient-hero border-0 text-white font-semibold"
+                          className="gradient-hero border-0 text-primary-foreground font-semibold rounded-xl"
                           size="sm"
                         >
-                          <Camera className="h-3.5 w-3.5 mr-1" />
+                          <Camera className="h-3.5 w-3.5 mr-1.5" />
                           Story
                         </Button>
                       </div>
                     </ActionCard>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2.5">
                       <Button
                         variant="outline"
                         onClick={handleGenerate}
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs rounded-xl border-border/40"
                         size="sm"
                       >
-                        <RefreshCw className="h-3 w-3 mr-1" /> Nova versão
+                        <RefreshCw className="h-3 w-3 mr-1.5" /> Nova versão
                       </Button>
                       <Button
                         variant="outline"
                         onClick={handleReset}
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs rounded-xl border-border/40"
                         size="sm"
                       >
                         Recomeçar
@@ -1099,33 +1166,35 @@ export default function Criar() {
 
         {/* ─── STEP 5: MOCKUP ─── */}
         {step === 5 && (
-          <section className="animate-in fade-in duration-300">
+          <section className="animate-fade-in">
             {isGeneratingMockup ? (
               <LoadingState
                 title="Criando mockup..."
                 subtitle={`Montando ${selectedMolde?.name} com tema ${selectedTema?.name}`}
-                icon={<Camera className="h-5 w-5 text-primary absolute -top-1 -right-1 animate-pulse" />}
               />
             ) : mockupImage ? (
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
                   <button
                     onClick={() => setStep(4)}
-                    className="h-9 w-9 rounded-full bg-card shadow-card flex items-center justify-center hover:bg-accent/50 transition-colors"
+                    className="h-10 w-10 rounded-xl bg-card shadow-card flex items-center justify-center hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
                   >
                     <ArrowLeft className="h-4 w-4 text-foreground" />
                   </button>
-                  <div>
-                    <h1 className="text-2xl font-bold text-foreground">Mockup pronto! 📸</h1>
-                    <p className="text-sm text-muted-foreground">
-                      {mockupFormato === "feed" ? "Feed (1:1)" : "Story (9:16)"} — pronto pra postar
-                    </p>
+                  <div className="space-y-0.5">
+                    <div className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                      <Check className="h-3 w-3" />
+                      {mockupFormato === "feed" ? "Feed (1:1)" : "Story (9:16)"}
+                    </div>
+                    <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+                      Mockup pronto! 📸
+                    </h1>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                   <div className="lg:col-span-3">
-                    <Card className="overflow-hidden shadow-card border-border/30">
+                    <Card className="overflow-hidden shadow-elevated border-border/20 rounded-2xl">
                       <CardContent className="p-0">
                         <img
                           src={mockupImage}
@@ -1144,45 +1213,45 @@ export default function Criar() {
                     >
                       <Button
                         onClick={() => handleDownload(mockupImageBase64, "mockup")}
-                        className="w-full gradient-hero border-0 text-white font-semibold shadow-soft"
+                        className="w-full gradient-hero border-0 text-primary-foreground font-semibold shadow-soft rounded-xl"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
                       </Button>
                     </ActionCard>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <Button
                         variant="outline"
                         onClick={() => handleGenerateMockup("feed")}
                         size="sm"
-                        className="text-xs"
+                        className="text-xs rounded-xl border-border/40"
                       >
-                        <RefreshCw className="h-3 w-3 mr-1" /> Novo Feed
+                        <RefreshCw className="h-3 w-3 mr-1.5" /> Novo Feed
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => handleGenerateMockup("story")}
                         size="sm"
-                        className="text-xs"
+                        className="text-xs rounded-xl border-border/40"
                       >
-                        <RefreshCw className="h-3 w-3 mr-1" /> Novo Story
+                        <RefreshCw className="h-3 w-3 mr-1.5" /> Novo Story
                       </Button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2.5">
                       <Button
                         variant="outline"
                         onClick={() => setStep(4)}
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs rounded-xl border-border/40"
                         size="sm"
                       >
-                        <ArrowLeft className="h-3 w-3 mr-1" /> Voltar à arte
+                        <ArrowLeft className="h-3 w-3 mr-1.5" /> Voltar à arte
                       </Button>
                       <Button
                         variant="outline"
                         onClick={handleReset}
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs rounded-xl border-border/40"
                         size="sm"
                       >
                         Recomeçar
@@ -1195,31 +1264,44 @@ export default function Criar() {
           </section>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="mt-16 py-6 border-t border-border/30">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground/60">
+            © {new Date().getFullYear()} MoldePronto
+          </p>
+          <p className="text-xs text-muted-foreground/40">
+            Feito com IA ✨
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
 
 /* ─── Sub-components ─── */
 
-function LoadingState({
-  title,
-  subtitle,
-  icon,
-}: {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-}) {
+function LoadingState({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="max-w-sm mx-auto py-20 flex flex-col items-center gap-5">
+    <div className="max-w-sm mx-auto py-24 flex flex-col items-center gap-6">
       <div className="relative">
-        <Loader2 className="h-14 w-14 text-primary animate-spin" />
-        {icon}
+        <div className="h-20 w-20 rounded-3xl gradient-card flex items-center justify-center shadow-elevated">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        </div>
+        <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full gradient-hero flex items-center justify-center shadow-soft">
+          <Sparkles className="h-3 w-3 text-primary-foreground animate-pulse" />
+        </div>
       </div>
-      <div className="text-center space-y-1.5">
+      <div className="text-center space-y-2">
         <p className="text-lg font-bold text-foreground">{title}</p>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
-        <p className="text-xs text-muted-foreground/70">Pode levar até 30 segundos</p>
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+        </div>
+        <p className="text-[11px] text-muted-foreground/60 mt-2">Pode levar até 30 segundos</p>
       </div>
     </div>
   );
@@ -1240,18 +1322,19 @@ function ActionCard({
 }) {
   return (
     <Card
-      className={`shadow-card border-border/30 ${
-        highlight ? "ring-1 ring-primary/20 bg-primary/[0.02]" : ""
+      className={`shadow-card border-border/20 rounded-2xl overflow-hidden ${
+        highlight ? "ring-1 ring-primary/15 gradient-card" : ""
       }`}
     >
+      {highlight && <div className="h-0.5 gradient-hero" />}
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start gap-3">
-          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
             {icon}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 pt-0.5">
             <h3 className="font-bold text-sm text-foreground">{title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
           </div>
         </div>
         {children}
