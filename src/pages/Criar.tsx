@@ -259,7 +259,6 @@ const STEPS = [
 
 export default function Criar() {
   const [step, setStep] = useState(1);
-  const [step, setStep] = useState(1);
   const [selectedTema, setSelectedTema] = useState<any>(null);
   const [selectedMolde, setSelectedMolde] = useState<any>(null);
   const [nome, setNome] = useState("");
