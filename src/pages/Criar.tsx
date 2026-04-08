@@ -337,7 +337,7 @@ export default function Criar() {
       if (data?.error) throw new Error(data.error);
       setMockupImage(data.mockupUrl);
       setMockupImageBase64(data.mockupBase64);
-      await saveProject(generatedImage, data.mockupUrl);
+      toast.success("Mockup pronto!");
       toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
