@@ -258,11 +258,24 @@ const STEPS = [
 ];
 
 const FONT_STYLES = [
-  { id: "divertida", label: "Divertida", desc: "Arredondada e lúdica" },
-  { id: "elegante", label: "Elegante", desc: "Fina e sofisticada" },
-  { id: "negrito", label: "Negrito", desc: "Grossa e impactante" },
-  { id: "manuscrita", label: "Manuscrita", desc: "Escrita à mão" },
-  { id: "fantasia", label: "Fantasia", desc: "Decorativa e temática" },
+  { id: "divertida", label: "🎈 Divertida", desc: "Arredondada e lúdica" },
+  { id: "elegante", label: "✨ Elegante", desc: "Fina e sofisticada" },
+  { id: "negrito", label: "💪 Negrito", desc: "Grossa e impactante" },
+  { id: "manuscrita", label: "✍️ Manuscrita", desc: "Escrita à mão" },
+  { id: "fantasia", label: "🦄 Fantasia", desc: "Decorativa e temática" },
+  { id: "minimalista", label: "🔲 Minimalista", desc: "Clean e moderna" },
+  { id: "retro", label: "📺 Retrô", desc: "Vintage e nostálgica" },
+];
+
+const DRAW_STYLES = [
+  { id: "cartoon", label: "🎨 Cartoon", desc: "Desenho animado colorido" },
+  { id: "aquarela", label: "🖌️ Aquarela", desc: "Pintura suave e artística" },
+  { id: "flat", label: "📐 Flat Design", desc: "Vetorial limpo e moderno" },
+  { id: "realista", label: "📷 Realista", desc: "Ilustração detalhada" },
+  { id: "kawaii", label: "🌸 Kawaii", desc: "Fofo estilo japonês" },
+  { id: "handdrawn", label: "✏️ Desenhado à mão", desc: "Traço manual e artesanal" },
+  { id: "3d", label: "🧊 3D", desc: "Volume e profundidade" },
+  { id: "pixel", label: "👾 Pixel Art", desc: "Retro pixelado" },
 ];
 
 const COR_PRESETS = [
