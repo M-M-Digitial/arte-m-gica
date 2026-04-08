@@ -36,9 +36,7 @@ const localImages: Record<string, string> = {
   "Caixa Envelope": moldEnvelope,
   "Topo de Bolo": moldTopoBolo,
   "Porta-bis": moldMilkBox,
-  // Legacy
   "Sacolinha": moldSacolinha,
-  "Topo de Bolo": moldTopper,
 };
 
 const categories = ["Todos", "Caixas", "Embalagens", "Decoração"];
