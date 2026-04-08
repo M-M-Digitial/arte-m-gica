@@ -260,6 +260,7 @@ export default function Criar() {
       if (data?.error) throw new Error(data.error);
       setGeneratedImage(data.imageUrl);
       setGeneratedImageBase64(data.imageBase64);
+      await saveProject(data.imageUrl, null);
       toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
