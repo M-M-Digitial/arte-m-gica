@@ -319,13 +319,15 @@ export default function Criar() {
           temaColors: selectedTema.colors,
           nome: nome.trim(),
           idade: idade.trim() || undefined,
+          frase: frase.trim() || undefined,
+          corDominante: corDominante || undefined,
+          fonteEstilo,
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setGeneratedImage(data.imageUrl);
       setGeneratedImageBase64(data.imageBase64);
-      toast.success("Arte gerada com sucesso!");
       toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
