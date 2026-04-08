@@ -3,12 +3,8 @@ import {
   Box,
   Palette,
   PenTool,
-  FolderOpen,
   Image,
-  BookOpen,
   CreditCard,
-  User,
-  Settings,
   Sparkles,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -23,32 +19,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Início", url: "/", icon: LayoutDashboard },
   { title: "Moldes", url: "/moldes", icon: Box },
   { title: "Temas", url: "/temas", icon: Palette },
-  { title: "Editor", url: "/editor", icon: PenTool },
+  { title: "Criar Arte", url: "/editor", icon: PenTool },
   { title: "Mockups", url: "/mockups", icon: Image },
 ];
 
-const manageItems = [
-  { title: "Projetos", url: "/projetos", icon: FolderOpen },
-  { title: "Catálogo", url: "/catalogo", icon: BookOpen },
-];
-
-const accountItems = [
+const otherItems = [
   { title: "Planos", url: "/planos", icon: CreditCard },
-  { title: "Perfil", url: "/perfil", icon: User },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
 
   const renderGroup = (label: string, items: typeof mainItems) => (
     <SidebarGroup>
@@ -92,9 +80,8 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {renderGroup("Principal", mainItems)}
-        {renderGroup("Gerenciar", manageItems)}
-        {renderGroup("Conta", accountItems)}
+        {renderGroup("Criar", mainItems)}
+        {renderGroup("Conta", otherItems)}
       </SidebarContent>
     </Sidebar>
   );
