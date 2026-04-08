@@ -275,28 +275,6 @@ export default function Criar() {
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
 
-  const saveProject = async (arteUrl: string | null, previewUrl: string | null) => {
-    if (!user) return;
-    try {
-      await supabase.from("projetos").insert({
-        user_id: user.id,
-        name: `${nome}${idade ? ` - ${idade} anos` : ""}`,
-        molde_id: selectedMolde?.id || null,
-        tema_id: selectedTema?.id || null,
-        arte_url: arteUrl,
-        preview_url: previewUrl,
-        personalization: {
-          nome,
-          idade,
-          tema: selectedTema?.name,
-          molde: selectedMolde?.name,
-        },
-        status: previewUrl ? "complete" : "arte_gerada",
-      });
-    } catch (err) {
-      console.error("Erro ao salvar projeto:", err);
-    }
-  };
 
   const handleSelectTema = (tema: any) => {
     setSelectedTema(tema);
