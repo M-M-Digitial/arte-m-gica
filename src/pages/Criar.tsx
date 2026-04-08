@@ -293,6 +293,7 @@ export default function Criar() {
   const [idade, setIdade] = useState("");
   const [frase, setFrase] = useState("");
   const [corDominante, setCorDominante] = useState("");
+  const [fonteEstilo, setFonteEstilo] = useState("divertida");
   const [desenhoEstilo, setDesenhoEstilo] = useState("cartoon");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
