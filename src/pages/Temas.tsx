@@ -16,11 +16,11 @@ import themeFazendinha from "@/assets/theme-fazendinha.png";
 const localImages: Record<string, string> = {
   "Safari": themeSafari,
   "Unicórnio": themeUnicornio,
-  "Princesas": themePrincesas,
+  "Princesas Disney": themePrincesas,
   "Fazendinha": themeFazendinha,
 };
 
-const categories = ["Todos", "Infantil", "Bebê", "Religioso", "Sazonal", "Escolar"];
+const categories = ["Todos", "Infantil Menina", "Infantil Menino", "Infantil Unissex", "Datas Especiais"];
 
 export default function Temas() {
   const [search, setSearch] = useState("");
