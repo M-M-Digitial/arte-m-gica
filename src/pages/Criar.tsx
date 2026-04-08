@@ -395,9 +395,9 @@ export default function Criar() {
     if (!generatedImageBase64) return;
     try {
       const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = 210;
-      const pageH = 297;
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pageW = 297;
+      const pageH = 210;
       const margin = 12;
       const contentW = pageW - margin * 2;
       const contentH = pageH - margin * 2 - 28;
