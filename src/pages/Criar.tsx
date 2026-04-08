@@ -497,24 +497,6 @@ export default function Criar() {
                 Recomeçar
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/historico")}
-              className="text-muted-foreground text-xs gap-1"
-            >
-              <Clock className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Histórico</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={signOut}
-              className="text-muted-foreground h-8 w-8"
-              title="Sair"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
           </div>
         </div>
       </header>
