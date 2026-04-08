@@ -573,10 +573,87 @@ export default function Criar() {
     setSelectedMolde(null);
     setNome("");
     setIdade("");
+    setFrase("");
+    setCorDominante("");
+    setFonteEstilo("divertida");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
     setMockupImage(null);
     setMockupImageBase64(null);
+    setEditingField(null);
+  };
+
+  // Editable selections panel (shown on steps 2+)
+  const EditableSelectionsPanel = () => {
+    if (step < 2) return null;
+    return (
+      <div className="bg-card rounded-xl shadow-card border border-border/30 p-3 mb-5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Suas escolhas</span>
+          <span className="text-[10px] text-muted-foreground">(clique para alterar)</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {/* Tema chip */}
+          {selectedTema && (
+            <button
+              onClick={() => { setStep(1); setEditingField("tema"); }}
+              className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              {themeImages[selectedTema.name] && (
+                <img src={themeImages[selectedTema.name]} alt="" className="h-5 w-5 rounded-full object-cover" />
+              )}
+              {selectedTema.name}
+              <span className="text-primary/50 ml-0.5">✎</span>
+            </button>
+          )}
+          {/* Molde chip */}
+          {selectedMolde && step >= 3 && (
+            <button
+              onClick={() => { setStep(2); setEditingField("molde"); }}
+              className="flex items-center gap-1.5 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              {moldImages[selectedMolde.name] && (
+                <img src={moldImages[selectedMolde.name]} alt="" className="h-5 w-5 object-contain" />
+              )}
+              {selectedMolde.name}
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )}
+          {/* Nome chip */}
+          {nome && step >= 4 && (
+            <button
+              onClick={() => setStep(3)}
+              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              <Type className="h-3 w-3" />
+              {nome}{idade ? ` (${idade})` : ""}
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )}
+          {/* Color chip */}
+          {corDominante && step >= 4 && (
+            <button
+              onClick={() => setStep(3)}
+              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: corDominante }} />
+              Cor
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )}
+          {/* Fonte chip */}
+          {step >= 4 && (
+            <button
+              onClick={() => setStep(3)}
+              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+            >
+              Fonte: {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
+              <span className="text-muted-foreground ml-0.5">✎</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
