@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -260,8 +258,6 @@ const STEPS = [
 ];
 
 export default function Criar() {
-  const navigate = useNavigate();
-  const { user, signOut } = useAuth();
   const [step, setStep] = useState(1);
   const [selectedTema, setSelectedTema] = useState<any>(null);
   const [selectedMolde, setSelectedMolde] = useState<any>(null);
@@ -278,28 +274,6 @@ export default function Criar() {
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
 
-  const saveProject = async (arteUrl: string | null, previewUrl: string | null) => {
-    if (!user) return;
-    try {
-      await supabase.from("projetos").insert({
-        user_id: user.id,
-        name: `${nome}${idade ? ` - ${idade} anos` : ""}`,
-        molde_id: selectedMolde?.id || null,
-        tema_id: selectedTema?.id || null,
-        arte_url: arteUrl,
-        preview_url: previewUrl,
-        personalization: {
-          nome,
-          idade,
-          tema: selectedTema?.name,
-          molde: selectedMolde?.name,
-        },
-        status: previewUrl ? "complete" : "arte_gerada",
-      });
-    } catch (err) {
-      console.error("Erro ao salvar projeto:", err);
-    }
-  };
 
   const handleSelectTema = (tema: any) => {
     setSelectedTema(tema);
@@ -332,7 +306,7 @@ export default function Criar() {
       if (data?.error) throw new Error(data.error);
       setGeneratedImage(data.imageUrl);
       setGeneratedImageBase64(data.imageBase64);
-      await saveProject(data.imageUrl, null);
+      toast.success("Arte gerada com sucesso!");
       toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
@@ -363,7 +337,7 @@ export default function Criar() {
       if (data?.error) throw new Error(data.error);
       setMockupImage(data.mockupUrl);
       setMockupImageBase64(data.mockupBase64);
-      await saveProject(generatedImage, data.mockupUrl);
+      toast.success("Mockup pronto!");
       toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
@@ -523,24 +497,6 @@ export default function Criar() {
                 Recomeçar
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/historico")}
-              className="text-muted-foreground text-xs gap-1"
-            >
-              <Clock className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Histórico</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={signOut}
-              className="text-muted-foreground h-8 w-8"
-              title="Sair"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </Button>
           </div>
         </div>
       </header>
