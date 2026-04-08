@@ -66,6 +66,37 @@ import themeBatizado from "@/assets/themes/theme-batizado.jpg";
 import themeFestaJunina from "@/assets/themes/theme-festa-junina.jpg";
 import themeNatal from "@/assets/themes/theme-natal.jpg";
 
+// New theme images
+import themeLol from "@/assets/themes/theme-lol.jpg";
+import themePeppa from "@/assets/themes/theme-peppa.jpg";
+import themeHelloKitty from "@/assets/themes/theme-hellokitty.jpg";
+import themeMoana from "@/assets/themes/theme-moana.jpg";
+import themeRapunzel from "@/assets/themes/theme-rapunzel.jpg";
+import themeBailarina from "@/assets/themes/theme-bailarina.jpg";
+import themeDragonBall from "@/assets/themes/theme-dragonball.jpg";
+import themeNaruto from "@/assets/themes/theme-naruto.jpg";
+import themeMinecraft from "@/assets/themes/theme-minecraft.jpg";
+import themeHotWheels from "@/assets/themes/theme-hotwheels.jpg";
+import themeBobEsponja from "@/assets/themes/theme-bobesponja.jpg";
+import themeToyStory from "@/assets/themes/theme-toystory.jpg";
+import themeVingadores from "@/assets/themes/theme-vingadores.jpg";
+import themeBatman from "@/assets/themes/theme-batman.jpg";
+import themeMundoBita from "@/assets/themes/theme-mundobita.jpg";
+import themePocoyo from "@/assets/themes/theme-pocoyo.jpg";
+import themeBabyShark from "@/assets/themes/theme-babyshark.jpg";
+import themeSnoopy from "@/assets/themes/theme-snoopy.jpg";
+import themeFloresta from "@/assets/themes/theme-floresta.jpg";
+import themeArcoIris from "@/assets/themes/theme-arcoiris.jpg";
+import themeNuvem from "@/assets/themes/theme-nuvem.jpg";
+import themeDiaPais from "@/assets/themes/theme-dia-pais.jpg";
+import themeHalloween from "@/assets/themes/theme-halloween.jpg";
+import themePascoa from "@/assets/themes/theme-pascoa.jpg";
+import themeAnoNovo from "@/assets/themes/theme-anonovo.jpg";
+import themeFormatura from "@/assets/themes/theme-formatura.jpg";
+import themeBodas from "@/assets/themes/theme-bodas.jpg";
+import theme15Anos from "@/assets/themes/theme-15anos.jpg";
+import themeProfessores from "@/assets/themes/theme-professores.jpg";
+
 const moldImages: Record<string, string> = {
   "Caixinha Milk": moldMilkBox,
   "Sacolinha de Papel": moldSacolinhaNew,
@@ -113,6 +144,35 @@ const themeImages: Record<string, string> = {
   Batizado: themeBatizado,
   "Festa Junina": themeFestaJunina,
   Natal: themeNatal,
+  "Boneca LOL": themeLol,
+  "Peppa Pig": themePeppa,
+  "Hello Kitty": themeHelloKitty,
+  Moana: themeMoana,
+  Rapunzel: themeRapunzel,
+  Bailarina: themeBailarina,
+  "Dragon Ball": themeDragonBall,
+  Naruto: themeNaruto,
+  Minecraft: themeMinecraft,
+  "Hot Wheels": themeHotWheels,
+  "Bob Esponja": themeBobEsponja,
+  "Toy Story": themeToyStory,
+  Vingadores: themeVingadores,
+  Batman: themeBatman,
+  "Mundo Bita": themeMundoBita,
+  Pocoyo: themePocoyo,
+  "Baby Shark": themeBabyShark,
+  Snoopy: themeSnoopy,
+  "Floresta Encantada": themeFloresta,
+  "Arco-Íris": themeArcoIris,
+  "Nuvem de Amor": themeNuvem,
+  "Dia dos Pais": themeDiaPais,
+  Halloween: themeHalloween,
+  "Páscoa": themePascoa,
+  "Ano Novo": themeAnoNovo,
+  Formatura: themeFormatura,
+  Bodas: themeBodas,
+  "15 Anos": theme15Anos,
+  "Dia dos Professores": themeProfessores,
 };
 
 const STEPS = [
