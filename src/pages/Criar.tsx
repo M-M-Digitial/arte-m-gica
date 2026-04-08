@@ -20,6 +20,8 @@ import {
   Box,
   Palette,
   Type,
+  Clock,
+  LogOut,
 } from "lucide-react";
 
 // Mold images
