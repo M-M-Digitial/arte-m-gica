@@ -391,13 +391,14 @@ export default function Criar() {
     link.click();
   };
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (orientation: "portrait" | "landscape" = "landscape") => {
     if (!generatedImageBase64) return;
     try {
       const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      const pageW = 297;
-      const pageH = 210;
+      const isLandscape = orientation === "landscape";
+      const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
+      const pageW = isLandscape ? 297 : 210;
+      const pageH = isLandscape ? 210 : 297;
       const margin = 12;
       const contentW = pageW - margin * 2;
       const contentH = pageH - margin * 2 - 28;
