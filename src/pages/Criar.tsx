@@ -712,6 +712,7 @@ export default function Criar() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        <EditableSelectionsPanel />
         {/* ─── STEP 1: TEMA ─── */}
         {step === 1 && (
           <section className="space-y-5 animate-in fade-in duration-300">
