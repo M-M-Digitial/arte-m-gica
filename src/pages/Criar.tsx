@@ -848,7 +848,7 @@ export default function Criar() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                {(moldes ?? []).map((mold) => {
+                {(moldes ?? []).filter((m) => m.category === "Caixas" || m.category === "Embalagens").map((mold) => {
                   const image = mold.image_url || moldImages[mold.name];
                   return (
                     <button
