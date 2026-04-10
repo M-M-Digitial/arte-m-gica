@@ -884,7 +884,7 @@ export default function Criar() {
                     onClick={() => setCorDominante(cor)}
                     className={`h-8 w-8 rounded-full transition-all duration-200 ${
                       corDominante === cor
-                        ? "ring-2 ring-foreground ring-offset-2 scale-110"
+                        ? "ring-2 ring-primary ring-offset-2 scale-110"
                         : "hover:scale-110"
                     }`}
                     style={{ backgroundColor: cor }}
@@ -924,7 +924,7 @@ export default function Criar() {
                     }`}
                   >
                     <p className="text-sm font-medium">{f.emoji} {f.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${fonteEstilo === f.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className={`text-[10px] mt-0.5 ${fonteEstilo === f.id ? "text-white/70" : "text-muted-foreground"}`}>
                       {f.desc}
                     </p>
                   </button>
@@ -951,7 +951,7 @@ export default function Criar() {
                     }`}
                   >
                     <p className="text-sm font-medium">{d.emoji} {d.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${desenhoEstilo === d.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className={`text-[10px] mt-0.5 ${desenhoEstilo === d.id ? "text-white/70" : "text-muted-foreground"}`}>
                       {d.desc}
                     </p>
                   </button>
@@ -978,7 +978,7 @@ export default function Criar() {
                     }`}
                   >
                     <p className="text-sm font-medium">{d.emoji} {d.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${densidadeVisual === d.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className={`text-[10px] mt-0.5 ${densidadeVisual === d.id ? "text-white/70" : "text-muted-foreground"}`}>
                       {d.desc}
                     </p>
                   </button>
