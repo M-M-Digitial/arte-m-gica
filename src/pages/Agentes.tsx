@@ -44,6 +44,12 @@ const agents = [
     description: "Te ajuda a transformar ideias soltas em produtos vendáveis e conteúdos claros.",
     emoji: "💡",
   },
+  {
+    name: "Malu",
+    title: "Especialista em Impressão",
+    description: "Dá dicas de papel, gramatura, impressora, corte e acabamento para seus personalizados ficarem perfeitos.",
+    emoji: "🖨️",
+  },
 ];
 
 export default function Agentes() {
