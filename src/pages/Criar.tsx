@@ -647,9 +647,9 @@ export default function Criar() {
                   disabled={!isDone && !isActive}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
-                      ? "bg-foreground text-primary-foreground"
+                      ? "gradient-hero text-white shadow-soft"
                       : isDone
-                      ? "bg-secondary text-foreground hover:bg-accent cursor-pointer"
+                      ? "bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
                       : "text-border cursor-default"
                   }`}
                 >
