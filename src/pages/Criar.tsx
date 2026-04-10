@@ -670,7 +670,7 @@ export default function Criar() {
         {/* Mobile progress bar */}
         <div className="sm:hidden h-0.5 bg-secondary">
           <div
-            className="h-full bg-foreground transition-all duration-300"
+            className="h-full gradient-hero transition-all duration-300"
             style={{ width: `${(step / 5) * 100}%` }}
           />
         </div>
