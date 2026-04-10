@@ -627,11 +627,11 @@ export default function Criar() {
       <header className="sticky top-0 z-50 bg-background/80 glass border-b border-border/40">
         <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center shrink-0">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-xl gradient-hero flex items-center justify-center shrink-0 shadow-soft">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-sm sm:text-[15px] font-semibold tracking-tight text-foreground">
-              MoldePronto
+            <span className="text-sm sm:text-[15px] font-bold tracking-tight text-foreground">
+              Molde<span className="text-gradient">Pronto</span>
             </span>
           </div>
 
