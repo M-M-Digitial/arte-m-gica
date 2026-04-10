@@ -1013,15 +1013,22 @@ export default function Criar() {
               </>
             )}
 
-            <Button
-              onClick={handleGenerate}
-              disabled={!nome.trim()}
-              className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Gerar arte com IA
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
+            {/* Spacer for fixed button on mobile */}
+            <div className="h-20 sm:hidden" />
+
+            {/* Generate button — fixed on mobile */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 glass border-t border-border/40 z-40 sm:static sm:p-0 sm:bg-transparent sm:border-0 sm:backdrop-blur-none">
+              <Button
+                onClick={handleGenerate}
+                disabled={!nome.trim()}
+                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
+                style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Gerar arte com IA
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           </section>
         )}
 
