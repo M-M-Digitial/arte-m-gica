@@ -33,15 +33,15 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/40 bg-sidebar">
+    <Sidebar collapsible="icon" className="border-r border-border/40">
       <SidebarHeader className="p-5 pb-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl gradient-hero shadow-soft">
+            <Sparkles className="h-3.5 w-3.5 text-white" />
           </div>
           {!collapsed && (
-            <span className="text-[15px] font-semibold tracking-tight text-foreground">
-              MoldePronto
+            <span className="text-[15px] font-bold tracking-tight text-foreground">
+              Molde<span className="text-gradient">Pronto</span>
             </span>
           )}
         </div>
@@ -56,8 +56,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
-                      activeClassName="bg-accent text-foreground font-semibold"
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                      activeClassName="bg-primary/10 text-primary font-semibold"
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
                       {!collapsed && <span>{item.title}</span>}
