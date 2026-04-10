@@ -1054,7 +1054,7 @@ export default function Criar() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
                   <div className="lg:col-span-3">
                     <div className="rounded-2xl overflow-hidden bg-secondary">
                       <img
