@@ -109,6 +109,8 @@ const agentSuggestions: Record<string, string[]> = {
   sofia: ["Mensagem de pós-venda criativa", "Como pedir indicação?", "Crie um programa de fidelidade simples"],
   malu: ["Calcule meu lucro neste pedido", "Como calcular ticket médio?", "Quais produtos dão mais lucro?"],
   bella: ["Qual papel usar para caixinhas?", "Dicas de laminação", "Como configurar a impressora?"],
+  elisa: ["Revise este pedido para mim", "Checklist antes de produzir", "O que conferir antes de entregar?"],
+  maia: ["Organize meus pedidos da semana", "Quais pedidos são urgentes?", "Como recusar prazo impossível?"],
 };
 
 export default function AgenteChat() {
