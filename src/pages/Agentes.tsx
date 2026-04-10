@@ -1,68 +1,6 @@
-import { Sparkles, MessageCircle, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-const agents = [
-  {
-    name: "Nina",
-    title: "Atendimento e Fechamento",
-    description: "Cuida das respostas no WhatsApp e Instagram, quebra objeções, passa confiança, responde dúvidas e ajuda a fechar pedidos.",
-    emoji: "💬",
-  },
-  {
-    name: "Jade",
-    title: "Orçamento e Precificação",
-    description: "Monta orçamento e calcula preço com base em quantidade, material, tempo, acabamento, lucro e urgência.",
-    emoji: "💎",
-  },
-  {
-    name: "Luna",
-    title: "Pedidos e Briefing",
-    description: "Organiza tudo o que precisa entrar no pedido: nome, idade, tema, cores, data, quantidade, observações e aprovação da cliente.",
-    emoji: "📋",
-  },
-  {
-    name: "Flora",
-    title: "Produção e Prazos",
-    description: "Organiza fila de produção, prioridade, checklist, agenda de entregas e evita atraso ou promessa furada.",
-    emoji: "📅",
-  },
-  {
-    name: "Iris",
-    title: "Vendas e Campanhas",
-    description: "Cria ofertas, combos, campanhas sazonais, promoções e ideias para vender mais em datas estratégicas.",
-    emoji: "🚀",
-  },
-  {
-    name: "Clara",
-    title: "Conteúdo e Instagram",
-    description: "Cria legendas, chamadas, ideias de posts e analisa perfil para transformar seguidores em clientes.",
-    emoji: "📱",
-  },
-  {
-    name: "Violeta",
-    title: "Catálogo e Portfólio",
-    description: "Organiza os produtos, categorias, descrições e vitrine para facilitar a decisão de compra da cliente.",
-    emoji: "🛍️",
-  },
-  {
-    name: "Sofia",
-    title: "Pós-venda e Fidelização",
-    description: "Envia mensagens depois da entrega, pede feedback, incentiva indicação e puxa recompra.",
-    emoji: "💖",
-  },
-  {
-    name: "Malu",
-    title: "Financeiro Básico",
-    description: "Acompanha entradas, saídas, lucro por pedido, ticket médio e mostra quais produtos valem mais a pena.",
-    emoji: "💰",
-  },
-  {
-    name: "Bella",
-    title: "Dicas de Impressão",
-    description: "Dá dicas de papel, gramatura, impressora, corte e acabamento para seus personalizados ficarem perfeitos.",
-    emoji: "🖨️",
-  },
-];
+import { Sparkles, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { agents } from "@/data/agents";
 
 export default function Agentes() {
   return (
@@ -82,8 +20,9 @@ export default function Agentes() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {agents.map((agent) => (
-          <button
-            key={agent.name}
+          <Link
+            to={`/agentes/${agent.id}`}
+            key={agent.id}
             className="group text-left p-5 rounded-2xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-card transition-all duration-300 space-y-3"
           >
             <div className="flex items-center gap-3">
@@ -101,7 +40,7 @@ export default function Agentes() {
             <div className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
               Conversar <ArrowRight className="h-3 w-3" />
             </div>
-          </button>
+          </Link>
         ))}
       </div>
     </div>
