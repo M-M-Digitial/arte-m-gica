@@ -80,69 +80,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <div className="border-t border-border/60" />
 
-      {/* Popular Molds */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground tracking-tight">Moldes populares</h2>
-          <Link to="/moldes">
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs h-8">
-              Ver todos <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {popularMolds.map((mold) => (
-            <Link to="/criar" key={mold.name}>
-              <div className="group cursor-pointer">
-                <div className="aspect-square rounded-2xl bg-secondary/60 flex items-center justify-center p-6 overflow-hidden transition-all duration-300 group-hover:bg-accent group-hover:shadow-card">
-                  <img
-                    src={mold.image}
-                    alt={mold.name}
-                    loading="lazy"
-                    width={512}
-                    height={512}
-                    className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <p className="text-sm font-medium text-foreground mt-3 text-center">{mold.name}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Trending Themes */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground tracking-tight">Temas em alta</h2>
-          <Link to="/temas">
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs h-8">
-              Ver todos <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {trendingThemes.map((theme) => (
-            <Link to="/criar" key={theme.name}>
-              <div className="group cursor-pointer">
-                <div className="aspect-square rounded-2xl overflow-hidden shadow-card">
-                  <img
-                    src={theme.image}
-                    alt={theme.name}
-                    loading="lazy"
-                    width={512}
-                    height={512}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <p className="text-sm font-medium text-foreground mt-3 text-center">{theme.name}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="rounded-3xl gradient-hero p-10 md:p-14 text-center space-y-4 shadow-elevated relative overflow-hidden">
