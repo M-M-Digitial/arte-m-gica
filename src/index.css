@@ -6,51 +6,51 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 11%;
+    --background: 340 30% 99%;
+    --foreground: 340 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 11%;
+    --card-foreground: 340 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 11%;
+    --popover-foreground: 340 15% 15%;
 
-    --primary: 0 0% 11%;
+    --primary: 340 65% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 0 0% 11%;
+    --secondary: 340 25% 96%;
+    --secondary-foreground: 340 15% 25%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 340 20% 96%;
+    --muted-foreground: 340 8% 48%;
 
-    --accent: 240 5% 96%;
-    --accent-foreground: 0 0% 11%;
+    --accent: 340 30% 94%;
+    --accent-foreground: 340 15% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 92%;
-    --input: 0 0% 92%;
-    --ring: 0 0% 11%;
+    --border: 340 15% 92%;
+    --input: 340 15% 92%;
+    --ring: 340 65% 58%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;
 
-    --lilac: 270 40% 96%;
-    --rose-light: 340 60% 96%;
-    --peach: 20 80% 96%;
-    --mint: 160 35% 95%;
+    --lilac: 280 35% 94%;
+    --rose-light: 340 55% 95%;
+    --peach: 20 70% 94%;
+    --mint: 160 30% 93%;
 
-    --sidebar-background: 240 5% 98%;
-    --sidebar-foreground: 0 0% 40%;
-    --sidebar-primary: 0 0% 11%;
+    --sidebar-background: 340 20% 98%;
+    --sidebar-foreground: 340 8% 42%;
+    --sidebar-primary: 340 65% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 94%;
-    --sidebar-accent-foreground: 0 0% 11%;
-    --sidebar-border: 0 0% 93%;
-    --sidebar-ring: 0 0% 11%;
+    --sidebar-accent: 340 25% 95%;
+    --sidebar-accent-foreground: 340 15% 15%;
+    --sidebar-border: 340 15% 93%;
+    --sidebar-ring: 340 65% 58%;
 
-    --color-brand: 330 55% 58%;
+    --color-brand: 340 65% 58%;
   }
 }
 
@@ -82,31 +82,35 @@
 
 @layer utilities {
   .gradient-hero {
-    background: linear-gradient(135deg, hsl(330 55% 58%), hsl(280 45% 62%));
+    background: linear-gradient(135deg, hsl(340 65% 58%), hsl(320 50% 55%), hsl(280 40% 60%));
   }
   .gradient-card {
-    background: hsl(240 5% 98%);
+    background: linear-gradient(145deg, hsl(340 30% 99%), hsl(340 25% 97%));
   }
   .gradient-surface {
-    background: hsl(0 0% 100%);
+    background: linear-gradient(180deg, hsl(340 30% 99%) 0%, hsl(340 20% 97%) 100%);
   }
   .shadow-soft {
-    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.08);
+    box-shadow:
+      0 4px 20px -4px hsl(340 65% 58% / 0.12),
+      0 0 0 1px hsl(340 65% 58% / 0.04);
   }
   .shadow-card {
-    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.04);
+    box-shadow:
+      0 1px 3px hsl(340 15% 15% / 0.04),
+      0 2px 8px -2px hsl(340 15% 15% / 0.06);
   }
   .shadow-elevated {
     box-shadow:
-      0 4px 16px -4px hsl(0 0% 0% / 0.1),
-      0 1px 2px hsl(0 0% 0% / 0.04);
+      0 8px 30px -8px hsl(340 65% 58% / 0.15),
+      0 2px 6px -2px hsl(340 15% 15% / 0.04);
   }
   .glass {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
   .text-gradient {
-    background: linear-gradient(135deg, hsl(330 55% 55%), hsl(280 45% 58%));
+    background: linear-gradient(135deg, hsl(340 65% 52%), hsl(310 50% 50%), hsl(280 40% 55%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

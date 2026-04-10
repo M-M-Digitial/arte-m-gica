@@ -627,11 +627,11 @@ export default function Criar() {
       <header className="sticky top-0 z-50 bg-background/80 glass border-b border-border/40">
         <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center shrink-0">
-              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className="h-8 w-8 rounded-xl gradient-hero flex items-center justify-center shrink-0 shadow-soft">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-sm sm:text-[15px] font-semibold tracking-tight text-foreground">
-              MoldePronto
+            <span className="text-sm sm:text-[15px] font-bold tracking-tight text-foreground">
+              Molde<span className="text-gradient">Pronto</span>
             </span>
           </div>
 
@@ -647,9 +647,9 @@ export default function Criar() {
                   disabled={!isDone && !isActive}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
-                      ? "bg-foreground text-primary-foreground"
+                      ? "gradient-hero text-white shadow-soft"
                       : isDone
-                      ? "bg-secondary text-foreground hover:bg-accent cursor-pointer"
+                      ? "bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
                       : "text-border cursor-default"
                   }`}
                 >
@@ -670,7 +670,7 @@ export default function Criar() {
         {/* Mobile progress bar */}
         <div className="sm:hidden h-0.5 bg-secondary">
           <div
-            className="h-full bg-foreground transition-all duration-300"
+            className="h-full gradient-hero transition-all duration-300"
             style={{ width: `${(step / 5) * 100}%` }}
           />
         </div>
@@ -872,7 +872,7 @@ export default function Criar() {
                   onClick={() => setCorDominante("")}
                   className={`h-8 px-3 rounded-full text-xs font-medium transition-all ${
                     !corDominante
-                      ? "bg-foreground text-primary-foreground"
+                      ? "gradient-hero text-white shadow-soft"
                       : "bg-secondary text-muted-foreground hover:bg-accent"
                   }`}
                 >
@@ -884,7 +884,7 @@ export default function Criar() {
                     onClick={() => setCorDominante(cor)}
                     className={`h-8 w-8 rounded-full transition-all duration-200 ${
                       corDominante === cor
-                        ? "ring-2 ring-foreground ring-offset-2 scale-110"
+                        ? "ring-2 ring-primary ring-offset-2 scale-110"
                         : "hover:scale-110"
                     }`}
                     style={{ backgroundColor: cor }}
@@ -919,12 +919,12 @@ export default function Criar() {
                     onClick={() => setFonteEstilo(f.id)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
                       fonteEstilo === f.id
-                        ? "bg-foreground text-primary-foreground"
+                        ? "gradient-hero text-white shadow-soft"
                         : "bg-secondary hover:bg-accent text-foreground"
                     }`}
                   >
                     <p className="text-sm font-medium">{f.emoji} {f.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${fonteEstilo === f.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className={`text-[10px] mt-0.5 ${fonteEstilo === f.id ? "text-white/70" : "text-muted-foreground"}`}>
                       {f.desc}
                     </p>
                   </button>
@@ -946,12 +946,12 @@ export default function Criar() {
                     onClick={() => setDesenhoEstilo(d.id)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
                       desenhoEstilo === d.id
-                        ? "bg-foreground text-primary-foreground"
+                        ? "gradient-hero text-white shadow-soft"
                         : "bg-secondary hover:bg-accent text-foreground"
                     }`}
                   >
                     <p className="text-sm font-medium">{d.emoji} {d.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${desenhoEstilo === d.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className={`text-[10px] mt-0.5 ${desenhoEstilo === d.id ? "text-white/70" : "text-muted-foreground"}`}>
                       {d.desc}
                     </p>
                   </button>
@@ -973,12 +973,12 @@ export default function Criar() {
                     onClick={() => setDensidadeVisual(d.id)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
                       densidadeVisual === d.id
-                        ? "bg-foreground text-primary-foreground"
+                        ? "gradient-hero text-white shadow-soft"
                         : "bg-secondary hover:bg-accent text-foreground"
                     }`}
                   >
                     <p className="text-sm font-medium">{d.emoji} {d.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${densidadeVisual === d.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                    <p className={`text-[10px] mt-0.5 ${densidadeVisual === d.id ? "text-white/70" : "text-muted-foreground"}`}>
                       {d.desc}
                     </p>
                   </button>
@@ -1021,7 +1021,7 @@ export default function Criar() {
               <Button
                 onClick={handleGenerate}
                 disabled={!nome.trim()}
-                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
+                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all"
                 style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
               >
                 <Sparkles className="h-4 w-4 mr-2" />
@@ -1072,7 +1072,7 @@ export default function Criar() {
                       </h3>
                       <Button
                         onClick={() => handleDownload(generatedImageBase64, "arte")}
-                        className="w-full h-11 rounded-full text-sm font-semibold"
+                        className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
@@ -1108,14 +1108,14 @@ export default function Criar() {
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={() => handleGenerateMockup("feed")}
-                          className="h-11 rounded-full text-sm font-semibold"
+                          className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                         >
                           <ImageIcon className="h-4 w-4 mr-1.5" />
                           Feed
                         </Button>
                         <Button
                           onClick={() => handleGenerateMockup("story")}
-                          className="h-11 rounded-full text-sm font-semibold"
+                          className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                         >
                           <Camera className="h-4 w-4 mr-1.5" />
                           Story
@@ -1196,7 +1196,7 @@ export default function Criar() {
                       </h3>
                       <Button
                         onClick={() => handleDownload(mockupImageBase64, "mockup")}
-                        className="w-full h-11 rounded-full text-sm font-semibold"
+                        className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
