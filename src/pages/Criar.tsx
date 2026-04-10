@@ -695,13 +695,13 @@ export default function Criar() {
             </div>
 
             {loadingTemas ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
                 {Array.from({ length: 18 }).map((_, i) => (
                   <Skeleton key={i} className="aspect-square rounded-2xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
                 {(temas ?? []).map((tema) => {
                   const image = tema.image_url || themeImages[tema.name];
                   return (
