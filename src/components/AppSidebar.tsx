@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Sparkles,
   Bot,
+  UserCircle,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -13,8 +14,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const mainItems = [
   { title: "Início", url: "/", icon: LayoutDashboard },
@@ -25,6 +31,18 @@ const mainItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null }>({ display_name: null, avatar_url: null });
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("display_name, avatar_url").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => { if (data) setProfile(data); });
+  }, [user]);
+
+  const initials = profile.display_name
+    ? profile.display_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : user?.email?.charAt(0).toUpperCase() || "?";
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/40">
@@ -63,6 +81,40 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {user && (
+        <SidebarFooter className="p-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink
+                  to="/perfil"
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                  activeClassName="bg-primary/10 text-primary font-semibold"
+                >
+                  {collapsed ? (
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={profile.avatar_url || undefined} />
+                      <AvatarFallback className="text-[8px] bg-primary/10 text-primary">{initials}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback className="text-[9px] bg-primary/10 text-primary">{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">{profile.display_name || "Meu Perfil"}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                    </>
+                  )}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
