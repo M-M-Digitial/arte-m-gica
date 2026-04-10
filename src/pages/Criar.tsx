@@ -682,11 +682,11 @@ export default function Criar() {
         {/* ─── STEP 1: TEMA ─── */}
         {step === 1 && (
           <section className="animate-fade-in space-y-10">
-            <div className="max-w-md space-y-3">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <div className="max-w-md space-y-2 sm:space-y-3">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 Passo 1
               </p>
-              <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground leading-[1.15]">
+              <h1 className="font-display text-2xl sm:text-4xl font-semibold text-foreground leading-[1.15]">
                 Qual o tema da festa?
               </h1>
               <p className="text-muted-foreground text-sm leading-relaxed">
