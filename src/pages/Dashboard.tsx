@@ -2,34 +2,12 @@ import { Box, Palette, PenTool, Image, ArrowRight, Sparkles, Heart } from "lucid
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroParty from "@/assets/hero-party.png";
-import themeSafari from "@/assets/theme-safari.png";
-import themeUnicornio from "@/assets/theme-unicornio.png";
-import themePrincesas from "@/assets/theme-princesas.png";
-import themeFazendinha from "@/assets/theme-fazendinha.png";
-import moldMilkBox from "@/assets/mold-milk-box.png";
-import moldSacolinha from "@/assets/mold-sacolinha.png";
-import moldTopper from "@/assets/mold-topper.png";
-import moldPiramide from "@/assets/mold-piramide.png";
 
 const steps = [
   { number: "01", title: "Escolha o Molde", description: "Caixinha, sacolinha, cone e mais", icon: Box },
   { number: "02", title: "Escolha o Tema", description: "Safari, Unicórnio, Princesas...", icon: Palette },
   { number: "03", title: "Personalize", description: "Nome, idade, cores e estilos", icon: PenTool },
   { number: "04", title: "Exporte", description: "PDF para imprimir + mockup", icon: Image },
-];
-
-const popularMolds = [
-  { name: "Caixinha Milk", image: moldMilkBox },
-  { name: "Sacolinha", image: moldSacolinha },
-  { name: "Topo de Bolo", image: moldTopper },
-  { name: "Caixa Pirâmide", image: moldPiramide },
-];
-
-const trendingThemes = [
-  { name: "Safari", image: themeSafari },
-  { name: "Unicórnio", image: themeUnicornio },
-  { name: "Princesas", image: themePrincesas },
-  { name: "Fazendinha", image: themeFazendinha },
 ];
 
 export default function Dashboard() {
