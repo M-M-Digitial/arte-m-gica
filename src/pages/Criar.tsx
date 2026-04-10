@@ -1021,7 +1021,7 @@ export default function Criar() {
               <Button
                 onClick={handleGenerate}
                 disabled={!nome.trim()}
-                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
+                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all"
                 style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
               >
                 <Sparkles className="h-4 w-4 mr-2" />
