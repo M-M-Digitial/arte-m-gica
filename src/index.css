@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,49 +6,51 @@
 
 @layer base {
   :root {
-    --background: 330 20% 98%;
-    --foreground: 280 15% 15%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 280 15% 15%;
+    --card-foreground: 0 0% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 280 15% 15%;
+    --popover-foreground: 0 0% 11%;
 
-    --primary: 330 55% 62%;
+    --primary: 0 0% 11%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 280 30% 95%;
-    --secondary-foreground: 280 30% 35%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 0 0% 11%;
 
-    --muted: 330 15% 95%;
-    --muted-foreground: 280 8% 50%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 330 35% 94%;
-    --accent-foreground: 330 40% 30%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 11%;
 
-    --destructive: 0 72% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 330 15% 91%;
-    --input: 330 15% 91%;
-    --ring: 330 55% 62%;
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
+    --ring: 0 0% 11%;
 
-    --radius: 0.875rem;
+    --radius: 0.75rem;
 
-    --lilac: 270 40% 90%;
-    --rose-light: 340 60% 94%;
-    --peach: 20 80% 92%;
-    --mint: 160 35% 90%;
+    --lilac: 270 40% 96%;
+    --rose-light: 340 60% 96%;
+    --peach: 20 80% 96%;
+    --mint: 160 35% 95%;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 280 8% 35%;
-    --sidebar-primary: 330 55% 62%;
+    --sidebar-background: 240 5% 98%;
+    --sidebar-foreground: 0 0% 40%;
+    --sidebar-primary: 0 0% 11%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 330 25% 96%;
-    --sidebar-accent-foreground: 280 15% 15%;
-    --sidebar-border: 330 15% 93%;
-    --sidebar-ring: 330 55% 62%;
+    --sidebar-accent: 240 5% 94%;
+    --sidebar-accent-foreground: 0 0% 11%;
+    --sidebar-border: 0 0% 93%;
+    --sidebar-ring: 0 0% 11%;
+
+    --color-brand: 330 55% 58%;
   }
 }
 
@@ -58,38 +60,37 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
   }
 }
 
 @layer utilities {
   .gradient-hero {
-    background: linear-gradient(135deg, hsl(330 55% 62%), hsl(280 45% 65%), hsl(330 50% 68%));
+    background: linear-gradient(135deg, hsl(330 55% 58%), hsl(280 45% 62%));
   }
   .gradient-card {
-    background: linear-gradient(145deg, hsl(330 50% 98%), hsl(280 40% 97%), hsl(340 60% 97%));
+    background: hsl(240 5% 98%);
   }
   .gradient-surface {
-    background: linear-gradient(180deg, hsl(330 20% 98%) 0%, hsl(330 25% 96%) 100%);
+    background: hsl(0 0% 100%);
   }
   .shadow-soft {
-    box-shadow:
-      0 4px 24px -6px hsl(330 55% 62% / 0.2),
-      0 0 0 1px hsl(330 55% 62% / 0.05);
+    box-shadow: 0 2px 8px -2px hsl(0 0% 0% / 0.08);
   }
   .shadow-card {
-    box-shadow:
-      0 1px 3px hsl(280 15% 15% / 0.04),
-      0 4px 12px -4px hsl(280 15% 15% / 0.06);
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.04);
   }
   .shadow-elevated {
     box-shadow:
-      0 8px 30px -8px hsl(280 15% 15% / 0.1),
-      0 2px 8px -2px hsl(280 15% 15% / 0.04);
+      0 4px 16px -4px hsl(0 0% 0% / 0.1),
+      0 1px 2px hsl(0 0% 0% / 0.04);
   }
   .glass {
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
   .text-gradient {
     background: linear-gradient(135deg, hsl(330 55% 55%), hsl(280 45% 58%));
@@ -98,6 +99,7 @@
     background-clip: text;
   }
   .font-display {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Newsreader', Georgia, serif;
+    letter-spacing: -0.02em;
   }
 }

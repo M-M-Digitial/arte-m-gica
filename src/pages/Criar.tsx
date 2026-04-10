@@ -18,9 +18,8 @@ import {
   Box,
   Palette,
   Type,
-  Clock,
-  LogOut,
   FileText,
+  ArrowRight,
 } from "lucide-react";
 
 // Mold images
@@ -36,7 +35,6 @@ import moldEnvelope from "@/assets/molds/mold-caixa-envelope.png";
 import moldTopoBolo from "@/assets/molds/mold-topo-bolo.png";
 import moldSacolinhaNew from "@/assets/molds/mold-sacolinha.png";
 import moldPiramideNew from "@/assets/molds/mold-piramide.png";
-// New mold images
 import moldCubo from "@/assets/molds/mold-caixa-cubo.png";
 import moldFatiaBolo from "@/assets/molds/mold-fatia-bolo.png";
 import moldMaleta from "@/assets/molds/mold-maleta.png";
@@ -104,8 +102,6 @@ import themeChaBebe from "@/assets/themes/theme-cha-bebe.jpg";
 import themeBatizado from "@/assets/themes/theme-batizado.jpg";
 import themeFestaJunina from "@/assets/themes/theme-festa-junina.jpg";
 import themeNatal from "@/assets/themes/theme-natal.jpg";
-
-// New theme images
 import themeLol from "@/assets/themes/theme-lol.jpg";
 import themePeppa from "@/assets/themes/theme-peppa.jpg";
 import themeHelloKitty from "@/assets/themes/theme-hellokitty.jpg";
@@ -258,31 +254,31 @@ const STEPS = [
 ];
 
 const FONT_STYLES = [
-  { id: "divertida", label: "🎈 Divertida", desc: "Arredondada e lúdica" },
-  { id: "elegante", label: "✨ Elegante", desc: "Fina e sofisticada" },
-  { id: "negrito", label: "💪 Negrito", desc: "Grossa e impactante" },
-  { id: "manuscrita", label: "✍️ Manuscrita", desc: "Escrita à mão" },
-  { id: "fantasia", label: "🦄 Fantasia", desc: "Decorativa e temática" },
-  { id: "minimalista", label: "🔲 Minimalista", desc: "Clean e moderna" },
-  { id: "retro", label: "📺 Retrô", desc: "Vintage e nostálgica" },
+  { id: "divertida", label: "Divertida", emoji: "🎈", desc: "Arredondada e lúdica" },
+  { id: "elegante", label: "Elegante", emoji: "✨", desc: "Fina e sofisticada" },
+  { id: "negrito", label: "Negrito", emoji: "💪", desc: "Grossa e impactante" },
+  { id: "manuscrita", label: "Manuscrita", emoji: "✍️", desc: "Escrita à mão" },
+  { id: "fantasia", label: "Fantasia", emoji: "🦄", desc: "Decorativa e temática" },
+  { id: "minimalista", label: "Minimalista", emoji: "◻️", desc: "Clean e moderna" },
+  { id: "retro", label: "Retrô", emoji: "📺", desc: "Vintage e nostálgica" },
 ];
 
 const DRAW_STYLES = [
-  { id: "cartoon", label: "🎨 Cartoon", desc: "Desenho animado colorido" },
-  { id: "aquarela", label: "🖌️ Aquarela", desc: "Pintura suave e artística" },
-  { id: "flat", label: "📐 Flat Design", desc: "Vetorial limpo e moderno" },
-  { id: "realista", label: "📷 Realista", desc: "Ilustração detalhada" },
-  { id: "kawaii", label: "🌸 Kawaii", desc: "Fofo estilo japonês" },
-  { id: "handdrawn", label: "✏️ Desenhado à mão", desc: "Traço manual e artesanal" },
-  { id: "3d", label: "🧊 3D", desc: "Volume e profundidade" },
-  { id: "pixel", label: "👾 Pixel Art", desc: "Retro pixelado" },
+  { id: "cartoon", label: "Cartoon", emoji: "🎨", desc: "Desenho animado colorido" },
+  { id: "aquarela", label: "Aquarela", emoji: "🖌️", desc: "Pintura suave e artística" },
+  { id: "flat", label: "Flat Design", emoji: "📐", desc: "Vetorial limpo e moderno" },
+  { id: "realista", label: "Realista", emoji: "📷", desc: "Ilustração detalhada" },
+  { id: "kawaii", label: "Kawaii", emoji: "🌸", desc: "Fofo estilo japonês" },
+  { id: "handdrawn", label: "Desenhado à mão", emoji: "✏️", desc: "Traço manual e artesanal" },
+  { id: "3d", label: "3D", emoji: "🧊", desc: "Volume e profundidade" },
+  { id: "pixel", label: "Pixel Art", emoji: "👾", desc: "Retro pixelado" },
 ];
 
 const DENSITY_STYLES = [
-  { id: "minimalista", label: "🪷 Minimalista", desc: "Poucos elementos, clean e elegante" },
-  { id: "equilibrado", label: "⚖️ Equilibrado", desc: "Quantidade moderada de elementos" },
-  { id: "decorado", label: "🎀 Decorado", desc: "Bastante detalhes e enfeites" },
-  { id: "maximalista", label: "🎆 Maximalista", desc: "Cheio de elementos, cores e padrões" },
+  { id: "minimalista", label: "Minimalista", emoji: "🪷", desc: "Poucos elementos, clean" },
+  { id: "equilibrado", label: "Equilibrado", emoji: "⚖️", desc: "Quantidade moderada" },
+  { id: "decorado", label: "Decorado", emoji: "🎀", desc: "Bastante detalhes" },
+  { id: "maximalista", label: "Maximalista", emoji: "🎆", desc: "Cheio de elementos" },
 ];
 
 const COR_PRESETS = [
@@ -314,7 +310,6 @@ export default function Criar() {
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
-
 
   const handleSelectTema = (tema: any) => {
     setSelectedTema(tema);
@@ -412,7 +407,6 @@ export default function Criar() {
       const contentW = pageW - margin * 2;
       const contentH = pageH - margin * 2 - 28;
 
-      // ── Header ──
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
       doc.setTextColor(60, 60, 60);
@@ -424,12 +418,10 @@ export default function Criar() {
         `${selectedTema?.name} · ${selectedMolde?.name} · ${nome}${idade ? ` (${idade} anos)` : ""}`,
         margin, margin + 11
       );
-      // Thin separator line
       doc.setDrawColor(220, 220, 220);
       doc.setLineWidth(0.3);
       doc.line(margin, margin + 14, pageW - margin, margin + 14);
 
-      // ── Load image ──
       const img = new Image();
       img.crossOrigin = "anonymous";
       await new Promise<void>((resolve, reject) => {
@@ -439,7 +431,7 @@ export default function Criar() {
       });
 
       const imgRatio = img.width / img.height;
-      let drawW = contentW - 14; // leave space for rulers
+      let drawW = contentW - 14;
       let drawH = drawW / imgRatio;
       if (drawH > contentH) {
         drawH = contentH;
@@ -449,12 +441,7 @@ export default function Criar() {
       const offsetX = margin + rulerSpace + (contentW - rulerSpace - drawW) / 2;
       const offsetY = margin + 20;
 
-      // ── Rulers ──
       const rulerColor = { r: 180, g: 180, b: 180 };
-      const rulerTickSmall = 1.5;
-      const rulerTickBig = 3;
-
-      // Left ruler (vertical, cm)
       doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
       doc.setLineWidth(0.2);
       const rulerX = offsetX - 4;
@@ -465,7 +452,7 @@ export default function Criar() {
         if (y > offsetY + drawH) break;
         const isCm = i % 10 === 0;
         const isHalf = i % 5 === 0;
-        const tickLen = isCm ? rulerTickBig : isHalf ? 2 : rulerTickSmall;
+        const tickLen = isCm ? 3 : isHalf ? 2 : 1.5;
         doc.line(rulerX - tickLen, y, rulerX, y);
         if (isCm && i > 0) {
           doc.setFontSize(5);
@@ -474,7 +461,6 @@ export default function Criar() {
         }
       }
 
-      // Top ruler (horizontal, cm)
       const rulerY = offsetY - 4;
       doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
       doc.line(offsetX, rulerY, offsetX + drawW, rulerY);
@@ -484,7 +470,7 @@ export default function Criar() {
         if (x > offsetX + drawW) break;
         const isCm = i % 10 === 0;
         const isHalf = i % 5 === 0;
-        const tickLen = isCm ? rulerTickBig : isHalf ? 2 : rulerTickSmall;
+        const tickLen = isCm ? 3 : isHalf ? 2 : 1.5;
         doc.line(x, rulerY - tickLen, x, rulerY);
         if (isCm && i > 0) {
           doc.setFontSize(5);
@@ -493,34 +479,25 @@ export default function Criar() {
         }
       }
 
-      // ── Image ──
       doc.addImage(generatedImageBase64!, "PNG", offsetX, offsetY, drawW, drawH);
 
-      // ── Cut marks (corner crop marks) ──
       const markLen = 6;
       const markGap = 2;
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.35);
-      // Top-left
       doc.line(offsetX - markGap, offsetY, offsetX - markGap - markLen, offsetY);
       doc.line(offsetX, offsetY - markGap, offsetX, offsetY - markGap - markLen);
-      // Top-right
       doc.line(offsetX + drawW + markGap, offsetY, offsetX + drawW + markGap + markLen, offsetY);
       doc.line(offsetX + drawW, offsetY - markGap, offsetX + drawW, offsetY - markGap - markLen);
-      // Bottom-left
       doc.line(offsetX - markGap, offsetY + drawH, offsetX - markGap - markLen, offsetY + drawH);
       doc.line(offsetX, offsetY + drawH + markGap, offsetX, offsetY + drawH + markGap + markLen);
-      // Bottom-right
       doc.line(offsetX + drawW + markGap, offsetY + drawH, offsetX + drawW + markGap + markLen, offsetY + drawH);
       doc.line(offsetX + drawW, offsetY + drawH + markGap, offsetX + drawW, offsetY + drawH + markGap + markLen);
 
-      // ── Fold lines (dashed cross in center of image) ──
       doc.setDrawColor(100, 100, 100);
       doc.setLineWidth(0.25);
       const dashLen = 3;
       const gapLen = 2;
-
-      // Horizontal center fold
       const foldY = offsetY + drawH / 2;
       let cx = offsetX;
       while (cx < offsetX + drawW) {
@@ -528,8 +505,6 @@ export default function Criar() {
         doc.line(cx, foldY, end, foldY);
         cx += dashLen + gapLen;
       }
-
-      // Vertical center fold
       const foldX = offsetX + drawW / 2;
       let cy = offsetY;
       while (cy < offsetY + drawH) {
@@ -538,7 +513,6 @@ export default function Criar() {
         cy += dashLen + gapLen;
       }
 
-      // ── Dimensions label ──
       doc.setFontSize(6);
       doc.setTextColor(150, 150, 150);
       doc.text(
@@ -546,18 +520,13 @@ export default function Criar() {
         offsetX + drawW + 3, offsetY + drawH + 5
       );
 
-      // ── Legend ──
       const legendY = offsetY + drawH + 12;
       doc.setFontSize(7);
       doc.setTextColor(100, 100, 100);
-
-      // Cut line legend
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.4);
       doc.line(margin, legendY, margin + 12, legendY);
       doc.text("Linha de corte (recortar)", margin + 14, legendY + 1);
-
-      // Fold line legend
       doc.setDrawColor(100, 100, 100);
       doc.setLineWidth(0.25);
       let lx = margin;
@@ -567,8 +536,6 @@ export default function Criar() {
         lx += 3.5;
       }
       doc.text("Linha de dobra (dobrar)", margin + 14, ly + 1);
-
-      // Ruler legend
       doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
       doc.setLineWidth(0.2);
       doc.line(margin, legendY + 12, margin + 12, legendY + 12);
@@ -577,7 +544,6 @@ export default function Criar() {
       }
       doc.text("Régua em centímetros (cm)", margin + 14, legendY + 13);
 
-      // ── Footer ──
       const footerY = pageH - margin;
       doc.setFontSize(6.5);
       doc.setTextColor(170, 170, 170);
@@ -610,207 +576,146 @@ export default function Criar() {
     setEditingField(null);
   };
 
-  // Editable selections panel (shown on steps 2+)
-  const EditableSelectionsPanel = () => {
+  // Breadcrumb-style selections
+  const SelectionsBreadcrumb = () => {
     if (step < 2) return null;
     return (
-      <div className="bg-card rounded-xl shadow-card border border-border/30 p-3 mb-5">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Suas escolhas</span>
-          <span className="text-[10px] text-muted-foreground">(clique para alterar)</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {/* Tema chip */}
-          {selectedTema && (
-            <button
-              onClick={() => { setStep(1); setEditingField("tema"); }}
-              className="flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
-            >
-              {themeImages[selectedTema.name] && (
-                <img src={themeImages[selectedTema.name]} alt="" className="h-5 w-5 rounded-full object-cover" />
-              )}
-              {selectedTema.name}
-              <span className="text-primary/50 ml-0.5">✎</span>
-            </button>
-          )}
-          {/* Molde chip */}
-          {selectedMolde && step >= 3 && (
+      <div className="flex items-center gap-2 mb-8 flex-wrap">
+        {selectedTema && (
+          <button
+            onClick={() => { setStep(1); setEditingField("tema"); }}
+            className="inline-flex items-center gap-2 bg-secondary hover:bg-accent text-foreground pl-1.5 pr-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+          >
+            {themeImages[selectedTema.name] && (
+              <img src={themeImages[selectedTema.name]} alt="" className="h-5 w-5 rounded-full object-cover" />
+            )}
+            {selectedTema.name}
+          </button>
+        )}
+        {selectedMolde && step >= 3 && (
+          <>
+            <span className="text-border text-xs">/</span>
             <button
               onClick={() => { setStep(2); setEditingField("molde"); }}
-              className="flex items-center gap-1.5 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-2 bg-secondary hover:bg-accent text-foreground pl-1.5 pr-3 py-1.5 rounded-full text-xs font-medium transition-colors"
             >
               {moldImages[selectedMolde.name] && (
                 <img src={moldImages[selectedMolde.name]} alt="" className="h-5 w-5 object-contain" />
               )}
               {selectedMolde.name}
-              <span className="text-muted-foreground ml-0.5">✎</span>
             </button>
-          )}
-          {/* Nome chip */}
-          {nome && step >= 4 && (
+          </>
+        )}
+        {nome && step >= 4 && (
+          <>
+            <span className="text-border text-xs">/</span>
             <button
               onClick={() => setStep(3)}
-              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 bg-secondary hover:bg-accent text-foreground px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
             >
-              <Type className="h-3 w-3" />
-              {nome}{idade ? ` (${idade})` : ""}
-              <span className="text-muted-foreground ml-0.5">✎</span>
+              {nome}{idade ? ` · ${idade}` : ""}
             </button>
-          )}
-          {/* Color chip */}
-          {corDominante && step >= 4 && (
-            <button
-              onClick={() => setStep(3)}
-              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
-            >
-              <span className="h-3 w-3 rounded-full border" style={{ backgroundColor: corDominante }} />
-              Cor
-              <span className="text-muted-foreground ml-0.5">✎</span>
-            </button>
-          )}
-          {/* Fonte chip */}
-          {step >= 4 && (
-            <button
-              onClick={() => setStep(3)}
-              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
-            >
-              Fonte: {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
-              <span className="text-muted-foreground ml-0.5">✎</span>
-            </button>
-          )}
-          {/* Desenho chip */}
-          {step >= 4 && (
-            <button
-              onClick={() => setStep(3)}
-              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
-            >
-              {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
-              <span className="text-muted-foreground ml-0.5">✎</span>
-            </button>
-          )}
-          {/* Densidade chip */}
-          {step >= 4 && (
-            <button
-              onClick={() => setStep(3)}
-              className="flex items-center gap-1 bg-accent hover:bg-accent/80 text-foreground px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
-            >
-              {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
-              <span className="text-muted-foreground ml-0.5">✎</span>
-            </button>
-          )}
-        </div>
+          </>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen gradient-surface">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 bg-card/70 glass border-b border-border/40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl gradient-hero flex items-center justify-center shadow-soft">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-background/80 glass border-b border-border/40">
+        <div className="max-w-4xl mx-auto px-5 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            <div>
-              <span className="font-bold text-lg tracking-tight text-foreground">
-                Molde<span className="text-gradient">Pronto</span>
-              </span>
-            </div>
+            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+              MoldePronto
+            </span>
           </div>
 
-          {/* Step indicators */}
-          <nav className="hidden sm:flex items-center gap-0.5">
+          {/* Step pills */}
+          <nav className="hidden sm:flex items-center gap-1">
             {STEPS.map((s, i) => {
-              const StepIcon = s.icon;
               const isActive = step === i + 1;
               const isDone = step > i + 1;
               return (
-                <div key={s.key} className="flex items-center">
-                  <button
-                    onClick={() => { if (isDone) setStep(i + 1); }}
-                    disabled={!isDone && !isActive}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                      isActive
-                        ? "gradient-hero text-primary-foreground shadow-soft"
-                        : isDone
-                        ? "bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
-                        : "text-muted-foreground/50"
-                    }`}
-                  >
-                    {isDone ? (
-                      <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Check className="h-2.5 w-2.5" />
-                      </div>
-                    ) : (
-                      <StepIcon className="h-3.5 w-3.5" />
-                    )}
-                    <span className="hidden md:inline">{s.label}</span>
-                  </button>
-                  {i < STEPS.length - 1 && (
-                    <div className={`w-4 h-px mx-0.5 ${isDone ? "bg-primary/30" : "bg-border"}`} />
-                  )}
-                </div>
+                <button
+                  key={s.key}
+                  onClick={() => { if (isDone) setStep(i + 1); }}
+                  disabled={!isDone && !isActive}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    isActive
+                      ? "bg-foreground text-primary-foreground"
+                      : isDone
+                      ? "bg-secondary text-foreground hover:bg-accent cursor-pointer"
+                      : "text-border cursor-default"
+                  }`}
+                >
+                  {isDone && <Check className="h-3 w-3 inline mr-1" />}
+                  {s.label}
+                </button>
               );
             })}
           </nav>
 
-          {/* Mobile step indicator */}
-          <div className="sm:hidden flex items-center gap-2">
-            <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
-              {step}/5
+          <div className="sm:hidden">
+            <span className="text-xs font-medium text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">
+              {step} / 5
             </span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        {/* ── Editable selections panel ── */}
-        <EditableSelectionsPanel />
+      <main className="max-w-4xl mx-auto px-5 py-10">
+        <SelectionsBreadcrumb />
 
         {/* ─── STEP 1: TEMA ─── */}
         {step === 1 && (
-          <section className="animate-fade-in space-y-8">
-            <div className="text-center max-w-md mx-auto space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">Passo 1 de 5</p>
-              <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground">
+          <section className="animate-fade-in space-y-10">
+            <div className="max-w-md space-y-3">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                Passo 1
+              </p>
+              <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground leading-[1.15]">
                 Qual o tema da festa?
               </h1>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Escolha o tema e a IA cria toda a arte personalizada
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Escolha o tema e a IA cria toda a arte personalizada.
               </p>
             </div>
 
             {loadingTemas ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                 {Array.from({ length: 18 }).map((_, i) => (
                   <Skeleton key={i} className="aspect-square rounded-2xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                 {(temas ?? []).map((tema) => {
                   const image = tema.image_url || themeImages[tema.name];
                   return (
                     <button
                       key={tema.id}
                       onClick={() => handleSelectTema(tema)}
-                      className="group relative aspect-square rounded-2xl overflow-hidden bg-card shadow-card hover:shadow-elevated transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
+                      className="group relative aspect-square rounded-2xl overflow-hidden bg-secondary focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2 transition-all duration-300 hover:shadow-elevated"
                     >
                       {image ? (
                         <img
                           src={image}
                           alt={tema.name}
-                          className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center gradient-card">
+                        <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-3xl">{tema.emoji || "🎉"}</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                       <div className="absolute inset-x-0 bottom-0 p-2.5">
-                        <span className="text-primary-foreground text-[11px] sm:text-xs font-semibold leading-tight drop-shadow-sm">
+                        <span className="text-white text-[11px] font-medium leading-tight">
                           {tema.name}
                         </span>
                       </div>
@@ -824,51 +729,53 @@ export default function Criar() {
 
         {/* ─── STEP 2: MOLDE ─── */}
         {step === 2 && (
-          <section className="animate-fade-in space-y-8">
-            <div className="flex items-center gap-4">
+          <section className="animate-fade-in space-y-10">
+            <div className="flex items-start gap-4">
               <button
                 onClick={() => setStep(1)}
-                className="h-10 w-10 rounded-xl bg-card shadow-card flex items-center justify-center hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
+                className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors mt-1"
               >
                 <ArrowLeft className="h-4 w-4 text-foreground" />
               </button>
-              <div className="space-y-0.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Passo 2 de 5</p>
-                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  Passo 2
+                </p>
+                <h1 className="font-display text-3xl font-semibold text-foreground">
                   Escolha o molde
                 </h1>
               </div>
             </div>
 
             {loadingMoldes ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
                   <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {(moldes ?? []).filter((m) => m.category === "Caixas" || m.category === "Embalagens").map((mold) => {
                   const image = mold.image_url || moldImages[mold.name];
                   return (
                     <button
                       key={mold.id}
                       onClick={() => handleSelectMolde(mold)}
-                      className="group bg-card rounded-2xl shadow-card overflow-hidden hover:shadow-elevated transition-all duration-300 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 focus:ring-offset-background"
+                      className="group text-left rounded-2xl overflow-hidden bg-secondary hover:bg-accent transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2"
                     >
-                      <div className="aspect-square flex items-center justify-center p-5 gradient-card">
+                      <div className="aspect-square flex items-center justify-center p-6">
                         {image ? (
                           <img
                             src={image}
                             alt={mold.name}
-                            className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-500"
+                            className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
                           <span className="text-4xl">{mold.emoji || "📦"}</span>
                         )}
                       </div>
-                      <div className="px-3 py-2.5 text-center border-t border-border/20">
-                        <span className="text-[11px] sm:text-xs font-semibold text-foreground leading-tight">
+                      <div className="px-3 pb-3 text-center">
+                        <span className="text-xs font-medium text-foreground">
                           {mold.name}
                         </span>
                       </div>
@@ -882,294 +789,230 @@ export default function Criar() {
 
         {/* ─── STEP 3: PERSONALIZAR ─── */}
         {step === 3 && (
-          <section className="max-w-lg mx-auto animate-fade-in space-y-6">
-            <div className="flex items-center gap-4">
+          <section className="max-w-lg mx-auto animate-fade-in space-y-8">
+            <div className="flex items-start gap-4">
               <button
                 onClick={() => setStep(2)}
-                className="h-10 w-10 rounded-xl bg-card shadow-card flex items-center justify-center hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
+                className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors mt-1"
               >
                 <ArrowLeft className="h-4 w-4 text-foreground" />
               </button>
-              <div className="space-y-0.5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-primary">Passo 3 de 5</p>
-                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                  Passo 3
+                </p>
+                <h1 className="font-display text-3xl font-semibold text-foreground">
                   Personalizar
                 </h1>
               </div>
             </div>
 
             {/* Dados */}
-            <Card className="shadow-card border-border/20 overflow-hidden">
-              <div className="h-1 gradient-hero" />
-              <CardContent className="p-5 space-y-4">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Type className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  Dados do homenageado
-                </h3>
+            <div className="space-y-5">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Dados do homenageado
+              </h3>
+              <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2">
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                      Nome *
-                    </label>
+                  <div className="col-span-2 space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Nome *</label>
                     <Input
                       placeholder="Ex: Maria Clara"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      className="mt-1.5 h-12 text-base bg-background border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl"
+                      className="h-11 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
                       maxLength={50}
                       autoFocus
                     />
                   </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                      Idade
-                    </label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Idade</label>
                     <Input
-                      placeholder="Ex: 5"
+                      placeholder="5"
                       value={idade}
                       onChange={(e) => setIdade(e.target.value)}
-                      className="mt-1.5 h-12 bg-background border-border/50 rounded-xl"
+                      className="h-11 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
                       maxLength={3}
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                    Frase personalizada
-                  </label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Frase personalizada</label>
                   <Input
                     placeholder="Ex: Obrigada por celebrar comigo!"
                     value={frase}
                     onChange={(e) => setFrase(e.target.value)}
-                    className="mt-1.5 bg-background border-border/50 rounded-xl"
+                    className="h-11 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
                     maxLength={80}
                   />
-                  <p className="text-[10px] text-muted-foreground/70 mt-1.5 ml-0.5">
-                    Aparecerá na face secundária do molde
-                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            <div className="border-t border-border/60" />
 
             {/* Cor dominante */}
-            <Card className="shadow-card border-border/20 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-pink-300 via-purple-300 to-blue-300" />
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Palette className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    Cor dominante
-                  </h3>
-                  <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    opcional
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Cor dominante
+                </h3>
+                <span className="text-[10px] text-muted-foreground/60">opcional</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setCorDominante("")}
+                  className={`h-8 px-3 rounded-full text-xs font-medium transition-all ${
+                    !corDominante
+                      ? "bg-foreground text-primary-foreground"
+                      : "bg-secondary text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  Auto
+                </button>
+                {COR_PRESETS.map((cor) => (
                   <button
-                    onClick={() => setCorDominante("")}
-                    className={`h-9 px-3 rounded-full border-2 flex items-center justify-center gap-1.5 transition-all text-xs font-medium ${
-                      !corDominante
-                        ? "border-primary bg-primary/10 text-primary shadow-soft"
-                        : "border-border/50 text-muted-foreground hover:border-primary/30"
+                    key={cor}
+                    onClick={() => setCorDominante(cor)}
+                    className={`h-8 w-8 rounded-full transition-all duration-200 ${
+                      corDominante === cor
+                        ? "ring-2 ring-foreground ring-offset-2 scale-110"
+                        : "hover:scale-110"
                     }`}
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    Auto
-                  </button>
-                  {COR_PRESETS.map((cor) => (
-                    <button
-                      key={cor}
-                      onClick={() => setCorDominante(cor)}
-                      className={`h-9 w-9 rounded-full border-2 transition-all duration-200 ${
-                        corDominante === cor
-                          ? "border-foreground scale-110 shadow-elevated ring-2 ring-primary/20"
-                          : "border-white/60 hover:scale-110 hover:shadow-card"
-                      }`}
-                      style={{ backgroundColor: cor }}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-3 pt-1">
-                  <label className="text-xs text-muted-foreground">Cor exata:</label>
-                  <div className="relative">
-                    <input
-                      type="color"
-                      value={corDominante || "#FF69B4"}
-                      onChange={(e) => setCorDominante(e.target.value)}
-                      className="h-8 w-12 rounded-lg cursor-pointer border border-border/50 bg-card"
-                    />
-                  </div>
-                  {corDominante && (
-                    <span className="text-[11px] font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                      {corDominante}
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                    style={{ backgroundColor: cor }}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-muted-foreground">Personalizada:</label>
+                <input
+                  type="color"
+                  value={corDominante || "#FF69B4"}
+                  onChange={(e) => setCorDominante(e.target.value)}
+                  className="h-7 w-10 rounded-lg cursor-pointer border-0 bg-transparent"
+                />
+                {corDominante && (
+                  <span className="text-[11px] font-mono text-muted-foreground">{corDominante}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-border/60" />
 
             {/* Estilo de fonte */}
-            <Card className="shadow-card border-border/20 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-amber-200 via-rose-200 to-violet-200" />
-              <CardContent className="p-5 space-y-4">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Type className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  Estilo da fonte
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {FONT_STYLES.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setFonteEstilo(f.id)}
-                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                        fonteEstilo === f.id
-                          ? "border-primary bg-primary/5 shadow-soft"
-                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
-                      }`}
-                    >
-                      {fonteEstilo === f.id && (
-                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
-                          <Check className="h-3 w-3 text-primary-foreground" />
-                        </div>
-                      )}
-                      <p className="text-sm font-bold text-foreground">{f.label}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{f.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Estilo da fonte
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {FONT_STYLES.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFonteEstilo(f.id)}
+                    className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
+                      fonteEstilo === f.id
+                        ? "bg-foreground text-primary-foreground"
+                        : "bg-secondary hover:bg-accent text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{f.emoji} {f.label}</p>
+                    <p className={`text-[10px] mt-0.5 ${fonteEstilo === f.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                      {f.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-border/60" />
 
             {/* Estilo de desenho */}
-            <Card className="shadow-card border-border/20 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-cyan-200 via-teal-200 to-emerald-200" />
-              <CardContent className="p-5 space-y-4">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  Estilo de desenho
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {DRAW_STYLES.map((d) => (
-                    <button
-                      key={d.id}
-                      onClick={() => setDesenhoEstilo(d.id)}
-                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                        desenhoEstilo === d.id
-                          ? "border-primary bg-primary/5 shadow-soft"
-                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
-                      }`}
-                    >
-                      {desenhoEstilo === d.id && (
-                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
-                          <Check className="h-3 w-3 text-primary-foreground" />
-                        </div>
-                      )}
-                      <p className="text-sm font-bold text-foreground">{d.label}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Estilo de desenho
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {DRAW_STYLES.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setDesenhoEstilo(d.id)}
+                    className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
+                      desenhoEstilo === d.id
+                        ? "bg-foreground text-primary-foreground"
+                        : "bg-secondary hover:bg-accent text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{d.emoji} {d.label}</p>
+                    <p className={`text-[10px] mt-0.5 ${desenhoEstilo === d.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                      {d.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-border/60" />
 
             {/* Densidade visual */}
-            <Card className="shadow-card border-border/20 overflow-hidden">
-              <div className="h-1 bg-gradient-to-r from-indigo-200 via-fuchsia-200 to-pink-200" />
-              <CardContent className="p-5 space-y-4">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  Quantidade de elementos
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {DENSITY_STYLES.map((d) => (
-                    <button
-                      key={d.id}
-                      onClick={() => setDensidadeVisual(d.id)}
-                      className={`relative p-3 rounded-xl border-2 text-left transition-all duration-200 ${
-                        densidadeVisual === d.id
-                          ? "border-primary bg-primary/5 shadow-soft"
-                          : "border-border/30 bg-card hover:border-primary/20 hover:shadow-card"
-                      }`}
-                    >
-                      {densidadeVisual === d.id && (
-                        <div className="absolute top-2 right-2 h-5 w-5 rounded-full gradient-hero flex items-center justify-center">
-                          <Check className="h-3 w-3 text-primary-foreground" />
-                        </div>
-                      )}
-                      <p className="text-sm font-bold text-foreground">{d.label}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{d.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Densidade visual
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {DENSITY_STYLES.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setDensidadeVisual(d.id)}
+                    className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
+                      densidadeVisual === d.id
+                        ? "bg-foreground text-primary-foreground"
+                        : "bg-secondary hover:bg-accent text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{d.emoji} {d.label}</p>
+                    <p className={`text-[10px] mt-0.5 ${densidadeVisual === d.id ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                      {d.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Preview */}
             {nome.trim() && (
-              <Card className="shadow-elevated border-primary/15 gradient-card overflow-hidden">
-                <CardContent className="p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-primary mb-2">
-                    Prévia do que será gerado
+              <>
+                <div className="border-t border-border/60" />
+                <div className="rounded-2xl bg-secondary p-4 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Resumo
                   </p>
-                  <div className="flex flex-wrap items-center gap-1.5 text-sm text-foreground">
-                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card font-bold text-xs">
-                      {selectedTema?.name}
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground">
+                    <span className="bg-background px-2.5 py-1 rounded-lg font-medium">{selectedTema?.name}</span>
+                    <span className="text-border">·</span>
+                    <span className="bg-background px-2.5 py-1 rounded-lg">{selectedMolde?.name}</span>
+                    <span className="text-border">·</span>
+                    <span className="bg-background px-2.5 py-1 rounded-lg font-semibold" style={corDominante ? { color: corDominante } : undefined}>
+                      {nome}{idade && ` (${idade})`}
                     </span>
-                    <span className="text-muted-foreground">·</span>
-                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs font-medium">
-                      {selectedMolde?.name}
-                    </span>
-                    <span className="text-muted-foreground">·</span>
-                    <span
-                      className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs font-bold"
-                      style={corDominante ? { color: corDominante } : undefined}
-                    >
-                      {nome}
-                      {idade && <span className="text-muted-foreground font-normal"> ({idade} anos)</span>}
-                    </span>
-                    {frase && (
-                      <>
-                        <span className="text-muted-foreground">·</span>
-                        <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs italic text-muted-foreground">
-                          "{frase}"
-                        </span>
-                      </>
-                    )}
-                    <span className="text-muted-foreground">·</span>
-                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
-                      {FONT_STYLES.find(f => f.id === fonteEstilo)?.label}
-                    </span>
-                    <span className="text-muted-foreground">·</span>
-                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
-                      {DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}
-                    </span>
-                    <span className="text-muted-foreground">·</span>
-                    <span className="bg-card px-2.5 py-1 rounded-lg shadow-card text-xs text-muted-foreground">
-                      {DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}
-                    </span>
+                    <span className="text-border">·</span>
+                    <span className="bg-background px-2.5 py-1 rounded-lg">{FONT_STYLES.find(f => f.id === fonteEstilo)?.label}</span>
+                    <span className="text-border">·</span>
+                    <span className="bg-background px-2.5 py-1 rounded-lg">{DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}</span>
+                    <span className="text-border">·</span>
+                    <span className="bg-background px-2.5 py-1 rounded-lg">{DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}</span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </>
             )}
 
             <Button
               onClick={handleGenerate}
               disabled={!nome.trim()}
-              className="w-full h-14 text-base font-bold gradient-hero border-0 text-primary-foreground shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200 rounded-xl disabled:opacity-40"
+              className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
             >
-              <Sparkles className="h-5 w-5 mr-2" />
-              Gerar Arte com IA
+              <Sparkles className="h-4 w-4 mr-2" />
+              Gerar arte com IA
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </section>
         )}
@@ -1179,105 +1022,99 @@ export default function Criar() {
           <section className="animate-fade-in">
             {isGenerating ? (
               <LoadingState
-                title="Criando sua arte..."
-                subtitle={`${selectedTema?.name} + ${selectedMolde?.name} para ${nome}`}
+                title="Criando sua arte"
+                subtitle={`${selectedTema?.name} · ${selectedMolde?.name} · ${nome}`}
               />
             ) : generatedImage ? (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="text-center space-y-2">
-                  <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold">
-                    <Check className="h-4 w-4" /> Arte gerada
+                  <div className="inline-flex items-center gap-1.5 bg-secondary text-foreground px-3 py-1.5 rounded-full text-xs font-medium">
+                    <Check className="h-3 w-3" /> Arte gerada
                   </div>
-                  <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
-                    Ficou linda! 🎉
+                  <h1 className="font-display text-3xl font-semibold text-foreground">
+                    Ficou linda!
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    Molde pronto para imprimir, recortar e montar
+                    Molde pronto para imprimir, recortar e montar.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                   <div className="lg:col-span-3">
-                    <Card className="overflow-hidden shadow-elevated border-border/20 rounded-2xl">
-                      <CardContent className="p-0">
-                        <img
-                          src={generatedImage}
-                          alt={`${selectedTema?.name} - ${selectedMolde?.name} - ${nome}`}
-                          className="w-full h-auto"
-                        />
-                      </CardContent>
-                    </Card>
+                    <div className="rounded-2xl overflow-hidden bg-secondary">
+                      <img
+                        src={generatedImage}
+                        alt={`${selectedTema?.name} - ${selectedMolde?.name} - ${nome}`}
+                        className="w-full h-auto"
+                      />
+                    </div>
                   </div>
 
                   <div className="lg:col-span-2 space-y-4">
-                    <ActionCard
-                      icon={<Download className="h-5 w-5 text-primary" />}
-                      title="Baixar Arte"
-                      description="Molde pronto para imprimir em A4"
-                    >
-                      <div className="space-y-2">
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Baixar arte
+                      </h3>
+                      <Button
+                        onClick={() => handleDownload(generatedImageBase64, "arte")}
+                        className="w-full h-11 rounded-full text-sm font-semibold"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Baixar PNG
+                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
-                          onClick={() => handleDownload(generatedImageBase64, "arte")}
-                          className="w-full gradient-hero border-0 text-primary-foreground font-semibold shadow-soft rounded-xl"
+                          onClick={() => handleDownloadPDF("landscape")}
+                          variant="outline"
+                          className="rounded-full text-xs font-medium h-9"
                           size="sm"
                         >
-                          <Download className="h-3.5 w-3.5 mr-1.5" />
-                          Baixar PNG
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          PDF Horizontal
                         </Button>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            onClick={() => handleDownloadPDF("landscape")}
-                            variant="outline"
-                            className="font-semibold border-primary/25 text-primary hover:bg-primary/5 rounded-xl text-[11px]"
-                            size="sm"
-                          >
-                            <FileText className="h-3.5 w-3.5 mr-1" />
-                            PDF Horizontal
-                          </Button>
-                          <Button
-                            onClick={() => handleDownloadPDF("portrait")}
-                            variant="outline"
-                            className="font-semibold border-primary/25 text-primary hover:bg-primary/5 rounded-xl text-[11px]"
-                            size="sm"
-                          >
-                            <FileText className="h-3.5 w-3.5 mr-1" />
-                            PDF Vertical
-                          </Button>
-                        </div>
+                        <Button
+                          onClick={() => handleDownloadPDF("portrait")}
+                          variant="outline"
+                          className="rounded-full text-xs font-medium h-9"
+                          size="sm"
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          PDF Vertical
+                        </Button>
                       </div>
-                    </ActionCard>
+                    </div>
 
-                    <ActionCard
-                      icon={<Camera className="h-5 w-5 text-primary" />}
-                      title="Gerar Mockup"
-                      description="Foto realista pra divulgar no Instagram"
-                      highlight
-                    >
-                      <div className="grid grid-cols-2 gap-2.5">
+                    <div className="border-t border-border/60" />
+
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Mockup para Instagram
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={() => handleGenerateMockup("feed")}
-                          className="gradient-hero border-0 text-primary-foreground font-semibold rounded-xl"
-                          size="sm"
+                          className="h-11 rounded-full text-sm font-semibold"
                         >
-                          <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+                          <ImageIcon className="h-4 w-4 mr-1.5" />
                           Feed
                         </Button>
                         <Button
                           onClick={() => handleGenerateMockup("story")}
-                          className="gradient-hero border-0 text-primary-foreground font-semibold rounded-xl"
-                          size="sm"
+                          className="h-11 rounded-full text-sm font-semibold"
                         >
-                          <Camera className="h-3.5 w-3.5 mr-1.5" />
+                          <Camera className="h-4 w-4 mr-1.5" />
                           Story
                         </Button>
                       </div>
-                    </ActionCard>
+                    </div>
 
-                    <div className="flex gap-2.5">
+                    <div className="border-t border-border/60" />
+
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         onClick={handleGenerate}
-                        className="flex-1 text-xs rounded-xl border-border/40"
+                        className="flex-1 rounded-full text-xs h-9"
                         size="sm"
                       >
                         <RefreshCw className="h-3 w-3 mr-1.5" /> Nova versão
@@ -1285,7 +1122,7 @@ export default function Criar() {
                       <Button
                         variant="outline"
                         onClick={handleReset}
-                        className="flex-1 text-xs rounded-xl border-border/40"
+                        className="flex-1 rounded-full text-xs h-9"
                         size="sm"
                       >
                         Recomeçar
@@ -1303,63 +1140,62 @@ export default function Criar() {
           <section className="animate-fade-in">
             {isGeneratingMockup ? (
               <LoadingState
-                title="Criando mockup..."
-                subtitle={`Montando ${selectedMolde?.name} com tema ${selectedTema?.name}`}
+                title="Criando mockup"
+                subtitle={`${selectedMolde?.name} · ${selectedTema?.name}`}
               />
             ) : mockupImage ? (
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
+              <div className="space-y-8">
+                <div className="flex items-start gap-4">
                   <button
                     onClick={() => setStep(4)}
-                    className="h-10 w-10 rounded-xl bg-card shadow-card flex items-center justify-center hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200"
+                    className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors mt-1"
                   >
                     <ArrowLeft className="h-4 w-4 text-foreground" />
                   </button>
-                  <div className="space-y-0.5">
-                    <div className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 bg-secondary text-foreground px-3 py-1 rounded-full text-xs font-medium">
                       <Check className="h-3 w-3" />
-                      {mockupFormato === "feed" ? "Feed (1:1)" : "Story (9:16)"}
+                      {mockupFormato === "feed" ? "Feed 1:1" : "Story 9:16"}
                     </div>
-                    <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
-                      Mockup pronto! 📸
+                    <h1 className="font-display text-3xl font-semibold text-foreground">
+                      Mockup pronto
                     </h1>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                   <div className="lg:col-span-3">
-                    <Card className="overflow-hidden shadow-elevated border-border/20 rounded-2xl">
-                      <CardContent className="p-0">
-                        <img
-                          src={mockupImage}
-                          alt={`Mockup ${selectedTema?.name}`}
-                          className="w-full h-auto"
-                        />
-                      </CardContent>
-                    </Card>
+                    <div className="rounded-2xl overflow-hidden bg-secondary">
+                      <img
+                        src={mockupImage}
+                        alt={`Mockup ${selectedTema?.name}`}
+                        className="w-full h-auto"
+                      />
+                    </div>
                   </div>
 
                   <div className="lg:col-span-2 space-y-4">
-                    <ActionCard
-                      icon={<Download className="h-5 w-5 text-primary" />}
-                      title="Baixar Mockup"
-                      description="Imagem pronta para redes sociais"
-                    >
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Baixar mockup
+                      </h3>
                       <Button
                         onClick={() => handleDownload(mockupImageBase64, "mockup")}
-                        className="w-full gradient-hero border-0 text-primary-foreground font-semibold shadow-soft rounded-xl"
+                        className="w-full h-11 rounded-full text-sm font-semibold"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
                       </Button>
-                    </ActionCard>
+                    </div>
 
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="border-t border-border/60" />
+
+                    <div className="grid grid-cols-2 gap-2">
                       <Button
                         variant="outline"
                         onClick={() => handleGenerateMockup("feed")}
                         size="sm"
-                        className="text-xs rounded-xl border-border/40"
+                        className="rounded-full text-xs h-9"
                       >
                         <RefreshCw className="h-3 w-3 mr-1.5" /> Novo Feed
                       </Button>
@@ -1367,25 +1203,25 @@ export default function Criar() {
                         variant="outline"
                         onClick={() => handleGenerateMockup("story")}
                         size="sm"
-                        className="text-xs rounded-xl border-border/40"
+                        className="rounded-full text-xs h-9"
                       >
                         <RefreshCw className="h-3 w-3 mr-1.5" /> Novo Story
                       </Button>
                     </div>
 
-                    <div className="flex gap-2.5">
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         onClick={() => setStep(4)}
-                        className="flex-1 text-xs rounded-xl border-border/40"
+                        className="flex-1 rounded-full text-xs h-9"
                         size="sm"
                       >
-                        <ArrowLeft className="h-3 w-3 mr-1.5" /> Voltar à arte
+                        <ArrowLeft className="h-3 w-3 mr-1.5" /> Voltar
                       </Button>
                       <Button
                         variant="outline"
                         onClick={handleReset}
-                        className="flex-1 text-xs rounded-xl border-border/40"
+                        className="flex-1 rounded-full text-xs h-9"
                         size="sm"
                       >
                         Recomeçar
@@ -1398,18 +1234,6 @@ export default function Criar() {
           </section>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="mt-16 py-6 border-t border-border/30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground/60">
-            © {new Date().getFullYear()} MoldePronto
-          </p>
-          <p className="text-xs text-muted-foreground/40">
-            Feito com IA ✨
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -1418,61 +1242,15 @@ export default function Criar() {
 
 function LoadingState({ title, subtitle }: { title: string; subtitle: string }) {
   return (
-    <div className="max-w-sm mx-auto py-24 flex flex-col items-center gap-6">
-      <div className="relative">
-        <div className="h-20 w-20 rounded-3xl gradient-card flex items-center justify-center shadow-elevated">
-          <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        </div>
-        <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full gradient-hero flex items-center justify-center shadow-soft">
-          <Sparkles className="h-3 w-3 text-primary-foreground animate-pulse" />
-        </div>
+    <div className="max-w-sm mx-auto py-32 flex flex-col items-center gap-6">
+      <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center">
+        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
       </div>
-      <div className="text-center space-y-2">
-        <p className="text-lg font-bold text-foreground">{title}</p>
+      <div className="text-center space-y-1.5">
+        <p className="text-lg font-semibold text-foreground">{title}</p>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
-          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
-        </div>
-        <p className="text-[11px] text-muted-foreground/60 mt-2">Pode levar até 30 segundos</p>
+        <p className="text-xs text-muted-foreground/50 pt-2">Pode levar até 30 segundos</p>
       </div>
     </div>
-  );
-}
-
-function ActionCard({
-  icon,
-  title,
-  description,
-  children,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-  highlight?: boolean;
-}) {
-  return (
-    <Card
-      className={`shadow-card border-border/20 rounded-2xl overflow-hidden ${
-        highlight ? "ring-1 ring-primary/15 gradient-card" : ""
-      }`}
-    >
-      {highlight && <div className="h-0.5 gradient-hero" />}
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
-            {icon}
-          </div>
-          <div className="min-w-0 pt-0.5">
-            <h3 className="font-bold text-sm text-foreground">{title}</h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
-          </div>
-        </div>
-        {children}
-      </CardContent>
-    </Card>
   );
 }
