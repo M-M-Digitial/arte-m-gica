@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/AppLayout";
 import Criar from "./pages/Criar";
 import Agentes from "./pages/Agentes";
+import AgenteChat from "./pages/AgenteChat";
 import Dashboard from "./pages/Dashboard";
 import Moldes from "./pages/Moldes";
 import Temas from "./pages/Temas";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/editor" element={<Editor />} />
             <Route path="/mockups" element={<Mockups />} />
             <Route path="/agentes" element={<Agentes />} />
+            <Route path="/agentes/:agentId" element={<AgenteChat />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
