@@ -622,20 +622,20 @@ export default function Criar() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen min-h-[100dvh] bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 glass border-b border-border/40">
-        <div className="max-w-4xl mx-auto px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center">
+        <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center shrink-0">
               <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+            <span className="text-sm sm:text-[15px] font-semibold tracking-tight text-foreground">
               MoldePronto
             </span>
           </div>
 
-          {/* Step pills */}
+          {/* Step pills — desktop */}
           <nav className="hidden sm:flex items-center gap-1">
             {STEPS.map((s, i) => {
               const isActive = step === i + 1;
@@ -660,15 +660,23 @@ export default function Criar() {
             })}
           </nav>
 
-          <div className="sm:hidden">
-            <span className="text-xs font-medium text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">
-              {step} / 5
+          {/* Step indicator — mobile */}
+          <div className="sm:hidden flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {step}/5
             </span>
           </div>
         </div>
+        {/* Mobile progress bar */}
+        <div className="sm:hidden h-0.5 bg-secondary">
+          <div
+            className="h-full bg-foreground transition-all duration-300"
+            style={{ width: `${(step / 5) * 100}%` }}
+          />
+        </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-5 py-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-5 py-6 sm:py-10 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <SelectionsBreadcrumb />
 
         {/* ─── STEP 1: TEMA ─── */}
