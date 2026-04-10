@@ -1,10 +1,7 @@
 import {
   LayoutDashboard,
-  Box,
-  Palette,
-  PenTool,
-  Image,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -22,10 +19,7 @@ import {
 const mainItems = [
   { title: "Início", url: "/", icon: LayoutDashboard },
   { title: "Criar com IA", url: "/criar", icon: Sparkles },
-  { title: "Moldes", url: "/moldes", icon: Box },
-  { title: "Temas", url: "/temas", icon: Palette },
-  { title: "Editor Manual", url: "/editor", icon: PenTool },
-  { title: "Mockups", url: "/mockups", icon: Image },
+  { title: "Agentes da Papelaria", url: "/agentes", icon: Bot },
 ];
 
 export function AppSidebar() {
