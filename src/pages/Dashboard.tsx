@@ -2,34 +2,12 @@ import { Box, Palette, PenTool, Image, ArrowRight, Sparkles, Heart } from "lucid
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import heroParty from "@/assets/hero-party.png";
-import themeSafari from "@/assets/theme-safari.png";
-import themeUnicornio from "@/assets/theme-unicornio.png";
-import themePrincesas from "@/assets/theme-princesas.png";
-import themeFazendinha from "@/assets/theme-fazendinha.png";
-import moldMilkBox from "@/assets/mold-milk-box.png";
-import moldSacolinha from "@/assets/mold-sacolinha.png";
-import moldTopper from "@/assets/mold-topper.png";
-import moldPiramide from "@/assets/mold-piramide.png";
 
 const steps = [
   { number: "01", title: "Escolha o Molde", description: "Caixinha, sacolinha, cone e mais", icon: Box },
   { number: "02", title: "Escolha o Tema", description: "Safari, Unicórnio, Princesas...", icon: Palette },
   { number: "03", title: "Personalize", description: "Nome, idade, cores e estilos", icon: PenTool },
   { number: "04", title: "Exporte", description: "PDF para imprimir + mockup", icon: Image },
-];
-
-const popularMolds = [
-  { name: "Caixinha Milk", image: moldMilkBox },
-  { name: "Sacolinha", image: moldSacolinha },
-  { name: "Topo de Bolo", image: moldTopper },
-  { name: "Caixa Pirâmide", image: moldPiramide },
-];
-
-const trendingThemes = [
-  { name: "Safari", image: themeSafari },
-  { name: "Unicórnio", image: themeUnicornio },
-  { name: "Princesas", image: themePrincesas },
-  { name: "Fazendinha", image: themeFazendinha },
 ];
 
 export default function Dashboard() {
@@ -102,69 +80,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <div className="border-t border-border/60" />
 
-      {/* Popular Molds */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground tracking-tight">Moldes populares</h2>
-          <Link to="/moldes">
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs h-8">
-              Ver todos <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {popularMolds.map((mold) => (
-            <Link to="/criar" key={mold.name}>
-              <div className="group cursor-pointer">
-                <div className="aspect-square rounded-2xl bg-secondary/60 flex items-center justify-center p-6 overflow-hidden transition-all duration-300 group-hover:bg-accent group-hover:shadow-card">
-                  <img
-                    src={mold.image}
-                    alt={mold.name}
-                    loading="lazy"
-                    width={512}
-                    height={512}
-                    className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <p className="text-sm font-medium text-foreground mt-3 text-center">{mold.name}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Trending Themes */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-foreground tracking-tight">Temas em alta</h2>
-          <Link to="/temas">
-            <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs h-8">
-              Ver todos <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {trendingThemes.map((theme) => (
-            <Link to="/criar" key={theme.name}>
-              <div className="group cursor-pointer">
-                <div className="aspect-square rounded-2xl overflow-hidden shadow-card">
-                  <img
-                    src={theme.image}
-                    alt={theme.name}
-                    loading="lazy"
-                    width={512}
-                    height={512}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <p className="text-sm font-medium text-foreground mt-3 text-center">{theme.name}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
 
       {/* CTA */}
       <section className="rounded-3xl gradient-hero p-10 md:p-14 text-center space-y-4 shadow-elevated relative overflow-hidden">
