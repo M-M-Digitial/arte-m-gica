@@ -77,6 +77,20 @@ export const agents: Agent[] = [
     description: "Dá dicas de papel, gramatura, impressora, corte e acabamento para seus personalizados ficarem perfeitos.",
     emoji: "🖨️",
   },
+  {
+    id: "elisa",
+    name: "Elisa",
+    title: "Revisão Final",
+    description: "Confere tudo antes de produzir ou entregar: revisa nome, idade, data, tema, quantidade, observações e aprovação da cliente. Evita erro bobo que vira prejuízo.",
+    emoji: "✅",
+  },
+  {
+    id: "maia",
+    name: "Maia",
+    title: "Urgências e Agenda",
+    description: "Organiza encaixes, urgências e prioridades da semana. Separa pedidos urgentes, mostra o que vence primeiro e ajuda a não aceitar prazo impossível.",
+    emoji: "⏰",
+  },
 ];
 
 export function getAgentById(id: string): Agent | undefined {
