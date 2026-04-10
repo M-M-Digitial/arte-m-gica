@@ -21,12 +21,6 @@ const agents = [
     emoji: "✍️",
   },
   {
-    name: "Aurora",
-    title: "Mestre dos Mockups",
-    description: "Cria e orienta mockups profissionais que valorizam seus produtos e aumentam o valor percebido.",
-    emoji: "🎨",
-  },
-  {
     name: "Jade",
     title: "Musa da Precificação",
     description: "Te ajuda a precificar corretamente, sair do barato e cobrar com segurança e clareza.",
@@ -49,12 +43,6 @@ const agents = [
     title: "Transformador de Ideias",
     description: "Te ajuda a transformar ideias soltas em produtos vendáveis e conteúdos claros.",
     emoji: "💡",
-  },
-  {
-    name: "Rosa",
-    title: "Designer com IA",
-    description: "Cria artes, mascotinhos, kits, identidades e visuais personalizados com inteligência artificial.",
-    emoji: "🎀",
   },
 ];
 
