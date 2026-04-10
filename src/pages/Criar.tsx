@@ -1072,7 +1072,7 @@ export default function Criar() {
                       </h3>
                       <Button
                         onClick={() => handleDownload(generatedImageBase64, "arte")}
-                        className="w-full h-11 rounded-full text-sm font-semibold"
+                        className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
@@ -1108,14 +1108,14 @@ export default function Criar() {
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={() => handleGenerateMockup("feed")}
-                          className="h-11 rounded-full text-sm font-semibold"
+                          className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                         >
                           <ImageIcon className="h-4 w-4 mr-1.5" />
                           Feed
                         </Button>
                         <Button
                           onClick={() => handleGenerateMockup("story")}
-                          className="h-11 rounded-full text-sm font-semibold"
+                          className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                         >
                           <Camera className="h-4 w-4 mr-1.5" />
                           Story
@@ -1196,7 +1196,7 @@ export default function Criar() {
                       </h3>
                       <Button
                         onClick={() => handleDownload(mockupImageBase64, "mockup")}
-                        className="w-full h-11 rounded-full text-sm font-semibold"
+                        className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
