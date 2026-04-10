@@ -872,7 +872,7 @@ export default function Criar() {
                   onClick={() => setCorDominante("")}
                   className={`h-8 px-3 rounded-full text-xs font-medium transition-all ${
                     !corDominante
-                      ? "bg-foreground text-primary-foreground"
+                      ? "gradient-hero text-white shadow-soft"
                       : "bg-secondary text-muted-foreground hover:bg-accent"
                   }`}
                 >
@@ -919,7 +919,7 @@ export default function Criar() {
                     onClick={() => setFonteEstilo(f.id)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
                       fonteEstilo === f.id
-                        ? "bg-foreground text-primary-foreground"
+                        ? "gradient-hero text-white shadow-soft"
                         : "bg-secondary hover:bg-accent text-foreground"
                     }`}
                   >
@@ -946,7 +946,7 @@ export default function Criar() {
                     onClick={() => setDesenhoEstilo(d.id)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
                       desenhoEstilo === d.id
-                        ? "bg-foreground text-primary-foreground"
+                        ? "gradient-hero text-white shadow-soft"
                         : "bg-secondary hover:bg-accent text-foreground"
                     }`}
                   >
@@ -973,7 +973,7 @@ export default function Criar() {
                     onClick={() => setDensidadeVisual(d.id)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
                       densidadeVisual === d.id
-                        ? "bg-foreground text-primary-foreground"
+                        ? "gradient-hero text-white shadow-soft"
                         : "bg-secondary hover:bg-accent text-foreground"
                     }`}
                   >
