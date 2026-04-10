@@ -622,20 +622,20 @@ export default function Criar() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen min-h-[100dvh] bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 glass border-b border-border/40">
-        <div className="max-w-4xl mx-auto px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center">
+        <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-foreground flex items-center justify-center shrink-0">
               <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+            <span className="text-sm sm:text-[15px] font-semibold tracking-tight text-foreground">
               MoldePronto
             </span>
           </div>
 
-          {/* Step pills */}
+          {/* Step pills — desktop */}
           <nav className="hidden sm:flex items-center gap-1">
             {STEPS.map((s, i) => {
               const isActive = step === i + 1;
@@ -660,25 +660,33 @@ export default function Criar() {
             })}
           </nav>
 
-          <div className="sm:hidden">
-            <span className="text-xs font-medium text-muted-foreground bg-secondary px-3 py-1.5 rounded-full">
-              {step} / 5
+          {/* Step indicator — mobile */}
+          <div className="sm:hidden flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {step}/5
             </span>
           </div>
         </div>
+        {/* Mobile progress bar */}
+        <div className="sm:hidden h-0.5 bg-secondary">
+          <div
+            className="h-full bg-foreground transition-all duration-300"
+            style={{ width: `${(step / 5) * 100}%` }}
+          />
+        </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-5 py-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-5 py-6 sm:py-10 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <SelectionsBreadcrumb />
 
         {/* ─── STEP 1: TEMA ─── */}
         {step === 1 && (
           <section className="animate-fade-in space-y-10">
-            <div className="max-w-md space-y-3">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <div className="max-w-md space-y-2 sm:space-y-3">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 Passo 1
               </p>
-              <h1 className="font-display text-3xl sm:text-4xl font-semibold text-foreground leading-[1.15]">
+              <h1 className="font-display text-2xl sm:text-4xl font-semibold text-foreground leading-[1.15]">
                 Qual o tema da festa?
               </h1>
               <p className="text-muted-foreground text-sm leading-relaxed">
@@ -687,13 +695,13 @@ export default function Criar() {
             </div>
 
             {loadingTemas ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
                 {Array.from({ length: 18 }).map((_, i) => (
                   <Skeleton key={i} className="aspect-square rounded-2xl" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
                 {(temas ?? []).map((tema) => {
                   const image = tema.image_url || themeImages[tema.name];
                   return (
@@ -1005,15 +1013,22 @@ export default function Criar() {
               </>
             )}
 
-            <Button
-              onClick={handleGenerate}
-              disabled={!nome.trim()}
-              className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Gerar arte com IA
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
+            {/* Spacer for fixed button on mobile */}
+            <div className="h-20 sm:hidden" />
+
+            {/* Generate button — fixed on mobile */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 glass border-t border-border/40 z-40 sm:static sm:p-0 sm:bg-transparent sm:border-0 sm:backdrop-blur-none">
+              <Button
+                onClick={handleGenerate}
+                disabled={!nome.trim()}
+                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30"
+                style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Gerar arte com IA
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
           </section>
         )}
 
@@ -1039,7 +1054,7 @@ export default function Criar() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 sm:gap-8">
                   <div className="lg:col-span-3">
                     <div className="rounded-2xl overflow-hidden bg-secondary">
                       <img
