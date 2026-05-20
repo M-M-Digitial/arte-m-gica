@@ -288,6 +288,16 @@ const COR_PRESETS = [
   "#673AB7", "#9C27B0", "#E040FB", "#795548", "#607D8B",
 ];
 
+const AI_CREDITS_MESSAGE =
+  "Créditos de IA esgotados. Adicione créditos em Settings → Cloud & AI balance para continuar gerando artes.";
+
+const getFunctionErrorMessage = (err: any, fallback: string) => {
+  const message = err?.context?.error || err?.message || fallback;
+  return message.includes("Créditos") || message.includes("credits") || message.includes("402")
+    ? AI_CREDITS_MESSAGE
+    : message;
+};
+
 export default function Criar() {
   const [step, setStep] = useState(1);
   const [selectedTema, setSelectedTema] = useState<any>(null);
@@ -344,13 +354,20 @@ export default function Criar() {
         },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        if (data.code === "AI_CREDITS_EXHAUSTED") {
+          toast.error(AI_CREDITS_MESSAGE);
+          setStep(3);
+          return;
+        }
+        throw new Error(data.error);
+      }
       setGeneratedImage(data.imageUrl);
       setGeneratedImageBase64(data.imageBase64);
       toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
-      toast.error(err.message || "Erro ao gerar arte. Tente novamente.");
+      toast.error(getFunctionErrorMessage(err, "Erro ao gerar arte. Tente novamente."));
       setStep(3);
     } finally {
       setIsGenerating(false);
@@ -380,7 +397,7 @@ export default function Criar() {
       toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
-      toast.error(err.message || "Erro ao gerar mockup. Tente novamente.");
+      toast.error(getFunctionErrorMessage(err, "Erro ao gerar mockup. Tente novamente."));
       setStep(4);
     } finally {
       setIsGeneratingMockup(false);
