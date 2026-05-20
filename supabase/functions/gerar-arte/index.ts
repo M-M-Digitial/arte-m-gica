@@ -110,8 +110,11 @@ REGRAS OBRIGATÓRIAS:
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos esgotados. Adicione créditos para continuar." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "Créditos esgotados. Adicione créditos para continuar.",
+            code: "AI_CREDITS_EXHAUSTED",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
