@@ -7,6 +7,42 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const normalizeTheme = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const protectedThemeAlternatives: Array<[RegExp, string]> = [
+  [/minnie|mickey/, "tema clássico com laços, poás, luvas brancas e paleta vermelha, preta e branca"],
+  [/barbie/, "tema fashion em tons de rosa, passarela, laços, estrelas e acessórios de moda"],
+  [/frozen/, "tema reino de gelo com flocos de neve, cristais, azul claro e brilho prateado"],
+  [/encanto/, "tema jardim latino colorido com flores tropicais, borboletas e arquitetura artesanal"],
+  [/patrulha/, "tema cachorrinhos aventureiros com escudos, patinhas, veículos e cores primárias"],
+  [/aranha|vingadores|batman|herois/, "tema super-herói genérico com cidade, raios, estrelas, máscaras e ação em quadrinhos"],
+  [/carros|hot\s*wheels/, "tema corrida com pistas, bandeiras quadriculadas, troféus e cores vibrantes"],
+  [/sonic/, "tema velocidade arcade com anéis, raios, trilhas dinâmicas e azul vibrante"],
+  [/stitch/, "tema espacial tropical com estrelas, flores havaianas e criatura alienígena fofa genérica"],
+  [/monica|cocomelon|pocoyo|baby\s*shark|peppa|mundo\s*bita|galinha/, "tema musical colorido com formas geométricas, notas musicais, arco-íris e animais fofos genéricos"],
+  [/hello\s*kitty/, "tema gatinho kawaii com laços, corações, flores pequenas e tons pastel"],
+  [/moana/, "tema ilha tropical com ondas, flores, folhas, sol e textura artesanal"],
+  [/rapunzel|princesas/, "tema conto de fadas com coroa, castelo, flores delicadas e brilho dourado"],
+  [/dragon\s*ball|naruto/, "tema mangá de ação com energia, nuvens estilizadas, raios e composição dinâmica"],
+  [/minecraft/, "tema mundo de blocos pixelados com grama, ferramentas e padrão quadriculado"],
+  [/bob\s*esponja/, "tema fundo do mar com bolhas, corais, estrelas-do-mar e amarelo alegre"],
+  [/toy\s*story/, "tema brinquedos retrô com estrelas, nuvens, cowboy, espaço e cores primárias"],
+  [/snoopy/, "tema cachorrinho cartoon com patinhas, casinha, nuvens e traços minimalistas"],
+];
+
+const getSafeThemeDescription = (temaNome: string) => {
+  const normalized = normalizeTheme(temaNome);
+  const alternative = protectedThemeAlternatives.find(([pattern]) => pattern.test(normalized));
+
+  return alternative
+    ? alternative[1]
+    : `${temaNome}, reinterpretado como tema decorativo genérico sem marcas, personagens licenciados ou pessoas reais`;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -33,8 +69,9 @@ serve(async (req) => {
         ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
         : "";
 
-    const idadeText = idade ? ` — número decorativo "${idade}" como elemento gráfico` : "";
-    const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — incluir na face secundária do molde com destaque tipográfico.` : "";
+    const safeThemeDesc = getSafeThemeDescription(temaNome);
+    const idadeText = idade ? ` — incluir o número "${idade}" como numeral decorativo, sem mencionar idade ou aniversário` : "";
+    const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — usar como lettering curto na face secundária do molde.` : "";
 
     const fonteMap: Record<string, string> = {
       divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
@@ -70,7 +107,7 @@ serve(async (req) => {
     const prompt = `Design gráfico de papelaria decorativa: arte completa aplicada em um molde planificado de embalagem, pronto para impressão e montagem artesanal.
 
 MOLDE: ${moldeName} — desenhe o molde planificado (aberto, flat), com todas as abas de colagem e linhas de dobra pontilhadas.
-TEMA DECORATIVO: ${temaNome}
+TEMA DECORATIVO SEGURO: ${safeThemeDesc}
 PALAVRA EM DESTAQUE: "${nome}"${idadeText}
 ${colorsDesc}
 ${fraseText}
@@ -81,27 +118,45 @@ DENSIDADE VISUAL: ${densityDesc}.
 REGRAS:
 1. Mostre o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como padrão de recorte vetorial).
 2. Linhas de corte = traço contínuo. Linhas de dobra = traço pontilhado.
-3. O tema "${temaNome}" decora todas as faces com padrões, ilustrações e cores.
+3. O tema decorativo seguro decora todas as faces com padrões, ilustrações e cores, sem copiar personagens, logos, marcas ou imagens licenciadas.
 4. A palavra "${nome}" aparece grande e legível na face principal.
 5. Todos os textos em português do Brasil.
 6. Estilo de papelaria decorativa profissional — colorido, vibrante, alegre.
 7. Fundo branco ao redor do molde (área de recorte).
-8. Alta resolução para impressão em A4.`;
+8. Alta resolução para impressão em A4.
+9. Não retratar crianças, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.`;
 
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt,
-        size: "1024x1536",
-        n: 1,
-        moderation: "low",
-      }),
-    });
+    const requestOpenAIImage = (activePrompt: string) =>
+      fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-image-1",
+          prompt: activePrompt,
+          size: "1024x1536",
+          n: 1,
+          moderation: "low",
+        }),
+      });
+
+    const fallbackPrompt = `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
+
+TEMA VISUAL: ${safeThemeDesc}.
+${colorsDesc}
+ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
+DENSIDADE VISUAL: ${densityDesc}.
+
+REGRAS:
+1. Sem nomes próprios, idade, crianças, pessoas reais, personagens registrados, logotipos ou marcas.
+2. Usar apenas padrões, formas, ícones genéricos, flores, estrelas, laços, elementos abstratos e ilustrações originais.
+3. Mostrar linhas de corte contínuas, linhas de dobra pontilhadas, abas de colagem e fundo branco.
+4. Alta resolução, visual alegre, profissional e artesanal.`;
+
+    let response = await requestOpenAIImage(prompt);
+    let usedSafeFallback = false;
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -113,12 +168,28 @@ REGRAS:
       const errorText = await response.text();
       console.error("OpenAI error:", response.status, errorText);
       if (errorText.includes("moderation_blocked")) {
-        return new Response(
-          JSON.stringify({ error: "O conteúdo foi bloqueado pela moderação da OpenAI. Tente outro nome, tema ou frase mais neutra." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        usedSafeFallback = true;
+        response = await requestOpenAIImage(fallbackPrompt);
+        if (response.ok) {
+          console.warn("OpenAI moderation blocked original prompt; generated safe fallback art.");
+        } else {
+          const fallbackErrorText = await response.text();
+          console.error("OpenAI fallback error:", response.status, fallbackErrorText);
+          return new Response(
+            JSON.stringify({
+              error: "A OpenAI bloqueou este tema por segurança. Gere uma arte segura pelo modelo alternativo do app.",
+              code: "OPENAI_MODERATION_BLOCKED",
+              fallback: {
+                safeThemeDescription: safeThemeDesc,
+                message: "Use o fallback local para criar uma arte decorativa sem personagens, marcas ou pessoas reais.",
+              },
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        throw new Error(`Erro no serviço de IA: ${response.status}`);
       }
-      throw new Error(`Erro no serviço de IA: ${response.status}`);
     }
 
     const data = await response.json();
@@ -158,6 +229,7 @@ REGRAS:
       JSON.stringify({
         imageUrl: publicUrl.publicUrl,
         imageBase64: imageData,
+        usedSafeFallback,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
