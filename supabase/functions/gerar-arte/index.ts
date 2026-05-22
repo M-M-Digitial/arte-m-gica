@@ -128,11 +128,46 @@ REGRAS:
 
     // Tenta baixar a imagem-template do molde para usar como base em images/edits
     let templateBlob: Blob | null = null;
+    let outputSize = "1024x1536";
     if (moldeTemplateUrl) {
       try {
         const tmplRes = await fetch(moldeTemplateUrl);
         if (tmplRes.ok) {
           templateBlob = await tmplRes.blob();
+          // Detecta dimensões do template (PNG/JPEG) para escolher o tamanho mais próximo suportado
+          try {
+            const buf = new Uint8Array(await templateBlob.arrayBuffer());
+            let w = 0, h = 0;
+            // PNG: bytes 16-23 contêm width/height big-endian
+            if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+              w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+              h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+            } else if (buf[0] === 0xff && buf[1] === 0xd8) {
+              // JPEG: percorre marcadores até SOF
+              let i = 2;
+              while (i < buf.length) {
+                if (buf[i] !== 0xff) break;
+                const marker = buf[i + 1];
+                const len = (buf[i + 2] << 8) | buf[i + 3];
+                if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+                  h = (buf[i + 5] << 8) | buf[i + 6];
+                  w = (buf[i + 7] << 8) | buf[i + 8];
+                  break;
+                }
+                i += 2 + len;
+              }
+            }
+            if (w > 0 && h > 0) {
+              templateBlob = new Blob([buf], { type: templateBlob.type || "image/png" });
+              const ratio = w / h;
+              if (ratio > 1.15) outputSize = "1536x1024";
+              else if (ratio < 0.87) outputSize = "1024x1536";
+              else outputSize = "1024x1024";
+              console.log(`Template ${w}x${h} ratio=${ratio.toFixed(2)} -> output ${outputSize}`);
+            }
+          } catch (e) {
+            console.warn("Template dimension parse error:", e);
+          }
         } else {
           console.warn("Template fetch failed:", tmplRes.status);
         }
