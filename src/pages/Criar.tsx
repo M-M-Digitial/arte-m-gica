@@ -342,6 +342,7 @@ export default function Criar() {
       const { data, error } = await supabase.functions.invoke("gerar-arte", {
         body: {
           moldeName: selectedMolde.name,
+          moldeTemplateUrl: (selectedMolde as any).image_url || undefined,
           temaNome: selectedTema.name,
           temaColors: selectedTema.colors,
           nome: nome.trim(),
