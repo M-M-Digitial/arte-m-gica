@@ -33,8 +33,8 @@ serve(async (req) => {
         ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
         : "";
 
-    const idadeText = idade ? ` (${idade} anos)` : "";
-    const fraseText = frase ? `\nFRASE PERSONALIZADA: "${frase}" — incluir na face secundária do molde com destaque.` : "";
+    const idadeText = idade ? ` — número decorativo "${idade}" como elemento gráfico` : "";
+    const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — incluir na face secundária do molde com destaque tipográfico.` : "";
 
     const fonteMap: Record<string, string> = {
       divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
@@ -67,26 +67,26 @@ serve(async (req) => {
     };
     const densityDesc = densityMap[densidadeVisual || "equilibrado"] || densityMap.equilibrado;
 
-    const prompt = `Crie uma arte COMPLETA para lembrancinha de festa, já aplicada no molde planificado, pronta para imprimir, recortar e montar.
+    const prompt = `Design gráfico de papelaria decorativa: arte completa aplicada em um molde planificado de embalagem, pronto para impressão e montagem artesanal.
 
-MOLDE: ${moldeName} — gere o molde planificado (aberto, flat) com todas as abas de colagem e linhas de dobra pontilhadas.
-TEMA: ${temaNome}
-NOME: ${nome}${idadeText}
+MOLDE: ${moldeName} — desenhe o molde planificado (aberto, flat), com todas as abas de colagem e linhas de dobra pontilhadas.
+TEMA DECORATIVO: ${temaNome}
+PALAVRA EM DESTAQUE: "${nome}"${idadeText}
 ${colorsDesc}
 ${fraseText}
-ESTILO DE FONTE: Use ${fonteDesc} para o nome "${nome}" e demais textos.
-ESTILO DE DESENHO/ILUSTRAÇÃO: ${drawDesc}. Todo o visual artístico do molde deve seguir este estilo.
+ESTILO TIPOGRÁFICO: ${fonteDesc} para a palavra "${nome}" e demais textos.
+ESTILO DE ILUSTRAÇÃO: ${drawDesc}. Todo o visual do molde deve seguir este estilo.
 DENSIDADE VISUAL: ${densityDesc}.
 
-REGRAS OBRIGATÓRIAS:
-1. A imagem deve mostrar o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como um padrão de recorte)
+REGRAS:
+1. Mostre o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como padrão de recorte vetorial).
 2. Linhas de corte = traço contínuo. Linhas de dobra = traço pontilhado.
-3. O tema "${temaNome}" deve decorar TODAS as faces com padrões, ilustrações e cores do tema
-4. O nome "${nome}" deve aparecer grande e legível na face principal
-5. Todos os textos em PORTUGUÊS DO BRASIL
-6. Estilo profissional de papelaria de festa — colorido, vibrante, alegre
-7. Fundo branco ao redor do molde (área de corte)
-8. Alta resolução, pronto para impressão em A4`;
+3. O tema "${temaNome}" decora todas as faces com padrões, ilustrações e cores.
+4. A palavra "${nome}" aparece grande e legível na face principal.
+5. Todos os textos em português do Brasil.
+6. Estilo de papelaria decorativa profissional — colorido, vibrante, alegre.
+7. Fundo branco ao redor do molde (área de recorte).
+8. Alta resolução para impressão em A4.`;
 
     const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
@@ -111,6 +111,12 @@ REGRAS OBRIGATÓRIAS:
       }
       const errorText = await response.text();
       console.error("OpenAI error:", response.status, errorText);
+      if (errorText.includes("moderation_blocked")) {
+        return new Response(
+          JSON.stringify({ error: "O conteúdo foi bloqueado pela moderação da OpenAI. Tente outro nome, tema ou frase mais neutra." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       throw new Error(`Erro no serviço de IA: ${response.status}`);
     }
 
