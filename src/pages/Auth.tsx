@@ -50,14 +50,8 @@ export default function Auth() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error(result.error.message || "Erro ao entrar com Google");
-    }
-  };
+
+
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
