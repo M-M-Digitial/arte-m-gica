@@ -362,9 +362,12 @@ export default function Criar() {
         }
         throw new Error(data.error);
       }
+      if (!data?.imageUrl || !data?.imageBase64) {
+        throw new Error("A IA não retornou uma imagem. Tente gerar novamente.");
+      }
       setGeneratedImage(data.imageUrl);
       setGeneratedImageBase64(data.imageBase64);
-      toast.success("Arte gerada com sucesso!");
+      toast.success(data.usedSafeFallback ? "Arte segura gerada com sucesso!" : "Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
       toast.error(getFunctionErrorMessage(err, "Erro ao gerar arte. Tente novamente."));
