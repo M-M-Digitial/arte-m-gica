@@ -95,7 +95,7 @@ REGRAS OBRIGATÓRIAS:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-image-1",
+        model: "google/gemini-3-pro-image-preview",
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),
