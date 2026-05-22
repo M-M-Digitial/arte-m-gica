@@ -41,7 +41,8 @@ export default function Auth() {
           },
         });
         if (error) throw error;
-        toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+        toast.success("Conta criada! 🎉");
+        navigate("/", { replace: true });
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao autenticar");
