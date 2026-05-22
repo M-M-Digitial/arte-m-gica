@@ -199,7 +199,7 @@ REGRAS:
         body: JSON.stringify({
           model: "gpt-image-2",
           prompt: activePrompt,
-          size: "1024x1536",
+          size: outputSize,
           n: 1,
           moderation: "low",
         }),
