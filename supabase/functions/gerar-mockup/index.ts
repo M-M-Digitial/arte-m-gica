@@ -54,7 +54,7 @@ NÃO incluir: textos sobrepostos, watermarks, molduras, logos. Apenas a foto rea
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model: "gpt-image-2",
         prompt,
         size,
         n: 1,
