@@ -104,9 +104,14 @@ export default function Moldes() {
                     <h3 className="font-semibold text-sm text-foreground">{mold.name}</h3>
                     <p className="text-xs text-muted-foreground line-clamp-2">{mold.description}</p>
                     <Badge variant="secondary" className="text-[10px]">{mold.category}</Badge>
-                    <Link to="/editor">
+                    <Link to="/criar">
                       <Button size="sm" className="w-full mt-2 gradient-hero border-0 text-primary-foreground text-xs">🎨 Usar este molde</Button>
                     </Link>
+                    {(mold as any).template_pdf_url && (
+                      <a href={(mold as any).template_pdf_url} target="_blank" rel="noopener noreferrer" className="block">
+                        <Button size="sm" variant="outline" className="w-full text-xs">📄 Baixar PDF</Button>
+                      </a>
+                    )}
                   </div>
                 </CardContent>
               </Card>
