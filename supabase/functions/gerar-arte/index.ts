@@ -181,7 +181,7 @@ REGRAS:
         const form = new FormData();
         form.append("model", "gpt-image-2");
         form.append("prompt", activePrompt);
-        form.append("size", "1024x1536");
+        form.append("size", outputSize);
         form.append("n", "1");
         form.append("image", templateBlob, "template.png");
         return fetch("https://api.openai.com/v1/images/edits", {
