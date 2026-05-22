@@ -45,27 +45,19 @@ A IMAGEM DEVE MOSTRAR:
 
 NÃO incluir: textos sobrepostos, watermarks, molduras, logos. Apenas a foto realista do produto.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const size = formato === "story" ? "1024x1536" : "1024x1024";
+
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: { url: arteImageUrl },
-              },
-            ],
-          },
-        ],
-        modalities: ["image", "text"],
+        model: "gpt-image-1",
+        prompt,
+        size,
+        n: 1,
       }),
     });
 
@@ -76,23 +68,17 @@ NÃO incluir: textos sobrepostos, watermarks, molduras, logos. Apenas a foto rea
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos esgotados. Adicione créditos para continuar." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("OpenAI error:", response.status, errorText);
       throw new Error(`Erro no serviço de IA: ${response.status}`);
     }
 
     const data = await response.json();
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageData) {
+    const b64 = data.data?.[0]?.b64_json;
+    if (!b64) {
       throw new Error("A IA não gerou o mockup. Tente novamente.");
     }
+    const imageData = `data:image/png;base64,${b64}`;
 
     // Upload to storage
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
