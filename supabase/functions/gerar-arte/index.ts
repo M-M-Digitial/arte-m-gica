@@ -49,7 +49,7 @@ serve(async (req) => {
   }
 
   try {
-    const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual } = await req.json();
+    const { moldeName, moldeTemplateUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual } = await req.json();
 
     if (!moldeName || !temaNome || !nome) {
       return new Response(
@@ -117,7 +117,7 @@ DENSIDADE VISUAL: ${densityDesc}.
 
 REGRAS:
 1. Mostre o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como padrão de recorte vetorial).
-2. Linhas de corte = traço contínuo. Linhas de dobra = traço pontilhado.
+2. ${moldeTemplateUrl ? "RESPEITE EXATAMENTE o formato planificado, as proporções, abas de colagem e linhas de dobra da imagem de referência fornecida — apenas aplique a decoração temática sobre essa estrutura." : "Linhas de corte = traço contínuo. Linhas de dobra = traço pontilhado."}
 3. O tema decorativo seguro decora todas as faces com padrões, ilustrações e cores, sem copiar personagens, logos, marcas ou imagens licenciadas.
 4. A palavra "${nome}" aparece grande e legível na face principal.
 5. Todos os textos em português do Brasil.
@@ -126,8 +126,36 @@ REGRAS:
 8. Alta resolução para impressão em A4.
 9. Não retratar crianças, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.`;
 
-    const requestOpenAIImage = (activePrompt: string) =>
-      fetch("https://api.openai.com/v1/images/generations", {
+    // Tenta baixar a imagem-template do molde para usar como base em images/edits
+    let templateBlob: Blob | null = null;
+    if (moldeTemplateUrl) {
+      try {
+        const tmplRes = await fetch(moldeTemplateUrl);
+        if (tmplRes.ok) {
+          templateBlob = await tmplRes.blob();
+        } else {
+          console.warn("Template fetch failed:", tmplRes.status);
+        }
+      } catch (e) {
+        console.warn("Template fetch error:", e);
+      }
+    }
+
+    const requestOpenAIImage = (activePrompt: string) => {
+      if (templateBlob) {
+        const form = new FormData();
+        form.append("model", "gpt-image-2");
+        form.append("prompt", activePrompt);
+        form.append("size", "1024x1536");
+        form.append("n", "1");
+        form.append("image", templateBlob, "template.png");
+        return fetch("https://api.openai.com/v1/images/edits", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+          body: form,
+        });
+      }
+      return fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${OPENAI_API_KEY}`,
@@ -141,6 +169,7 @@ REGRAS:
           moderation: "low",
         }),
       });
+    };
 
     const fallbackPrompt = `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
 

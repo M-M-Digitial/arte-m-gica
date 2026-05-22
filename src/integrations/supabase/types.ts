@@ -55,6 +55,7 @@ export type Database = {
           name: string
           popular: boolean
           sort_order: number
+          template_pdf_url: string | null
           updated_at: string
         }
         Insert: {
@@ -67,6 +68,7 @@ export type Database = {
           name: string
           popular?: boolean
           sort_order?: number
+          template_pdf_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -79,6 +81,7 @@ export type Database = {
           name?: string
           popular?: boolean
           sort_order?: number
+          template_pdf_url?: string | null
           updated_at?: string
         }
         Relationships: []
