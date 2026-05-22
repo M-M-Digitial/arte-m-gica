@@ -52,7 +52,7 @@ NÃO incluir: textos sobrepostos, watermarks, molduras, logos. Apenas a foto rea
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-image-1",
+        model: "google/gemini-3-pro-image-preview",
         messages: [
           {
             role: "user",
