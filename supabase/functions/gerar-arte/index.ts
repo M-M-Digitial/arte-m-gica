@@ -152,8 +152,15 @@ REGRAS:
       console.error("OpenAI error:", response.status, errorText);
       if (errorText.includes("moderation_blocked")) {
         return new Response(
-          JSON.stringify({ error: "O conteúdo foi bloqueado pela moderação da OpenAI. Tente outro nome, tema ou frase mais neutra." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "A OpenAI bloqueou este tema por segurança. Gere uma arte segura pelo modelo alternativo do app.",
+            code: "OPENAI_MODERATION_BLOCKED",
+            fallback: {
+              safeThemeDescription: safeThemeDesc,
+              message: "Use o fallback local para criar uma arte decorativa sem personagens, marcas ou pessoas reais.",
+            },
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       throw new Error(`Erro no serviço de IA: ${response.status}`);
