@@ -99,6 +99,7 @@ REGRAS:
         prompt,
         size: "1024x1536",
         n: 1,
+        moderation: "low",
       }),
     });
 
