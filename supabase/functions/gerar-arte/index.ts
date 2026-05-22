@@ -69,8 +69,9 @@ serve(async (req) => {
         ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
         : "";
 
-    const idadeText = idade ? ` — número decorativo "${idade}" como elemento gráfico` : "";
-    const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — incluir na face secundária do molde com destaque tipográfico.` : "";
+    const safeThemeDesc = getSafeThemeDescription(temaNome);
+    const idadeText = idade ? ` — incluir o número "${idade}" como numeral decorativo, sem mencionar idade ou aniversário` : "";
+    const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — usar como lettering curto na face secundária do molde.` : "";
 
     const fonteMap: Record<string, string> = {
       divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
@@ -106,7 +107,7 @@ serve(async (req) => {
     const prompt = `Design gráfico de papelaria decorativa: arte completa aplicada em um molde planificado de embalagem, pronto para impressão e montagem artesanal.
 
 MOLDE: ${moldeName} — desenhe o molde planificado (aberto, flat), com todas as abas de colagem e linhas de dobra pontilhadas.
-TEMA DECORATIVO: ${temaNome}
+TEMA DECORATIVO SEGURO: ${safeThemeDesc}
 PALAVRA EM DESTAQUE: "${nome}"${idadeText}
 ${colorsDesc}
 ${fraseText}
@@ -117,12 +118,13 @@ DENSIDADE VISUAL: ${densityDesc}.
 REGRAS:
 1. Mostre o MOLDE PLANIFICADO COMPLETO (todas as faces abertas, como padrão de recorte vetorial).
 2. Linhas de corte = traço contínuo. Linhas de dobra = traço pontilhado.
-3. O tema "${temaNome}" decora todas as faces com padrões, ilustrações e cores.
+3. O tema decorativo seguro decora todas as faces com padrões, ilustrações e cores, sem copiar personagens, logos, marcas ou imagens licenciadas.
 4. A palavra "${nome}" aparece grande e legível na face principal.
 5. Todos os textos em português do Brasil.
 6. Estilo de papelaria decorativa profissional — colorido, vibrante, alegre.
 7. Fundo branco ao redor do molde (área de recorte).
-8. Alta resolução para impressão em A4.`;
+8. Alta resolução para impressão em A4.
+9. Não retratar crianças, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.`;
 
     const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
