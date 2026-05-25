@@ -212,6 +212,60 @@ export type Database = {
         }
         Relationships: []
       }
+      upload_jobs: {
+        Row: {
+          bucket: string
+          created_at: string
+          default_category: string
+          error: string | null
+          failed: number
+          file_name: string
+          id: string
+          prefix: string
+          register_in_moldes: boolean
+          results: Json
+          status: string
+          success: number
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          default_category?: string
+          error?: string | null
+          failed?: number
+          file_name: string
+          id?: string
+          prefix?: string
+          register_in_moldes?: boolean
+          results?: Json
+          status?: string
+          success?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          default_category?: string
+          error?: string | null
+          failed?: number
+          file_name?: string
+          id?: string
+          prefix?: string
+          register_in_moldes?: boolean
+          results?: Json
+          status?: string
+          success?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

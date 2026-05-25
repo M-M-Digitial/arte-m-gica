@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 type ResultItem = { path: string; status: "ok" | "error"; message?: string };
 type Bucket = { id: string; name: string; public: boolean };
@@ -60,10 +61,38 @@ export default function AdminMoldesUpload() {
     setResults(null);
   };
 
+  const [progress, setProgress] = useState<{ total: number; success: number; failed: number } | null>(null);
+
+  const pollJob = async (jobId: string) => {
+    while (true) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const { data, error } = await supabase
+        .from("upload_jobs")
+        .select("status,total,success,failed,results,error")
+        .eq("id", jobId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) continue;
+      setProgress({ total: data.total, success: data.success, failed: data.failed });
+      if (data.status === "completed") {
+        setResults((data.results as ResultItem[]) || []);
+        toast({
+          title: "Upload concluído",
+          description: `${data.success} ok, ${data.failed} falhas (${data.total} total).`,
+        });
+        return;
+      }
+      if (data.status === "failed") {
+        throw new Error(data.error || "Processamento falhou");
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!file || !bucket) return;
     setUploading(true);
     setResults(null);
+    setProgress(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Não autenticado");
@@ -84,11 +113,7 @@ export default function AdminMoldesUpload() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Falha no upload");
 
-      setResults(data.results);
-      toast({
-        title: "Upload concluído",
-        description: `${data.success} ok, ${data.failed} falhas (${data.total} total) → bucket "${data.bucket}".`,
-      });
+      await pollJob(data.job_id);
     } catch (err) {
       toast({
         title: "Erro",
@@ -210,6 +235,18 @@ export default function AdminMoldesUpload() {
             ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando…</>
             : "Enviar e processar"}
         </Button>
+
+        {progress && uploading && (
+          <div className="space-y-2">
+            <Progress
+              value={progress.total ? ((progress.success + progress.failed) / progress.total) * 100 : 5}
+            />
+            <p className="text-xs text-muted-foreground text-center">
+              {progress.success + progress.failed} / {progress.total || "?"} arquivos
+              {progress.failed > 0 && ` (${progress.failed} falhas)`}
+            </p>
+          </div>
+        )}
       </Card>
 
       {results && (
