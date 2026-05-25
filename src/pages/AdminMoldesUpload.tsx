@@ -160,11 +160,22 @@ export default function AdminMoldesUpload() {
           formData.append("register_in_moldes", String(registerInMoldes));
           formData.append("default_category", defaultCategory);
 
-          const { error: uploadError } = await supabase.functions.invoke("upload-moldes-zip", {
-            body: formData,
-          });
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-moldes-zip`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: formData,
+            },
+          );
 
-          if (uploadError) throw uploadError;
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.error || errorData?.message || `Falha no upload (${response.status})`);
+          }
 
           success += 1;
           nextResults.push({ path: storagePath, status: "ok" });
