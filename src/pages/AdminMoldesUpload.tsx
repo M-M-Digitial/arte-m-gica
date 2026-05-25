@@ -235,6 +235,18 @@ export default function AdminMoldesUpload() {
             ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando…</>
             : "Enviar e processar"}
         </Button>
+
+        {progress && uploading && (
+          <div className="space-y-2">
+            <Progress
+              value={progress.total ? ((progress.success + progress.failed) / progress.total) * 100 : 5}
+            />
+            <p className="text-xs text-muted-foreground text-center">
+              {progress.success + progress.failed} / {progress.total || "?"} arquivos
+              {progress.failed > 0 && ` (${progress.failed} falhas)`}
+            </p>
+          </div>
+        )}
       </Card>
 
       {results && (
