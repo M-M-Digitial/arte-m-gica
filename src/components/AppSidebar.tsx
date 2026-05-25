@@ -3,6 +3,7 @@ import {
   Sparkles,
   Bot,
   UserCircle,
+  Library,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -25,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 const mainItems = [
   { title: "Início", url: "/", icon: LayoutDashboard },
   { title: "Criar com IA", url: "/criar", icon: Sparkles },
+  { title: "Modelos Prontos", url: "/modelos-prontos", icon: Library },
   { title: "Agentes da Papelaria", url: "/agentes", icon: Bot },
 ];
 

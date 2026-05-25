@@ -11,6 +11,7 @@ import Agentes from "./pages/Agentes";
 import AgenteChat from "./pages/AgenteChat";
 import Dashboard from "./pages/Dashboard";
 import Moldes from "./pages/Moldes";
+import ModelosProntos from "./pages/ModelosProntos";
 import Temas from "./pages/Temas";
 import Editor from "./pages/Editor";
 import Mockups from "./pages/Mockups";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/criar" element={<Criar />} />
               <Route path="/moldes" element={<Moldes />} />
+              <Route path="/modelos-prontos" element={<ModelosProntos />} />
               <Route path="/temas" element={<Temas />} />
               <Route path="/editor" element={<Editor />} />
               <Route path="/mockups" element={<Mockups />} />
