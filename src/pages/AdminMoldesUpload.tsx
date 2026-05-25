@@ -149,32 +149,32 @@ export default function AdminMoldesUpload() {
           .join("/");
 
         try {
-          const bytes = await entry.async("uint8array");
-          const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(storagePath, bytes, { contentType, upsert: true });
+          const buffer = await entry.async("arraybuffer");
+          const uploadFile = new File([buffer], filename, { type: contentType });
+          const formData = new FormData();
 
-          if (uploadError) throw uploadError;
+          formData.append("file", uploadFile);
+          formData.append("bucket", bucket);
+          formData.append("prefix", prefix.trim());
+          formData.append("storage_path", storagePath);
+          formData.append("register_in_moldes", String(registerInMoldes));
+          formData.append("default_category", defaultCategory);
 
-          if (registerInMoldes && ["png", "jpg", "jpeg", "webp", "svg", "pdf"].includes(ext)) {
-            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-            const isPdf = ext === "pdf";
-            const baseName = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
-            const derivedCategory = folderSegs.length > 0
-              ? prettify(folderSegs.join(" / "))
-              : defaultCategory;
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-moldes-zip`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              },
+              body: formData,
+            },
+          );
 
-            const { error: moldError } = await supabase.from("moldes").insert({
-              name: prettify(baseName),
-              category: derivedCategory,
-              image_url: isPdf ? null : publicData.publicUrl,
-              template_pdf_url: isPdf ? publicData.publicUrl : null,
-              emoji: "📦",
-              popular: false,
-              sort_order: 0,
-            });
-
-            if (moldError) throw moldError;
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.error || errorData?.message || `Falha no upload (${response.status})`);
           }
 
           success += 1;
