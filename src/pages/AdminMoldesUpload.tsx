@@ -150,32 +150,21 @@ export default function AdminMoldesUpload() {
 
         try {
           const bytes = await entry.async("uint8array");
-          const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(storagePath, bytes, { contentType, upsert: true });
+          const uploadFile = new File([bytes], filename, { type: contentType });
+          const formData = new FormData();
+
+          formData.append("file", uploadFile);
+          formData.append("bucket", bucket);
+          formData.append("prefix", prefix.trim());
+          formData.append("storage_path", storagePath);
+          formData.append("register_in_moldes", String(registerInMoldes));
+          formData.append("default_category", defaultCategory);
+
+          const { error: uploadError } = await supabase.functions.invoke("upload-moldes-zip", {
+            body: formData,
+          });
 
           if (uploadError) throw uploadError;
-
-          if (registerInMoldes && ["png", "jpg", "jpeg", "webp", "svg", "pdf"].includes(ext)) {
-            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-            const isPdf = ext === "pdf";
-            const baseName = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
-            const derivedCategory = folderSegs.length > 0
-              ? prettify(folderSegs.join(" / "))
-              : defaultCategory;
-
-            const { error: moldError } = await supabase.from("moldes").insert({
-              name: prettify(baseName),
-              category: derivedCategory,
-              image_url: isPdf ? null : publicData.publicUrl,
-              template_pdf_url: isPdf ? publicData.publicUrl : null,
-              emoji: "📦",
-              popular: false,
-              sort_order: 0,
-            });
-
-            if (moldError) throw moldError;
-          }
 
           success += 1;
           nextResults.push({ path: storagePath, status: "ok" });
