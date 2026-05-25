@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import JSZip from "jszip";
 import { Upload, FileArchive, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,40 @@ import { Progress } from "@/components/ui/progress";
 
 type ResultItem = { path: string; status: "ok" | "error"; message?: string };
 type Bucket = { id: string; name: string; public: boolean };
+type ProgressState = { total: number; processed: number; success: number; failed: number };
+
+const MIME: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  gif: "image/gif",
+  svg: "image/svg+xml",
+  pdf: "application/pdf",
+  json: "application/json",
+  txt: "text/plain",
+  csv: "text/csv",
+  mp4: "video/mp4",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  zip: "application/zip",
+  ttf: "font/ttf",
+  otf: "font/otf",
+  woff: "font/woff",
+  woff2: "font/woff2",
+};
+
+const slugifySegment = (value: string) => value
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase()
+  .replace(/[^a-z0-9._-]+/g, "-")
+  .replace(/^-+|-+$/g, "");
+
+const prettify = (value: string) => {
+  const clean = value.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim();
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Geral";
+};
 
 export default function AdminMoldesUpload() {
   const [buckets, setBuckets] = useState<Bucket[]>([]);
@@ -25,6 +60,7 @@ export default function AdminMoldesUpload() {
   const [uploading, setUploading] = useState(false);
   const [loadingBuckets, setLoadingBuckets] = useState(true);
   const [results, setResults] = useState<ResultItem[] | null>(null);
+  const [progress, setProgress] = useState<ProgressState | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -34,7 +70,7 @@ export default function AdminMoldesUpload() {
         const { data, error } = await supabase.functions.invoke("list-storage-buckets");
         if (error) throw error;
         setBuckets(data.buckets || []);
-        if (data.buckets?.find((b: Bucket) => b.name === "moldes")) {
+        if (data.buckets?.find((item: Bucket) => item.name === "moldes")) {
           setBucket("moldes");
         } else if (data.buckets?.[0]) {
           setBucket(data.buckets[0].name);
@@ -51,69 +87,120 @@ export default function AdminMoldesUpload() {
     })();
   }, []);
 
-  const handleFile = (f: File | null) => {
-    if (!f) return;
-    if (!f.name.toLowerCase().endsWith(".zip")) {
+  const handleFile = (selectedFile: File | null) => {
+    if (!selectedFile) return;
+    if (!selectedFile.name.toLowerCase().endsWith(".zip")) {
       toast({ title: "Arquivo inválido", description: "Envie um .zip", variant: "destructive" });
       return;
     }
-    setFile(f);
+    setFile(selectedFile);
     setResults(null);
-  };
-
-  const [progress, setProgress] = useState<{ total: number; success: number; failed: number } | null>(null);
-
-  const pollJob = async (jobId: string) => {
-    while (true) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const { data, error } = await supabase
-        .from("upload_jobs")
-        .select("status,total,success,failed,results,error")
-        .eq("id", jobId)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) continue;
-      setProgress({ total: data.total, success: data.success, failed: data.failed });
-      if (data.status === "completed") {
-        setResults((data.results as ResultItem[]) || []);
-        toast({
-          title: "Upload concluído",
-          description: `${data.success} ok, ${data.failed} falhas (${data.total} total).`,
-        });
-        return;
-      }
-      if (data.status === "failed") {
-        throw new Error(data.error || "Processamento falhou");
-      }
-    }
+    setProgress(null);
   };
 
   const handleSubmit = async () => {
     if (!file || !bucket) return;
+
     setUploading(true);
     setResults(null);
     setProgress(null);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Não autenticado");
 
-      const form = new FormData();
-      form.append("file", file);
-      form.append("bucket", bucket);
-      form.append("prefix", prefix);
-      form.append("register_in_moldes", registerInMoldes ? "true" : "false");
-      form.append("category", category);
+      const zip = await JSZip.loadAsync(file);
+      const entries = Object.values(zip.files).filter(
+        (entry) => !entry.dir
+          && !entry.name.startsWith("__MACOSX/")
+          && !entry.name.split("/").pop()?.startsWith("."),
+      );
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-moldes-zip`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: form,
+      if (entries.length === 0) {
+        throw new Error("O ZIP não contém arquivos válidos para upload.");
+      }
+
+      const nextResults: ResultItem[] = [];
+      let success = 0;
+      let failed = 0;
+      const defaultCategory = category.trim() || "Geral";
+
+      setProgress({ total: entries.length, processed: 0, success: 0, failed: 0 });
+
+      for (const entry of entries) {
+        const rawPath = entry.name;
+        const segments = rawPath
+          .split("/")
+          .filter(Boolean)
+          .map(slugifySegment)
+          .filter(Boolean);
+
+        if (segments.length === 0) {
+          continue;
+        }
+
+        const filename = segments[segments.length - 1];
+        const folderSegs = segments.slice(0, -1);
+        const dotIdx = filename.lastIndexOf(".");
+        const ext = dotIdx > 0 ? filename.slice(dotIdx + 1).toLowerCase() : "";
+        const contentType = MIME[ext] || "application/octet-stream";
+        const storagePath = [prefix.trim().replace(/^\/+|\/+$/g, ""), ...folderSegs, filename]
+          .filter(Boolean)
+          .join("/");
+
+        try {
+          const bytes = await entry.async("uint8array");
+          const { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(storagePath, bytes, { contentType, upsert: true });
+
+          if (uploadError) throw uploadError;
+
+          if (registerInMoldes && ["png", "jpg", "jpeg", "webp", "svg", "pdf"].includes(ext)) {
+            const { data: publicData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+            const isPdf = ext === "pdf";
+            const baseName = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
+            const derivedCategory = folderSegs.length > 0
+              ? prettify(folderSegs.join(" / "))
+              : defaultCategory;
+
+            const { error: moldError } = await supabase.from("moldes").insert({
+              name: prettify(baseName),
+              category: derivedCategory,
+              image_url: isPdf ? null : publicData.publicUrl,
+              template_pdf_url: isPdf ? publicData.publicUrl : null,
+              emoji: "📦",
+              popular: false,
+              sort_order: 0,
+            });
+
+            if (moldError) throw moldError;
+          }
+
+          success += 1;
+          nextResults.push({ path: storagePath, status: "ok" });
+        } catch (error) {
+          failed += 1;
+          nextResults.push({
+            path: storagePath,
+            status: "error",
+            message: error instanceof Error ? error.message : "Erro desconhecido",
+          });
+        }
+
+        setProgress({
+          total: entries.length,
+          processed: success + failed,
+          success,
+          failed,
+        });
+      }
+
+      setResults(nextResults);
+      toast({
+        title: "Upload concluído",
+        description: `${success} ok, ${failed} falhas (${entries.length} total).`,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha no upload");
-
-      await pollJob(data.job_id);
     } catch (err) {
       toast({
         title: "Erro",
@@ -142,9 +229,9 @@ export default function AdminMoldesUpload() {
               <SelectValue placeholder={loadingBuckets ? "Carregando…" : "Escolha um bucket"} />
             </SelectTrigger>
             <SelectContent>
-              {buckets.map((b) => (
-                <SelectItem key={b.id} value={b.name}>
-                  {b.name} {b.public ? "🌐" : "🔒"}
+              {buckets.map((item) => (
+                <SelectItem key={item.id} value={item.name}>
+                  {item.name} {item.public ? "🌐" : "🔒"}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -169,7 +256,7 @@ export default function AdminMoldesUpload() {
           <Checkbox
             id="register"
             checked={registerInMoldes}
-            onCheckedChange={(v) => setRegisterInMoldes(!!v)}
+            onCheckedChange={(checked) => setRegisterInMoldes(!!checked)}
           />
           <div className="space-y-1">
             <Label htmlFor="register" className="cursor-pointer">
@@ -208,7 +295,10 @@ export default function AdminMoldesUpload() {
           }`}
         >
           <input
-            ref={inputRef} type="file" accept=".zip" className="hidden"
+            ref={inputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
             onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           />
           {file ? (
@@ -229,7 +319,8 @@ export default function AdminMoldesUpload() {
         <Button
           onClick={handleSubmit}
           disabled={!file || !bucket || uploading}
-          className="w-full" size="lg"
+          className="w-full"
+          size="lg"
         >
           {uploading
             ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando…</>
@@ -238,11 +329,9 @@ export default function AdminMoldesUpload() {
 
         {progress && uploading && (
           <div className="space-y-2">
-            <Progress
-              value={progress.total ? ((progress.success + progress.failed) / progress.total) * 100 : 5}
-            />
+            <Progress value={progress.total ? (progress.processed / progress.total) * 100 : 0} />
             <p className="text-xs text-muted-foreground text-center">
-              {progress.success + progress.failed} / {progress.total || "?"} arquivos
+              {progress.processed} / {progress.total} arquivos
               {progress.failed > 0 && ` (${progress.failed} falhas)`}
             </p>
           </div>
@@ -253,14 +342,14 @@ export default function AdminMoldesUpload() {
         <Card className="p-6">
           <h2 className="font-semibold text-foreground mb-3">Resultados</h2>
           <ul className="space-y-2 max-h-96 overflow-auto">
-            {results.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                {r.status === "ok"
+            {results.map((result, index) => (
+              <li key={index} className="flex items-start gap-2 text-sm">
+                {result.status === "ok"
                   ? <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                   : <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-foreground truncate font-mono text-xs">{r.path}</p>
-                  {r.message && <p className="text-muted-foreground text-xs">{r.message}</p>}
+                  <p className="text-foreground truncate font-mono text-xs">{result.path}</p>
+                  {result.message && <p className="text-muted-foreground text-xs">{result.message}</p>}
                 </div>
               </li>
             ))}
