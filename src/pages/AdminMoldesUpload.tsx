@@ -149,8 +149,8 @@ export default function AdminMoldesUpload() {
           .join("/");
 
         try {
-          const bytes = await entry.async("uint8array");
-          const uploadFile = new File([bytes], filename, { type: contentType });
+          const buffer = await entry.async("arraybuffer");
+          const uploadFile = new File([buffer], filename, { type: contentType });
           const formData = new FormData();
 
           formData.append("file", uploadFile);
