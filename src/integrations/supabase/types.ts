@@ -44,6 +44,62 @@ export type Database = {
         }
         Relationships: []
       }
+      modelos_prontos_arquivos: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          label: string
+          sort_order: number
+          theme_slug: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          label: string
+          sort_order?: number
+          theme_slug: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          theme_slug?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_prontos_arquivos_theme_slug_fkey"
+            columns: ["theme_slug"]
+            isOneToOne: false
+            referencedRelation: "modelos_prontos_temas"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      modelos_prontos_temas: {
+        Row: {
+          created_at: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       moldes: {
         Row: {
           category: string
