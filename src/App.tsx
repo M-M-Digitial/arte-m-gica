@@ -15,6 +15,7 @@ import Temas from "./pages/Temas";
 import Editor from "./pages/Editor";
 import Mockups from "./pages/Mockups";
 import Perfil from "./pages/Perfil";
+import AdminMoldesUpload from "./pages/AdminMoldesUpload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/agentes" element={<Agentes />} />
               <Route path="/agentes/:agentId" element={<AgenteChat />} />
               <Route path="/perfil" element={<Perfil />} />
+              <Route path="/admin/moldes" element={<AdminMoldesUpload />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
