@@ -1,1 +1,4 @@
 project_id = "pemjulrovatvcicnpvbo"
+
+[functions.list-modelos-prontos]
+verify_jwt = false
