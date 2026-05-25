@@ -27,6 +27,93 @@ const prettify = (s: string) => {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 };
 
+async function processInBackground(
+  admin: ReturnType<typeof createClient>,
+  jobId: string,
+  zipBuffer: ArrayBuffer,
+  bucket: string,
+  prefix: string,
+  registerInMoldes: boolean,
+  defaultCategory: string,
+) {
+  try {
+    const zip = await JSZip.loadAsync(zipBuffer);
+    const entries = Object.values(zip.files).filter(
+      (f: any) =>
+        !f.dir &&
+        !f.name.startsWith("__MACOSX/") &&
+        !f.name.split("/").pop()?.startsWith("."),
+    );
+
+    await admin.from("upload_jobs").update({
+      status: "processing", total: entries.length, updated_at: new Date().toISOString(),
+    }).eq("id", jobId);
+
+    const results: Array<{ path: string; status: "ok" | "error"; message?: string }> = [];
+    let success = 0;
+    let failed = 0;
+
+    for (const entry of entries) {
+      const rawPath = (entry as any).name as string;
+      const segments = rawPath.split("/").filter(Boolean).map(slugifySegment).filter(Boolean);
+      if (segments.length === 0) continue;
+      const filename = segments[segments.length - 1];
+      const folderSegs = segments.slice(0, -1);
+      const dotIdx = filename.lastIndexOf(".");
+      const ext = dotIdx > 0 ? filename.slice(dotIdx + 1).toLowerCase() : "";
+      const contentType = MIME[ext] || "application/octet-stream";
+      const storagePath = [prefix, ...folderSegs, filename].filter(Boolean).join("/");
+
+      try {
+        const bytes = await (entry as any).async("uint8array");
+        const { error: upErr } = await admin.storage
+          .from(bucket).upload(storagePath, bytes, { contentType, upsert: true });
+        if (upErr) throw new Error(upErr.message);
+
+        if (registerInMoldes && ["png","jpg","jpeg","webp","svg","pdf"].includes(ext)) {
+          const { data: pub } = admin.storage.from(bucket).getPublicUrl(storagePath);
+          const isPdf = ext === "pdf";
+          const baseName = filename.slice(0, dotIdx);
+          const category = folderSegs.length > 0 ? prettify(folderSegs.join(" / ")) : defaultCategory;
+          await admin.from("moldes").insert({
+            name: prettify(baseName), category,
+            image_url: isPdf ? null : pub.publicUrl,
+            template_pdf_url: isPdf ? pub.publicUrl : null,
+            emoji: "📦", popular: false, sort_order: 0,
+          });
+        }
+
+        results.push({ path: storagePath, status: "ok" });
+        success++;
+      } catch (e) {
+        results.push({
+          path: storagePath, status: "error",
+          message: e instanceof Error ? e.message : "Erro desconhecido",
+        });
+        failed++;
+      }
+
+      // Atualiza progresso a cada 5 arquivos
+      if ((success + failed) % 5 === 0) {
+        await admin.from("upload_jobs").update({
+          success, failed, results, updated_at: new Date().toISOString(),
+        }).eq("id", jobId);
+      }
+    }
+
+    await admin.from("upload_jobs").update({
+      status: "completed", success, failed, results,
+      updated_at: new Date().toISOString(),
+    }).eq("id", jobId);
+  } catch (err) {
+    await admin.from("upload_jobs").update({
+      status: "failed",
+      error: err instanceof Error ? err.message : "Erro desconhecido",
+      updated_at: new Date().toISOString(),
+    }).eq("id", jobId);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -58,9 +145,8 @@ serve(async (req) => {
     const { data: roleRow } = await admin
       .from("user_roles").select("role")
       .eq("user_id", userId).eq("role", "admin").maybeSingle();
-
     if (!roleRow) {
-      return new Response(JSON.stringify({ error: "Apenas administradores podem enviar." }), {
+      return new Response(JSON.stringify({ error: "Apenas administradores." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -72,18 +158,12 @@ serve(async (req) => {
     const registerInMoldes = (form.get("register_in_moldes") as string) === "true";
     const defaultCategory = (form.get("category") as string) || "Geral";
 
-    if (!(file instanceof File)) {
-      return new Response(JSON.stringify({ error: "Arquivo ZIP não enviado." }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!bucket) {
-      return new Response(JSON.stringify({ error: "Bucket não informado." }), {
+    if (!(file instanceof File) || !bucket) {
+      return new Response(JSON.stringify({ error: "Arquivo ou bucket inválido." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Garante que o bucket existe
     const { data: buckets } = await admin.storage.listBuckets();
     if (!buckets?.some((b) => b.name === bucket)) {
       return new Response(JSON.stringify({ error: `Bucket "${bucket}" não encontrado.` }), {
@@ -91,78 +171,32 @@ serve(async (req) => {
       });
     }
 
-    const zipBuffer = await file.arrayBuffer();
-    const zip = await JSZip.loadAsync(zipBuffer);
-
-    type Result = { path: string; status: "ok" | "error"; message?: string };
-    const results: Result[] = [];
-
-    const entries = Object.values(zip.files).filter(
-      (f: any) =>
-        !f.dir &&
-        !f.name.startsWith("__MACOSX/") &&
-        !f.name.split("/").pop()?.startsWith("."),
-    );
-
-    for (const entry of entries) {
-      const rawPath = (entry as any).name as string;
-      // Preserva estrutura de pastas, sanitiza cada segmento
-      const segments = rawPath.split("/").filter(Boolean).map(slugifySegment).filter(Boolean);
-      if (segments.length === 0) continue;
-      const filename = segments[segments.length - 1];
-      const folderSegs = segments.slice(0, -1);
-
-      const dotIdx = filename.lastIndexOf(".");
-      const ext = dotIdx > 0 ? filename.slice(dotIdx + 1).toLowerCase() : "";
-      const contentType = MIME[ext] || "application/octet-stream";
-
-      const storagePath = [prefix, ...folderSegs, filename].filter(Boolean).join("/");
-
-      try {
-        const bytes = await (entry as any).async("uint8array");
-        const { error: upErr } = await admin.storage
-          .from(bucket)
-          .upload(storagePath, bytes, { contentType, upsert: true });
-        if (upErr) throw new Error(upErr.message);
-
-        // Registro opcional na tabela moldes (apenas imagens/PDF)
-        if (registerInMoldes && (["png","jpg","jpeg","webp","svg","pdf"].includes(ext))) {
-          const { data: pub } = admin.storage.from(bucket).getPublicUrl(storagePath);
-          const isPdf = ext === "pdf";
-          const baseName = filename.slice(0, dotIdx);
-          const category = folderSegs.length > 0 ? prettify(folderSegs.join(" / ")) : defaultCategory;
-          await admin.from("moldes").insert({
-            name: prettify(baseName),
-            category,
-            image_url: isPdf ? null : pub.publicUrl,
-            template_pdf_url: isPdf ? pub.publicUrl : null,
-            emoji: "📦",
-            popular: false,
-            sort_order: 0,
-          });
-        }
-
-        results.push({ path: storagePath, status: "ok" });
-      } catch (e) {
-        results.push({
-          path: storagePath,
-          status: "error",
-          message: e instanceof Error ? e.message : "Erro desconhecido",
-        });
-      }
+    // Cria registro do job
+    const { data: job, error: jobErr } = await admin
+      .from("upload_jobs")
+      .insert({
+        user_id: userId, bucket, prefix, file_name: file.name,
+        status: "pending", register_in_moldes: registerInMoldes,
+        default_category: defaultCategory,
+      })
+      .select().single();
+    if (jobErr || !job) {
+      return new Response(JSON.stringify({ error: jobErr?.message || "Falha ao criar job" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const okCount = results.filter((r) => r.status === "ok").length;
-    return new Response(
-      JSON.stringify({
-        total: results.length,
-        success: okCount,
-        failed: results.length - okCount,
-        bucket,
-        results,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    const zipBuffer = await file.arrayBuffer();
+
+    // Processa em background, responde imediatamente
+    // @ts-ignore EdgeRuntime disponível no Supabase
+    EdgeRuntime.waitUntil(
+      processInBackground(admin, job.id, zipBuffer, bucket, prefix, registerInMoldes, defaultCategory),
     );
+
+    return new Response(JSON.stringify({ job_id: job.id }), {
+      status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("upload-moldes-zip error:", err);
     return new Response(
