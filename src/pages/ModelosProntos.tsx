@@ -21,9 +21,19 @@ export default function ModelosProntos() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke("list-modelos-prontos");
-        if (error) throw error;
-        setThemes((data as { themes: Theme[] }).themes || []);
+        const [{ data: temas, error: e1 }, { data: arquivos, error: e2 }] = await Promise.all([
+          supabase.from("modelos_prontos_temas").select("slug, name").order("name"),
+          supabase.from("modelos_prontos_arquivos").select("theme_slug, file_name, label, url").order("file_name"),
+        ]);
+        if (e1) throw e1;
+        if (e2) throw e2;
+        const byTheme = new Map<string, ThemeFile[]>();
+        (arquivos ?? []).forEach((a) => {
+          const arr = byTheme.get(a.theme_slug) ?? [];
+          arr.push({ name: a.file_name, label: a.label, url: a.url });
+          byTheme.set(a.theme_slug, arr);
+        });
+        setThemes((temas ?? []).map((t) => ({ slug: t.slug, name: t.name, files: byTheme.get(t.slug) ?? [] })));
       } catch (e: any) {
         setError(e?.message ?? "Erro ao carregar");
       } finally {
