@@ -220,7 +220,7 @@ Resultado: o MESMO molde da entrada, com decoração aplicada dentro das faces, 
         form.append("size", outputSize);
         form.append("n", "1");
         form.append("quality", "high");
-        form.append("input_fidelity", "high");
+        
         form.append("image", templateBlob, "template.png");
         return fetch("https://api.openai.com/v1/images/edits", {
           method: "POST",
