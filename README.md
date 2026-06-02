@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# MoldePronto
 
 TODO: Document your project here
