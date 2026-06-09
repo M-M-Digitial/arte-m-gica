@@ -16,6 +16,27 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+function findBase64Image(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  for (const key of ["b64_json", "partial_image_b64", "image_b64", "base64"]) {
+    const found = record[key];
+    if (typeof found === "string") return found.startsWith("data:image") ? found.split(",")[1] : found;
+  }
+  for (const nested of Object.values(record)) {
+    if (Array.isArray(nested)) {
+      for (const item of nested) {
+        const found = findBase64Image(item);
+        if (found) return found;
+      }
+    } else if (nested && typeof nested === "object") {
+      const found = findBase64Image(nested);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -159,29 +180,37 @@ NÃO incluir: textos sobrepostos, watermarks, molduras, logos.`;
       const decoder = new TextDecoder();
       let buf = "";
       let finalB64: string | null = null;
+      let lastB64: string | null = null;
       try {
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           await writer.write(value);
           buf += decoder.decode(value, { stream: true });
-          let nl;
-          while ((nl = buf.indexOf("\n\n")) !== -1) {
-            const block = buf.slice(0, nl);
-            buf = buf.slice(nl + 2);
+          let match;
+          while ((match = buf.match(/\r?\n\r?\n/))) {
+            const block = buf.slice(0, match.index);
+            buf = buf.slice((match.index ?? 0) + match[0].length);
             let evt = "";
             let data = "";
             for (const line of block.split("\n")) {
               if (line.startsWith("event:")) evt = line.slice(6).trim();
               else if (line.startsWith("data:")) data += line.slice(5).trim();
             }
-            if (evt === "image_generation.completed" && data) {
-              try { finalB64 = JSON.parse(data).b64_json ?? null; } catch {}
+            if (evt.includes("image_generation") && data) {
+              try {
+                const b64 = findBase64Image(JSON.parse(data));
+                if (b64) {
+                  lastB64 = b64;
+                  if (evt.includes("completed") || evt.includes("final")) finalB64 = b64;
+                }
+              } catch {}
             }
           }
         }
-        if (finalB64) await finalizeAndUpload(finalB64, writer, encoder);
-        else console.error("SSE stream ended without completed event");
+        const imageToUpload = finalB64 || lastB64;
+        if (imageToUpload) await finalizeAndUpload(imageToUpload, writer, encoder);
+        else console.error("SSE stream ended without any image event");
       } catch (e) {
         console.error("stream pump error:", e);
       } finally {
