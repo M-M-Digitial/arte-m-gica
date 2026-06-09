@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
+import { streamImageEdgeFunction } from "@/lib/stream-image";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -20,6 +22,7 @@ import {
   Type,
   FileText,
   ArrowRight,
+  Zap,
 } from "lucide-react";
 
 // Mold images
@@ -312,11 +315,16 @@ export default function Criar() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewIsFinal, setPreviewIsFinal] = useState(false);
   const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
   const [mockupImage, setMockupImage] = useState<string | null>(null);
   const [mockupImageBase64, setMockupImageBase64] = useState<string | null>(null);
+  const [mockupPreview, setMockupPreview] = useState<string | null>(null);
+  const [mockupPreviewIsFinal, setMockupPreviewIsFinal] = useState(false);
   const [mockupFormato, setMockupFormato] = useState<"feed" | "story">("feed");
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [qualidade, setQualidade] = useState<"low" | "medium">("medium");
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
