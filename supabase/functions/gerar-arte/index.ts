@@ -245,7 +245,82 @@ PROIBIÇÕES: sem crianças, pessoas reais, celebridades, personagens registrado
       });
     }
 
-    // TransformStream: encaminha SSE do OpenAI ao cliente; ao fim, compõe e faz upload, emite meta event.
+    const upstreamCT = openaiRes.headers.get("content-type") || "";
+    const isSSE = upstreamCT.includes("text/event-stream");
+    console.log("OpenAI upstream content-type:", upstreamCT, "isSSE:", isSSE);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const finalizeAndUpload = async (
+      b64: string,
+      writer: WritableStreamDefaultWriter<Uint8Array>,
+      encoder: TextEncoder,
+    ) => {
+      let bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
+        try { bytes = compositeMoldLines(templateBytes, bytes); } catch (e) { console.warn("composite skipped:", e); }
+      }
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const fileName = `arte_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+        const filePath = `public/${fileName}`;
+        const { error: upErr } = await supabase.storage
+          .from("artes-geradas")
+          .upload(filePath, bytes, { contentType: "image/png", upsert: false });
+        if (upErr) {
+          console.error("upload error:", upErr);
+          return;
+        }
+        const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
+        const meta = {
+          type: "meta.uploaded",
+          imageUrl: pub.publicUrl,
+          imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+        };
+        await writer.write(encoder.encode(`event: meta.uploaded\ndata: ${JSON.stringify(meta)}\n\n`));
+      } catch (e) {
+        console.error("upload step error:", e);
+      }
+    };
+
+    // Caminho A: upstream NÃO é SSE (OpenAI ignorou stream=true). Lê JSON, sintetiza events.
+    if (!isSSE) {
+      const json = await openaiRes.json().catch((e) => {
+        console.error("Failed to parse OpenAI JSON:", e);
+        return null;
+      });
+      const b64: string | undefined = json?.data?.[0]?.b64_json;
+      if (!b64) {
+        console.error("OpenAI non-SSE response had no b64_json:", JSON.stringify(json).slice(0, 500));
+        return new Response(
+          JSON.stringify({ error: "A IA não retornou uma imagem. Tente novamente." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { readable, writable } = new TransformStream();
+      const writer = writable.getWriter();
+      const encoder = new TextEncoder();
+      (async () => {
+        try {
+          const evt = { type: "image_generation.completed", b64_json: b64, created_at: Date.now() };
+          await writer.write(encoder.encode(`event: image_generation.completed\ndata: ${JSON.stringify(evt)}\n\n`));
+          await finalizeAndUpload(b64, writer, encoder);
+        } finally {
+          try { await writer.close(); } catch {}
+        }
+      })();
+      return new Response(readable, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
+    // Caminho B: upstream É SSE. Repassa eventos e captura `completed`.
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
@@ -276,35 +351,10 @@ PROIBIÇÕES: sem crianças, pessoas reais, celebridades, personagens registrado
             }
           }
         }
-
         if (finalB64) {
-          let bytes = Uint8Array.from(atob(finalB64), (c) => c.charCodeAt(0));
-          if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
-            try { bytes = compositeMoldLines(templateBytes, bytes); } catch (e) { console.warn("composite skipped:", e); }
-          }
-          try {
-            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-            const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-            const supabase = createClient(supabaseUrl, supabaseKey);
-            const fileName = `arte_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-            const filePath = `public/${fileName}`;
-            const { error: upErr } = await supabase.storage
-              .from("artes-geradas")
-              .upload(filePath, bytes, { contentType: "image/png", upsert: false });
-            if (!upErr) {
-              const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
-              const meta = {
-                type: "meta.uploaded",
-                imageUrl: pub.publicUrl,
-                imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
-              };
-              await writer.write(encoder.encode(`event: meta.uploaded\ndata: ${JSON.stringify(meta)}\n\n`));
-            } else {
-              console.error("upload error:", upErr);
-            }
-          } catch (e) {
-            console.error("upload step error:", e);
-          }
+          await finalizeAndUpload(finalB64, writer, encoder);
+        } else {
+          console.error("SSE stream ended without completed event");
         }
       } catch (e) {
         console.error("stream pump error:", e);
