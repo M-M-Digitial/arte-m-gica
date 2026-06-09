@@ -5,6 +5,28 @@ type Frame = { dataUrl: string; isFinal: boolean };
 
 export type StreamMeta = Record<string, any>;
 
+const findBase64Image = (value: unknown): string | null => {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, any>;
+  for (const key of ["b64_json", "partial_image_b64", "image_b64", "base64", "imageBase64", "mockupBase64"]) {
+    if (typeof record[key] === "string") {
+      return record[key].startsWith("data:image") ? record[key].split(",")[1] : record[key];
+    }
+  }
+  for (const nested of Object.values(record)) {
+    if (Array.isArray(nested)) {
+      for (const item of nested) {
+        const found = findBase64Image(item);
+        if (found) return found;
+      }
+    } else if (nested && typeof nested === "object") {
+      const found = findBase64Image(nested);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
 /**
  * Stream an edge function that returns SSE with `image_generation.partial_image`,
  * `image_generation.completed`, and a final `meta.uploaded` event.
@@ -51,13 +73,14 @@ export async function streamImageEdgeFunction(
 
   const parser = createParser({
     onEvent(ev) {
-      if (ev.event === "image_generation.partial_image" || ev.event === "image_generation.completed") {
+      if (ev.event?.includes("image_generation") || ev.event?.includes("partial_image")) {
         try {
           const payload = JSON.parse(ev.data);
-          if (payload?.b64_json && handlers.onFrame) {
+          const b64 = findBase64Image(payload);
+          if (b64 && handlers.onFrame) {
             handlers.onFrame({
-              dataUrl: `data:image/png;base64,${payload.b64_json}`,
-              isFinal: ev.event === "image_generation.completed",
+              dataUrl: `data:image/png;base64,${b64}`,
+              isFinal: ev.event?.includes("completed") || ev.event?.includes("final"),
             });
           }
         } catch {}
