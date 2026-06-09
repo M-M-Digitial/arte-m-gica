@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
+import { streamImageEdgeFunction } from "@/lib/stream-image";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -20,6 +22,7 @@ import {
   Type,
   FileText,
   ArrowRight,
+  Zap,
 } from "lucide-react";
 
 // Mold images
@@ -312,11 +315,16 @@ export default function Criar() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewIsFinal, setPreviewIsFinal] = useState(false);
   const [isGeneratingMockup, setIsGeneratingMockup] = useState(false);
   const [mockupImage, setMockupImage] = useState<string | null>(null);
   const [mockupImageBase64, setMockupImageBase64] = useState<string | null>(null);
+  const [mockupPreview, setMockupPreview] = useState<string | null>(null);
+  const [mockupPreviewIsFinal, setMockupPreviewIsFinal] = useState(false);
   const [mockupFormato, setMockupFormato] = useState<"feed" | "story">("feed");
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [qualidade, setQualidade] = useState<"low" | "medium">("medium");
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
@@ -338,9 +346,15 @@ export default function Criar() {
     }
     setIsGenerating(true);
     setStep(4);
+    setPreviewImage(null);
+    setPreviewIsFinal(false);
+    setGeneratedImage(null);
+    setGeneratedImageBase64(null);
     try {
-      const { data, error } = await supabase.functions.invoke("gerar-arte", {
-        body: {
+      let gotMeta = false;
+      await streamImageEdgeFunction(
+        "gerar-arte",
+        {
           moldeName: selectedMolde.name,
           moldeTemplateUrl: (selectedMolde as any).image_url || undefined,
           temaNome: selectedTema.name,
@@ -352,23 +366,26 @@ export default function Criar() {
           fonteEstilo,
           desenhoEstilo,
           densidadeVisual,
+          quality: qualidade,
         },
-      });
-      if (error) throw error;
-      if (data?.error) {
-        if (data.code === "AI_CREDITS_EXHAUSTED") {
-          toast.error(AI_CREDITS_MESSAGE);
-          setStep(3);
-          return;
+        {
+          onFrame: ({ dataUrl, isFinal }) => {
+            flushSync(() => {
+              setPreviewImage(dataUrl);
+              setPreviewIsFinal(isFinal);
+            });
+          },
+          onMeta: (meta) => {
+            gotMeta = true;
+            if (meta.imageUrl) setGeneratedImage(meta.imageUrl);
+            if (meta.imageBase64) setGeneratedImageBase64(meta.imageBase64);
+          },
         }
-        throw new Error(data.error);
+      );
+      if (!gotMeta) {
+        throw new Error("A IA não terminou de gerar a imagem. Tente novamente.");
       }
-      if (!data?.imageUrl || !data?.imageBase64) {
-        throw new Error("A IA não retornou uma imagem. Tente gerar novamente.");
-      }
-      setGeneratedImage(data.imageUrl);
-      setGeneratedImageBase64(data.imageBase64);
-      toast.success(data.usedSafeFallback ? "Arte segura gerada com sucesso!" : "Arte gerada com sucesso!");
+      toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
       toast.error(getFunctionErrorMessage(err, "Erro ao gerar arte. Tente novamente."));
@@ -384,20 +401,35 @@ export default function Criar() {
     setStep(5);
     setMockupImage(null);
     setMockupImageBase64(null);
+    setMockupPreview(null);
+    setMockupPreviewIsFinal(false);
     try {
-      const { data, error } = await supabase.functions.invoke("gerar-mockup", {
-        body: {
+      let gotMeta = false;
+      await streamImageEdgeFunction(
+        "gerar-mockup",
+        {
           arteImageUrl: generatedImage,
           moldeName: selectedMolde.name,
           temaNome: selectedTema.name,
           nome: nome.trim(),
           formato,
+          quality: qualidade,
         },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setMockupImage(data.mockupUrl);
-      setMockupImageBase64(data.mockupBase64);
+        {
+          onFrame: ({ dataUrl, isFinal }) => {
+            flushSync(() => {
+              setMockupPreview(dataUrl);
+              setMockupPreviewIsFinal(isFinal);
+            });
+          },
+          onMeta: (meta) => {
+            gotMeta = true;
+            if (meta.mockupUrl) setMockupImage(meta.mockupUrl);
+            if (meta.mockupBase64) setMockupImageBase64(meta.mockupBase64);
+          },
+        }
+      );
+      if (!gotMeta) throw new Error("Mockup não finalizou. Tente novamente.");
       toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
@@ -407,6 +439,7 @@ export default function Criar() {
       setIsGeneratingMockup(false);
     }
   };
+
 
   const handleDownload = (base64: string | null, prefix: string) => {
     if (!base64) return;
@@ -592,8 +625,12 @@ export default function Criar() {
     setDensidadeVisual("equilibrado");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
+    setPreviewImage(null);
+    setPreviewIsFinal(false);
     setMockupImage(null);
     setMockupImageBase64(null);
+    setMockupPreview(null);
+    setMockupPreviewIsFinal(false);
     setEditingField(null);
   };
 
@@ -1034,6 +1071,47 @@ export default function Criar() {
               </>
             )}
 
+            <div className="border-t border-border/60" />
+
+            {/* Qualidade */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Qualidade da geração
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setQualidade("low")}
+                  className={`p-3 rounded-xl text-left transition-all duration-200 ${
+                    qualidade === "low"
+                      ? "gradient-hero text-white shadow-soft"
+                      : "bg-secondary hover:bg-accent text-foreground"
+                  }`}
+                >
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5" /> Rascunho rápido
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${qualidade === "low" ? "text-white/70" : "text-muted-foreground"}`}>
+                    ~10–15s · ideal para testar
+                  </p>
+                </button>
+                <button
+                  onClick={() => setQualidade("medium")}
+                  className={`p-3 rounded-xl text-left transition-all duration-200 ${
+                    qualidade === "medium"
+                      ? "gradient-hero text-white shadow-soft"
+                      : "bg-secondary hover:bg-accent text-foreground"
+                  }`}
+                >
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" /> Final
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${qualidade === "medium" ? "text-white/70" : "text-muted-foreground"}`}>
+                    ~25–40s · alta fidelidade
+                  </p>
+                </button>
+              </div>
+            </div>
+
             {/* Spacer for fixed button on mobile */}
             <div className="h-20 sm:hidden" />
 
@@ -1060,6 +1138,8 @@ export default function Criar() {
               <LoadingState
                 title="Criando sua arte"
                 subtitle={`${selectedTema?.name} · ${selectedMolde?.name} · ${nome}`}
+                previewSrc={previewImage}
+                isFinal={previewIsFinal}
               />
             ) : generatedImage ? (
               <div className="space-y-8">
@@ -1178,6 +1258,8 @@ export default function Criar() {
               <LoadingState
                 title="Criando mockup"
                 subtitle={`${selectedMolde?.name} · ${selectedTema?.name}`}
+                previewSrc={mockupPreview}
+                isFinal={mockupPreviewIsFinal}
               />
             ) : mockupImage ? (
               <div className="space-y-8">
@@ -1276,16 +1358,56 @@ export default function Criar() {
 
 /* ─── Sub-components ─── */
 
-function LoadingState({ title, subtitle }: { title: string; subtitle: string }) {
+function LoadingState({
+  title,
+  subtitle,
+  previewSrc,
+  isFinal,
+}: {
+  title: string;
+  subtitle: string;
+  previewSrc?: string | null;
+  isFinal?: boolean;
+}) {
   return (
-    <div className="max-w-sm mx-auto py-32 flex flex-col items-center gap-6">
-      <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center">
-        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+    <div className="max-w-md mx-auto py-10 sm:py-16 flex flex-col items-center gap-6">
+      <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-secondary flex items-center justify-center">
+        {previewSrc ? (
+          <>
+            <img
+              src={previewSrc}
+              alt="Prévia"
+              className={`absolute inset-0 h-full w-full object-contain transition-[filter] duration-500 ${
+                isFinal ? "" : "blur-xl scale-105"
+              }`}
+            />
+            {!isFinal && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+            )}
+            {!isFinal && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 bg-background/90 glass px-3 py-1.5 rounded-full text-[11px] font-medium text-foreground shadow-soft">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Renderizando…
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-14 w-14 rounded-2xl bg-background flex items-center justify-center shadow-soft">
+              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+            </div>
+            <p className="text-[11px] text-muted-foreground">Preparando IA…</p>
+          </div>
+        )}
       </div>
       <div className="text-center space-y-1.5">
         <p className="text-lg font-semibold text-foreground">{title}</p>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
-        <p className="text-xs text-muted-foreground/50 pt-2">Pode levar até 30 segundos</p>
+        <p className="text-xs text-muted-foreground/60 pt-1">
+          {previewSrc && !isFinal
+            ? "Você já está vendo uma prévia. A versão final chega em segundos."
+            : "Pode levar alguns segundos"}
+        </p>
       </div>
     </div>
   );

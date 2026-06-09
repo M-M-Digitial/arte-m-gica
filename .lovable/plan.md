@@ -1,55 +1,50 @@
-## Objetivo
+# Otimizar geração de arte (mantendo OpenAI direto)
 
-Garantir que a arte gerada respeite **exatamente** o molde escolhido — sem alterar contorno, abas, linhas de corte ou linhas de dobra. Mantemos `gpt-image-2` da OpenAI.
+## Diagnóstico
+
+`gerar-arte` e `gerar-mockup` chamam `gpt-image-2` na OpenAI **sem streaming** com `quality: "high"`. O usuário fica 40–90s no spinner. Depois ainda rodamos `compositeMoldLines` (pngjs) + upload no Storage antes de responder.
 
 ## Mudanças
 
-Tudo em **`supabase/functions/gerar-arte/index.ts`** (sem alterações no frontend).
+### 1. Streaming SSE da OpenAI → cliente (maior ganho de UX percebida)
+A OpenAI suporta `stream: true` + `partial_images: 2` em `/v1/images/edits` e `/v1/images/generations` com `gpt-image-2`. Mudanças:
 
-### 1. Prompt reescrito em modo "edit-in-place"
+- Edge function envia `stream: true, partial_images: 2` no body (multipart aceita esses campos).
+- Em vez de `await response.json()`, a function devolve `new Response(response.body, { headers: { ...cors, "Content-Type": "text/event-stream" } })` — proxy puro do SSE.
+- Cliente passa a usar `fetch` direto na URL da function (não `supabase.functions.invoke`, que bufferiza) e parseia eventos com `eventsource-parser`.
+- UI mostra cada `image_generation.partial_image` como `<img>` com `filter: blur(16px)`; no `image_generation.completed` remove o blur.
 
-Substituir o prompt atual (que pede "desenhe o molde planificado") por um que trata a imagem de entrada como **estrutura travada**:
+Resultado: primeiro preview em ~5–10s, final em ~25–40s. A espera deixa de ser "tela morta".
 
-- "A imagem que você recebeu JÁ É o molde final."
-- "NÃO redesenhe. NÃO altere contorno, abas, proporções."
-- "PRESERVE linhas de corte (contínuas) e dobra (pontilhadas) idênticas."
-- "Aplique decoração APENAS dentro das faces internas."
-- "PRESERVE o fundo branco fora do contorno."
+### 2. Baixar `quality` de `high` para `medium`
+`gpt-image-2` em `medium` é ~2x mais rápido e já entrega fidelidade ótima para molde decorado (linhas técnicas são re-estampadas depois pelo `compositeMoldLines`). Aplicar em `gerar-arte` e `gerar-mockup`.
 
-Mesma regra aplicada ao `fallbackPrompt` (acionado quando moderação bloqueia).
+### 3. Composição + upload em background
+Hoje a function só responde após compositar PNG e fazer upload. Mudança:
 
-### 2. Aumentar fidelidade da chamada `/images/edits`
+- Assim que o evento `completed` chega, o cliente já tem o b64 final e renderiza.
+- Composição (`compositeMoldLines`) e upload no Storage rodam em `EdgeRuntime.waitUntil(...)`.
+- Gravar a `imageUrl` final numa tabela `artes_geradas` (criar se não existir) chaveada por um `jobId` gerado no início; cliente faz Realtime subscribe nessa linha para receber a URL pública quando ficar pronta (necessária só para "Salvar" / "Baixar PDF").
 
-Adicionar ao FormData:
-- `input_fidelity: "high"` — parâmetro do `gpt-image-2` que prioriza preservação da entrada.
-- `quality: "high"` — melhor renderização das linhas.
+### 4. Toggle "Rascunho rápido" no wizard
+Adicionar opção no passo final: **Rascunho** (`quality: "low"`, ~10–15s) vs **Final** (`quality: "medium"`). Permite iterar tema/cor barato antes do render final.
 
-### 3. Composição final com máscara (garantia determinística)
+### 5. Mesma migração em `gerar-mockup`
+Aplicar streaming + `medium` + composição/upload em background no `gerar-mockup` também (mesmo sintoma hoje, e ainda está sem `quality` explícito).
 
-Após receber a imagem da OpenAI, pós-processar na edge function:
+## Arquivos afetados
 
-1. Decodificar o template PNG original (usando `pngjs` via `npm:` import).
-2. Decodificar a imagem gerada.
-3. Para cada pixel do template que seja **escuro e opaco** (luminância < 110, alpha > 200) — ou seja, uma linha do molde — sobrescrever o pixel correspondente da imagem gerada (com nearest-neighbor para casar dimensões diferentes).
-4. Recodificar PNG e usar como resultado final.
+- `supabase/functions/gerar-arte/index.ts` — adicionar `stream`+`partial_images`, retornar SSE proxy, mover composição/upload pra `waitUntil`, aceitar param `quality`.
+- `supabase/functions/gerar-mockup/index.ts` — mesmas mudanças.
+- `src/pages/Criar.tsx` (e qualquer outro consumidor) — trocar `invoke` por `fetch` streaming, parser SSE, estado `previewDataUrl`+`isFinal`, blur CSS, toggle Rascunho/Final, subscribe Realtime para URL final.
+- Nova tabela `artes_jobs` (id, user_id, image_url, status) + RLS + GRANTs, ou reuso de tabela existente se já houver.
+- `package.json` — adicionar `eventsource-parser`.
 
-Isso garante que **mesmo se o modelo suavizar as linhas**, o contorno/dobras/abas originais reaparecem intactos por cima.
+## Riscos
 
-Só roda se o template for PNG válido; caso contrário, silenciosamente usa a saída crua da IA (sem regressão).
+- `partial_images` no endpoint `/images/edits` com multipart: confirmar no primeiro deploy lendo o stream; se a OpenAI não emitir parciais em edits, manter pelo menos `stream: true` (chega só o `completed`, mas evita timeout de Edge Function e o ganho do `medium` já reduz bastante o tempo).
+- Realtime na tabela de jobs exige RLS correto — usuário só vê suas próprias linhas.
 
-### 4. Pipeline de upload ajustado
-
-Subir os **bytes finais compostos** para o bucket `artes-geradas` (em vez do base64 cru da OpenAI), e devolver `imageUrl` + `imageBase64` derivados desses bytes.
-
-## Detalhes técnicos
-
-- Import: `import { PNG } from "https://esm.sh/pngjs@7.0.0?target=deno"` (pura JS, roda em Deno Deploy, sem deps nativas).
-- A função de composição é O(W×H) — para 1024×1536 são ~1.5M pixels, executa em <500 ms.
-- Mantém o fluxo existente de detecção de `moderation_blocked` → fallback prompt seguro.
-- Mantém todos os parâmetros atuais da request (`moldeName`, `moldeTemplateUrl`, `temaNome`, etc.) — frontend não muda.
-
-## Como validar
-
-1. Gerar arte com `Caixa Milk` + tema `Safari` + nome `Maria`.
-2. Conferir que o PNG retornado tem **as mesmas linhas pretas** do template `mold-milk-box.png` (contorno + dobras pontilhadas) sobrepostas à decoração.
-3. Testar com tema bloqueado (ex.: `Mickey`) para confirmar que o fallback também preserva o molde.
+## Fora de escopo
+- Trocar modelo (Gemini/Nano Banana muda muito o estilo).
+- Cache de artes idênticas.
