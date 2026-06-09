@@ -352,6 +352,7 @@ export default function Criar() {
     setGeneratedImageBase64(null);
     try {
       let gotMeta = false;
+      let lastFrameDataUrl: string | null = null;
       await streamImageEdgeFunction(
         "gerar-arte",
         {
@@ -370,6 +371,7 @@ export default function Criar() {
         },
         {
           onFrame: ({ dataUrl, isFinal }) => {
+            lastFrameDataUrl = dataUrl;
             flushSync(() => {
               setPreviewImage(dataUrl);
               setPreviewIsFinal(isFinal);
@@ -383,7 +385,9 @@ export default function Criar() {
         }
       );
       if (!gotMeta) {
-        throw new Error("A IA não terminou de gerar a imagem. Tente novamente.");
+        if (!lastFrameDataUrl) throw new Error("A IA não terminou de gerar a imagem. Tente novamente.");
+        setGeneratedImage(lastFrameDataUrl);
+        setGeneratedImageBase64(lastFrameDataUrl);
       }
       toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
@@ -405,6 +409,7 @@ export default function Criar() {
     setMockupPreviewIsFinal(false);
     try {
       let gotMeta = false;
+      let lastFrameDataUrl: string | null = null;
       await streamImageEdgeFunction(
         "gerar-mockup",
         {
@@ -417,6 +422,7 @@ export default function Criar() {
         },
         {
           onFrame: ({ dataUrl, isFinal }) => {
+            lastFrameDataUrl = dataUrl;
             flushSync(() => {
               setMockupPreview(dataUrl);
               setMockupPreviewIsFinal(isFinal);
@@ -429,7 +435,11 @@ export default function Criar() {
           },
         }
       );
-      if (!gotMeta) throw new Error("Mockup não finalizou. Tente novamente.");
+      if (!gotMeta) {
+        if (!lastFrameDataUrl) throw new Error("Mockup não finalizou. Tente novamente.");
+        setMockupImage(lastFrameDataUrl);
+        setMockupImageBase64(lastFrameDataUrl);
+      }
       toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
