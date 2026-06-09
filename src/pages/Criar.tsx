@@ -346,9 +346,15 @@ export default function Criar() {
     }
     setIsGenerating(true);
     setStep(4);
+    setPreviewImage(null);
+    setPreviewIsFinal(false);
+    setGeneratedImage(null);
+    setGeneratedImageBase64(null);
     try {
-      const { data, error } = await supabase.functions.invoke("gerar-arte", {
-        body: {
+      let gotMeta = false;
+      await streamImageEdgeFunction(
+        "gerar-arte",
+        {
           moldeName: selectedMolde.name,
           moldeTemplateUrl: (selectedMolde as any).image_url || undefined,
           temaNome: selectedTema.name,
@@ -360,23 +366,26 @@ export default function Criar() {
           fonteEstilo,
           desenhoEstilo,
           densidadeVisual,
+          quality: qualidade,
         },
-      });
-      if (error) throw error;
-      if (data?.error) {
-        if (data.code === "AI_CREDITS_EXHAUSTED") {
-          toast.error(AI_CREDITS_MESSAGE);
-          setStep(3);
-          return;
+        {
+          onFrame: ({ dataUrl, isFinal }) => {
+            flushSync(() => {
+              setPreviewImage(dataUrl);
+              setPreviewIsFinal(isFinal);
+            });
+          },
+          onMeta: (meta) => {
+            gotMeta = true;
+            if (meta.imageUrl) setGeneratedImage(meta.imageUrl);
+            if (meta.imageBase64) setGeneratedImageBase64(meta.imageBase64);
+          },
         }
-        throw new Error(data.error);
+      );
+      if (!gotMeta) {
+        throw new Error("A IA não terminou de gerar a imagem. Tente novamente.");
       }
-      if (!data?.imageUrl || !data?.imageBase64) {
-        throw new Error("A IA não retornou uma imagem. Tente gerar novamente.");
-      }
-      setGeneratedImage(data.imageUrl);
-      setGeneratedImageBase64(data.imageBase64);
-      toast.success(data.usedSafeFallback ? "Arte segura gerada com sucesso!" : "Arte gerada com sucesso!");
+      toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
       console.error("Erro:", err);
       toast.error(getFunctionErrorMessage(err, "Erro ao gerar arte. Tente novamente."));
@@ -392,20 +401,35 @@ export default function Criar() {
     setStep(5);
     setMockupImage(null);
     setMockupImageBase64(null);
+    setMockupPreview(null);
+    setMockupPreviewIsFinal(false);
     try {
-      const { data, error } = await supabase.functions.invoke("gerar-mockup", {
-        body: {
+      let gotMeta = false;
+      await streamImageEdgeFunction(
+        "gerar-mockup",
+        {
           arteImageUrl: generatedImage,
           moldeName: selectedMolde.name,
           temaNome: selectedTema.name,
           nome: nome.trim(),
           formato,
+          quality: qualidade,
         },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setMockupImage(data.mockupUrl);
-      setMockupImageBase64(data.mockupBase64);
+        {
+          onFrame: ({ dataUrl, isFinal }) => {
+            flushSync(() => {
+              setMockupPreview(dataUrl);
+              setMockupPreviewIsFinal(isFinal);
+            });
+          },
+          onMeta: (meta) => {
+            gotMeta = true;
+            if (meta.mockupUrl) setMockupImage(meta.mockupUrl);
+            if (meta.mockupBase64) setMockupImageBase64(meta.mockupBase64);
+          },
+        }
+      );
+      if (!gotMeta) throw new Error("Mockup não finalizou. Tente novamente.");
       toast.success("Mockup pronto!");
     } catch (err: any) {
       console.error("Erro:", err);
@@ -415,6 +439,7 @@ export default function Criar() {
       setIsGeneratingMockup(false);
     }
   };
+
 
   const handleDownload = (base64: string | null, prefix: string) => {
     if (!base64) return;
