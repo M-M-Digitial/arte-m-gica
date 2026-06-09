@@ -625,8 +625,12 @@ export default function Criar() {
     setDensidadeVisual("equilibrado");
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
+    setPreviewImage(null);
+    setPreviewIsFinal(false);
     setMockupImage(null);
     setMockupImageBase64(null);
+    setMockupPreview(null);
+    setMockupPreviewIsFinal(false);
     setEditingField(null);
   };
 
