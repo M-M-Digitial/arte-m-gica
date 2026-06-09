@@ -1138,6 +1138,8 @@ export default function Criar() {
               <LoadingState
                 title="Criando sua arte"
                 subtitle={`${selectedTema?.name} · ${selectedMolde?.name} · ${nome}`}
+                previewSrc={previewImage}
+                isFinal={previewIsFinal}
               />
             ) : generatedImage ? (
               <div className="space-y-8">
@@ -1256,6 +1258,8 @@ export default function Criar() {
               <LoadingState
                 title="Criando mockup"
                 subtitle={`${selectedMolde?.name} · ${selectedTema?.name}`}
+                previewSrc={mockupPreview}
+                isFinal={mockupPreviewIsFinal}
               />
             ) : mockupImage ? (
               <div className="space-y-8">
