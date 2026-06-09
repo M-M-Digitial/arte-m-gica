@@ -1071,6 +1071,47 @@ export default function Criar() {
               </>
             )}
 
+            <div className="border-t border-border/60" />
+
+            {/* Qualidade */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Qualidade da geração
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setQualidade("low")}
+                  className={`p-3 rounded-xl text-left transition-all duration-200 ${
+                    qualidade === "low"
+                      ? "gradient-hero text-white shadow-soft"
+                      : "bg-secondary hover:bg-accent text-foreground"
+                  }`}
+                >
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Zap className="h-3.5 w-3.5" /> Rascunho rápido
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${qualidade === "low" ? "text-white/70" : "text-muted-foreground"}`}>
+                    ~10–15s · ideal para testar
+                  </p>
+                </button>
+                <button
+                  onClick={() => setQualidade("medium")}
+                  className={`p-3 rounded-xl text-left transition-all duration-200 ${
+                    qualidade === "medium"
+                      ? "gradient-hero text-white shadow-soft"
+                      : "bg-secondary hover:bg-accent text-foreground"
+                  }`}
+                >
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" /> Final
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${qualidade === "medium" ? "text-white/70" : "text-muted-foreground"}`}>
+                    ~25–40s · alta fidelidade
+                  </p>
+                </button>
+              </div>
+            </div>
+
             {/* Spacer for fixed button on mobile */}
             <div className="h-20 sm:hidden" />
 
