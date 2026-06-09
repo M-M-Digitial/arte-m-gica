@@ -379,8 +379,10 @@ export default function Criar() {
           },
           onMeta: (meta) => {
             gotMeta = true;
-            if (meta.imageUrl) setGeneratedImage(meta.imageUrl);
             if (meta.imageBase64) setGeneratedImageBase64(meta.imageBase64);
+            if (meta.imageUrl || meta.imageBase64) {
+              setGeneratedImage(meta.imageUrl ?? meta.imageBase64);
+            }
           },
         }
       );
@@ -430,8 +432,10 @@ export default function Criar() {
           },
           onMeta: (meta) => {
             gotMeta = true;
-            if (meta.mockupUrl) setMockupImage(meta.mockupUrl);
             if (meta.mockupBase64) setMockupImageBase64(meta.mockupBase64);
+            if (meta.mockupUrl || meta.mockupBase64) {
+              setMockupImage(meta.mockupUrl ?? meta.mockupBase64);
+            }
           },
         }
       );
@@ -1101,7 +1105,7 @@ export default function Criar() {
                     <Zap className="h-3.5 w-3.5" /> Rascunho rápido
                   </p>
                   <p className={`text-[10px] mt-0.5 ${qualidade === "low" ? "text-white/70" : "text-muted-foreground"}`}>
-                    ~10–15s · ideal para testar
+                    ~10–60s · ideal para testar
                   </p>
                 </button>
                 <button
@@ -1116,7 +1120,7 @@ export default function Criar() {
                     <Sparkles className="h-3.5 w-3.5" /> Final
                   </p>
                   <p className={`text-[10px] mt-0.5 ${qualidade === "medium" ? "text-white/70" : "text-muted-foreground"}`}>
-                    ~25–40s · alta fidelidade
+                    ~5m · alta fidelidade
                   </p>
                 </button>
               </div>
@@ -1172,6 +1176,11 @@ export default function Criar() {
                         src={generatedImage}
                         alt={`${selectedTema?.name} - ${selectedMolde?.name} - ${nome}`}
                         className="w-full h-auto"
+                        onError={() => {
+                          if (generatedImageBase64 && generatedImage !== generatedImageBase64) {
+                            setGeneratedImage(generatedImageBase64);
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -1298,6 +1307,11 @@ export default function Criar() {
                         src={mockupImage}
                         alt={`Mockup ${selectedTema?.name}`}
                         className="w-full h-auto"
+                        onError={() => {
+                          if (mockupImageBase64 && mockupImage !== mockupImageBase64) {
+                            setMockupImage(mockupImageBase64);
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -1416,7 +1430,7 @@ function LoadingState({
         <p className="text-xs text-muted-foreground/60 pt-1">
           {previewSrc && !isFinal
             ? "Você já está vendo uma prévia. A versão final chega em segundos."
-            : "Pode levar alguns segundos"}
+            : "Pode levar alguns minutos dependendo da fila e da complexidade da arte. Fique tranquilo, logo estará pronto."}
         </p>
       </div>
     </div>

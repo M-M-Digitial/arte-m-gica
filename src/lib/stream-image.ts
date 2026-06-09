@@ -58,17 +58,41 @@ export async function streamImageEdgeFunction(
     body: JSON.stringify(body ?? {}),
   });
 
-  // Error: edge function returned JSON instead of SSE
+  // Handle both SSE streams and plain JSON responses.
   const contentType = res.headers.get("content-type") ?? "";
-  if (!res.ok || !res.body || contentType.includes("application/json")) {
+  const isJson = contentType.includes("application/json");
+
+  if (!res.ok) {
     let errMsg = `Erro ${res.status}`;
     try {
-      const j = await res.json();
-      if (j?.error) errMsg = j.error;
+      if (isJson) {
+        const j = await res.json();
+        if (j?.error) errMsg = j.error;
+      } else {
+        const t = await res.text();
+        if (t) errMsg = t;
+      }
     } catch {}
     const err = new Error(errMsg) as Error & { status?: number };
     err.status = res.status;
     throw err;
+  }
+
+  if (isJson) {
+    const payload = await res.json();
+    if (payload?.error) {
+      throw new Error(payload.error);
+    }
+    handlers.onMeta?.(payload);
+    const b64 = findBase64Image(payload);
+    if (b64 && handlers.onFrame) {
+      handlers.onFrame({ dataUrl: `data:image/png;base64,${b64}`, isFinal: true });
+    }
+    return;
+  }
+
+  if (!res.body) {
+    throw new Error("Resposta sem stream.");
   }
 
   const parser = createParser({
