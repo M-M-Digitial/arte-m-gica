@@ -1354,16 +1354,56 @@ export default function Criar() {
 
 /* ─── Sub-components ─── */
 
-function LoadingState({ title, subtitle }: { title: string; subtitle: string }) {
+function LoadingState({
+  title,
+  subtitle,
+  previewSrc,
+  isFinal,
+}: {
+  title: string;
+  subtitle: string;
+  previewSrc?: string | null;
+  isFinal?: boolean;
+}) {
   return (
-    <div className="max-w-sm mx-auto py-32 flex flex-col items-center gap-6">
-      <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center">
-        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+    <div className="max-w-md mx-auto py-10 sm:py-16 flex flex-col items-center gap-6">
+      <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-secondary flex items-center justify-center">
+        {previewSrc ? (
+          <>
+            <img
+              src={previewSrc}
+              alt="Prévia"
+              className={`absolute inset-0 h-full w-full object-contain transition-[filter] duration-500 ${
+                isFinal ? "" : "blur-xl scale-105"
+              }`}
+            />
+            {!isFinal && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+            )}
+            {!isFinal && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 bg-background/90 glass px-3 py-1.5 rounded-full text-[11px] font-medium text-foreground shadow-soft">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Renderizando…
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-14 w-14 rounded-2xl bg-background flex items-center justify-center shadow-soft">
+              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+            </div>
+            <p className="text-[11px] text-muted-foreground">Preparando IA…</p>
+          </div>
+        )}
       </div>
       <div className="text-center space-y-1.5">
         <p className="text-lg font-semibold text-foreground">{title}</p>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
-        <p className="text-xs text-muted-foreground/50 pt-2">Pode levar até 30 segundos</p>
+        <p className="text-xs text-muted-foreground/60 pt-1">
+          {previewSrc && !isFinal
+            ? "Você já está vendo uma prévia. A versão final chega em segundos."
+            : "Pode levar alguns segundos"}
+        </p>
       </div>
     </div>
   );
