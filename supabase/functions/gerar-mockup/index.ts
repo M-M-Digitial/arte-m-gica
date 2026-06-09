@@ -7,13 +7,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
+  return btoa(bin);
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { arteImageUrl, moldeName, temaNome, nome, formato } = await req.json();
+    const { arteImageUrl, moldeName, temaNome, nome, formato, quality: qualityRaw } = await req.json();
 
     if (!arteImageUrl || !moldeName || !temaNome) {
       return new Response(
@@ -22,10 +29,10 @@ serve(async (req) => {
       );
     }
 
+    const quality = qualityRaw === "low" ? "low" : qualityRaw === "high" ? "high" : "medium";
+
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
-    }
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
 
     const formatoDesc = formato === "story"
       ? "formato vertical 9:16 para Stories do Instagram"
@@ -43,77 +50,110 @@ A IMAGEM DEVE MOSTRAR:
 - Iluminação profissional, suave e convidativa
 - Estilo de foto de produto para Instagram — clean, bonita, vendedora
 
-NÃO incluir: textos sobrepostos, watermarks, molduras, logos. Apenas a foto realista do produto.`;
+NÃO incluir: textos sobrepostos, watermarks, molduras, logos.`;
 
     const size = formato === "story" ? "1024x1536" : "1024x1024";
 
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
+    const openaiRes = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-image-2",
         prompt,
         size,
         n: 1,
+        quality,
+        stream: true,
+        partial_images: 2,
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos e tente de novo." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errorText = await response.text();
-      console.error("OpenAI error:", response.status, errorText);
-      throw new Error(`Erro no serviço de IA: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const b64 = data.data?.[0]?.b64_json;
-    if (!b64) {
-      throw new Error("A IA não gerou o mockup. Tente novamente.");
-    }
-    const imageData = `data:image/png;base64,${b64}`;
-
-    // Upload to storage
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
-    const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-
-    const fileName = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-    const filePath = `public/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("artes-geradas")
-      .upload(filePath, binaryData, {
-        contentType: "image/png",
-        upsert: false,
+    if (!openaiRes.ok || !openaiRes.body) {
+      const errText = await openaiRes.text().catch(() => "");
+      console.error("OpenAI error:", openaiRes.status, errText);
+      const status = openaiRes.status === 429 ? 429 : 500;
+      const msg =
+        openaiRes.status === 429
+          ? "Muitas requisições. Aguarde alguns segundos."
+          : `Erro no serviço de IA: ${openaiRes.status}`;
+      return new Response(JSON.stringify({ error: msg }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      throw new Error("Erro ao salvar o mockup.");
     }
 
-    const { data: publicUrl } = supabase.storage
-      .from("artes-geradas")
-      .getPublicUrl(filePath);
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
 
-    return new Response(
-      JSON.stringify({
-        mockupUrl: publicUrl.publicUrl,
-        mockupBase64: imageData,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    (async () => {
+      const reader = openaiRes.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let finalB64: string | null = null;
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          await writer.write(value);
+          buf += decoder.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf("\n\n")) !== -1) {
+            const block = buf.slice(0, nl);
+            buf = buf.slice(nl + 2);
+            let evt = "";
+            let data = "";
+            for (const line of block.split("\n")) {
+              if (line.startsWith("event:")) evt = line.slice(6).trim();
+              else if (line.startsWith("data:")) data += line.slice(5).trim();
+            }
+            if (evt === "image_generation.completed" && data) {
+              try { finalB64 = JSON.parse(data).b64_json ?? null; } catch {}
+            }
+          }
+        }
+
+        if (finalB64) {
+          try {
+            const bytes = Uint8Array.from(atob(finalB64), (c) => c.charCodeAt(0));
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+            const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+            const supabase = createClient(supabaseUrl, supabaseKey);
+            const fileName = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+            const filePath = `public/${fileName}`;
+            const { error: upErr } = await supabase.storage
+              .from("artes-geradas")
+              .upload(filePath, bytes, { contentType: "image/png", upsert: false });
+            if (!upErr) {
+              const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
+              const meta = {
+                type: "meta.uploaded",
+                mockupUrl: pub.publicUrl,
+                mockupBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+              };
+              await writer.write(encoder.encode(`event: meta.uploaded\ndata: ${JSON.stringify(meta)}\n\n`));
+            } else {
+              console.error("upload error:", upErr);
+            }
+          } catch (e) {
+            console.error("upload step error:", e);
+          }
+        }
+      } catch (e) {
+        console.error("stream pump error:", e);
+      } finally {
+        try { await writer.close(); } catch {}
+      }
+    })();
+
+    return new Response(readable, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+      },
+    });
   } catch (error) {
     console.error("gerar-mockup error:", error);
     return new Response(
