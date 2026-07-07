@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,6 +33,25 @@ export default function Editor() {
   const [busca, setBusca] = useState("");
   const [svg, setSvg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cliparts, setCliparts] = useState<{ url: string; role: string }[]>([]);
+  const [principalUrl, setPrincipalUrl] = useState<string>("");
+
+  // ao trocar de tema, carrega os cliparts p/ escolha do personagem em destaque
+  useEffect(() => {
+    setCliparts([]);
+    setPrincipalUrl("");
+    if (!themeSlug) return;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("tema_assets")
+        .select("url,role")
+        .eq("theme_slug", themeSlug)
+        .eq("kind", "clipart");
+      const list = (data ?? []) as { url: string; role: string }[];
+      setCliparts(list);
+      setPrincipalUrl(list.find((c) => c.role === "principal")?.url ?? list[0]?.url ?? "");
+    })();
+  }, [themeSlug]);
 
   const { data: temas, isLoading: loadingTemas } = useQuery({
     queryKey: ["biblioteca-temas-cards"],
@@ -100,9 +119,20 @@ export default function Editor() {
         .select("kind,name,url,role,meta")
         .eq("theme_slug", themeSlug);
       if (error) throw error;
+      // aplica a escolha de personagem em destaque (troca de roles em memória)
+      let lista = (assets ?? []) as TemaAsset[];
+      if (principalUrl) {
+        const atual = lista.find((a) => a.kind === "clipart" && a.role === "principal");
+        const escolhido = lista.find((a) => a.kind === "clipart" && a.url === principalUrl);
+        if (atual && escolhido && atual !== escolhido) {
+          const r = escolhido.role;
+          escolhido.role = "principal";
+          atual.role = r;
+        }
+      }
       const out = await composeKit({
         molde: molde as any,
-        assets: (assets ?? []) as TemaAsset[],
+        assets: lista,
         nome: nome.trim(),
         idade: idade.trim() || undefined,
       });
@@ -284,6 +314,26 @@ export default function Editor() {
               maxLength={3}
               className="h-11 bg-secondary border-0 rounded-xl"
             />
+            {cliparts.length > 1 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">Personagem em destaque</p>
+                <div className="flex gap-2">
+                  {cliparts.map((c) => (
+                    <button
+                      key={c.url}
+                      onClick={() => setPrincipalUrl(c.url)}
+                      className={`h-16 w-16 rounded-xl border-2 bg-white p-1 transition-all ${
+                        principalUrl === c.url
+                          ? "border-primary shadow-soft"
+                          : "border-border/40 hover:border-primary/40"
+                      }`}
+                    >
+                      <img src={c.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {temaSel && molde && nome.trim() && (
               <p className="text-xs text-muted-foreground">
                 <Heart className="h-3 w-3 inline mr-1 text-primary" />

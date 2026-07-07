@@ -47,6 +47,36 @@ const fetchDataUri = async (url: string) => {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// Recorta as margens transparentes do clipart (a biblioteca tem PNGs quadrados
+// com o desenho pequeno no meio — sem o crop o personagem sai miúdo na arte).
+async function trimTransparent(dataUri: string): Promise<{ uri: string; w: number; h: number }> {
+  const img = new Image();
+  await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("img")); img.src = dataUri; });
+  const cv = document.createElement("canvas");
+  cv.width = img.width; cv.height = img.height;
+  const cx = cv.getContext("2d")!;
+  cx.drawImage(img, 0, 0);
+  const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+  let minX = cv.width, minY = cv.height, maxX = -1, maxY = -1;
+  for (let y = 0; y < cv.height; y++) {
+    for (let x = 0; x < cv.width; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] > 12) {
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < 0 || (maxX - minX) < 10) return { uri: dataUri, w: img.width, h: img.height };
+  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+  minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+  maxX = Math.min(cv.width - 1, maxX + pad); maxY = Math.min(cv.height - 1, maxY + pad);
+  const w = maxX - minX + 1, h = maxY - minY + 1;
+  const out = document.createElement("canvas");
+  out.width = w; out.height = h;
+  out.getContext("2d")!.drawImage(cv, minX, minY, w, h, 0, 0, w, h);
+  return { uri: out.toDataURL("image/png"), w, h };
+}
+
 /** Compõe o kit e devolve o SVG completo (auto-contido, com assets embutidos). */
 export async function composeKit({ molde, assets, nome, idade }: ComposeInput): Promise<string> {
   const byRole = (role: string) => assets.find((a) => a.role === role);
@@ -76,6 +106,16 @@ export async function composeKit({ molde, assets, nome, idade }: ComposeInput): 
       placa ? fetchDataUri(placa.url) : Promise.resolve(null),
       fonte ? fetchDataUri(fonte.url) : Promise.resolve(null),
     ]);
+
+  // recorta margens transparentes dos cliparts e usa as dimensões REAIS do desenho
+  const [pTrim, aTrim, a2Trim] = await Promise.all([
+    principalUri ? trimTransparent(principalUri) : Promise.resolve(null),
+    amigoUri ? trimTransparent(amigoUri) : Promise.resolve(null),
+    amigo2Uri ? trimTransparent(amigo2Uri) : Promise.resolve(null),
+  ]);
+  const principalImg = pTrim ? { uri: pTrim.uri, meta: { w: pTrim.w, h: pTrim.h } } : null;
+  const amigoImg = aTrim ? { uri: aTrim.uri, meta: { w: aTrim.w, h: aTrim.h } } : null;
+  const amigo2Img = a2Trim ? { uri: a2Trim.uri, meta: { w: a2Trim.w, h: a2Trim.h } } : null;
 
   const vb = moldSvg.match(/viewBox="([^"]+)"/);
   if (!vb) throw new Error("Molde SVG sem viewBox");
@@ -142,26 +182,32 @@ export async function composeKit({ molde, assets, nome, idade }: ComposeInput): 
     <text x="${cx}" y="${plY + plH * 0.5}" text-anchor="middle" font-family="${family}" font-size="${plW * 0.155}" fill="${corNome}">${esc(nome)}</text>
     ${idade ? `<text x="${cx}" y="${plY + plH * 0.86}" text-anchor="middle" font-family="${family}" font-size="${plW * 0.075}" fill="#FFFFFF" stroke="${corIdade}" stroke-width="1.5" paint-order="stroke">${esc(idade)} anos</text>` : ""}`;
   };
-  const clipBlock = (uri: string | null, meta: Record<string, any> | undefined, cx: number, availW: number, faceBottom: number, cap: number) => {
-    if (!uri) return "";
-    const ratio = (meta?.h || 1) / (meta?.w || 1);
-    const aw = Math.min(availW * 0.85, cap);
-    const ah = aw * ratio;
+  const clipBlock = (img: { uri: string; meta: { w: number; h: number } } | null, cx: number, availW: number, faceBottom: number, cap: number, capH = 560) => {
+    if (!img) return "";
+    const ratio = img.meta.h / img.meta.w;
+    let aw = Math.min(availW * 0.85, cap);
+    let ah = aw * ratio;
+    if (ah > capH) { ah = capH; aw = ah / ratio; } // personagens altos não estouram o painel
     const base = Math.min(sandY + 10, faceBottom - 6);
-    return `<image href="${uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet"/>`;
+    return `<image href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet"/>`;
   };
   const amigosBlock = (cx: number, availW: number, faceTop: number, faceBottom: number) => {
-    const l = amigoUri
-      ? `<image href="${amigoUri}" x="${cx - Math.min(availW * 0.5, 260) / 2}" y="${faceTop + 20}" width="${Math.min(availW * 0.5, 260)}" height="${Math.min(availW * 0.5, 260) * ((amigo?.meta?.h || 1) / (amigo?.meta?.w || 1))}" preserveAspectRatio="xMidYMid meet"/>`
-      : "";
-    return l + clipBlock(amigo2Uri, amigo2?.meta, cx, availW * 0.65, faceBottom, 280);
+    let l = "";
+    if (amigoImg) {
+      const ratio = amigoImg.meta.h / amigoImg.meta.w;
+      let lw = Math.min(availW * 0.5, 260);
+      let lh = lw * ratio;
+      if (lh > 260) { lh = 260; lw = lh / ratio; }
+      l = `<image href="${amigoImg.uri}" x="${cx - lw / 2}" y="${faceTop + 20}" width="${lw}" height="${lh}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
+    return l + clipBlock(amigo2Img, cx, availW * 0.65, faceBottom, 280, 300);
   };
 
   let content = "";
   if (big.length === 1) {
     const p = big[0];
     content =
-      clipBlock(principalUri, principal?.meta, p.x + p.w * 0.18, p.w * 0.3, p.y + p.h, 460) +
+      clipBlock(principalImg, p.x + p.w * 0.18, p.w * 0.3, p.y + p.h, 460) +
       plateBlock(p.cx, p.cy, p.w * 0.42) +
       amigosBlock(p.x + p.w * 0.82, p.w * 0.3, p.y, p.y + p.h);
   } else {
@@ -171,7 +217,7 @@ export async function composeKit({ molde, assets, nome, idade }: ComposeInput): 
         const availW = Math.min(p.w, p.h);
         if (p === nameFace) return plateBlock(p.cx, p.cy, availW * 1.15);
         flip++;
-        if (flip % 2 === 1) return clipBlock(principalUri, principal?.meta, p.cx, availW, p.y + p.h, 460);
+        if (flip % 2 === 1) return clipBlock(principalImg, p.cx, availW, p.y + p.h, 460);
         return amigosBlock(p.cx, availW, p.y, p.y + p.h);
       })
       .join("");
