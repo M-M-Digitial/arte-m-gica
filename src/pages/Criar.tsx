@@ -1276,19 +1276,19 @@ export default function Criar() {
                         Baixar arte
                       </h3>
                       <Button
-                        onClick={() => handleDownload(generatedImageBase64, "arte")}
+                        onClick={baixarSvgHibrido}
                         className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Baixar PNG
+                        Baixar SVG (arquivo da artesã)
                       </Button>
                       <Button
-                        onClick={baixarSvgHibrido}
+                        onClick={() => handleDownload(generatedImageBase64, "arte")}
                         variant="outline"
                         className="w-full h-10 rounded-full text-xs font-semibold"
                       >
                         <Download className="h-3.5 w-3.5 mr-1.5" />
-                        SVG (linhas de corte vetoriais)
+                        PNG (imagem simples)
                       </Button>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
