@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -325,6 +325,80 @@ export default function Criar() {
   const [mockupFormato, setMockupFormato] = useState<"feed" | "story">("feed");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [qualidade, setQualidade] = useState<"low" | "medium">("medium");
+  const [fraseBusy, setFraseBusy] = useState(false);
+
+  // Gera uma frase fofa via chat-agente (streaming SSE no formato chat/completions)
+  const gerarFrase = async () => {
+    setFraseBusy(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const anon = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-agente`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anon,
+          Authorization: `Bearer ${session?.access_token ?? anon}`,
+        },
+        body: JSON.stringify({
+          agentId: "frase",
+          messages: [{
+            role: "user",
+            content: `Crie UMA frase curta e emocionante (máximo 55 caracteres) para a lembrancinha de festa infantil tema "${selectedTema?.name ?? "festa"}"${nome.trim() ? ` da criança ${nome.trim()}` : ""}${idade.trim() ? ` de ${idade.trim()} anos` : ""}. Tom carinhoso, em português. Responda SOMENTE a frase, sem aspas e sem explicação.`,
+          }],
+        }),
+      });
+      if (!res.ok || !res.body) throw new Error("Não consegui criar a frase agora.");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "", texto = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        for (const line of buf.split("\n")) {
+          if (!line.startsWith("data:") || line.includes("[DONE]")) continue;
+          try {
+            const delta = JSON.parse(line.slice(5))?.choices?.[0]?.delta?.content;
+            if (delta) texto += delta;
+          } catch {}
+        }
+        buf = buf.slice(buf.lastIndexOf("\n") + 1);
+        if (texto) setFrase(texto.replace(/^["'\s]+|["'\s]+$/g, "").slice(0, 80));
+      }
+      if (!texto.trim()) throw new Error("Não veio frase — tenta de novo!");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao criar a frase.");
+    } finally {
+      setFraseBusy(false);
+    }
+  };
+
+  // SVG híbrido: arte gerada como fundo + linhas de corte/dobra VETORIAIS por cima
+  const baixarSvgHibrido = async () => {
+    if (!generatedImageBase64) return;
+    try {
+      const svgUrl = (selectedMolde as any)?.svg_url;
+      let overlay = "", vw = 2526, vh = 1786;
+      if (svgUrl) {
+        const moldSvg = await (await fetch(svgUrl)).text();
+        const vb = moldSvg.match(/viewBox="([^"]+)"/);
+        if (vb) [, , vw, vh] = vb[1].split(/\s+/).map(Number) as any;
+        const path = moldSvg.match(/<path[\s\S]*?\/>/i)?.[0] ?? "";
+        overlay = `<g fill="#111111">${path.replace(/fill="[^"]*"/, "")}</g>`;
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}"><image href="${generatedImageBase64}" x="0" y="0" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet"/>${overlay}</svg>`;
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `arte-${nome.trim() || "molde"}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Erro ao montar o SVG.");
+    }
+  };
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
   const { data: temas, isLoading: loadingTemas } = useTemas();
@@ -917,7 +991,18 @@ export default function Criar() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Frase personalizada</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">Frase personalizada</label>
+                    <button
+                      type="button"
+                      onClick={gerarFrase}
+                      disabled={fraseBusy}
+                      className="text-[11px] font-semibold text-primary hover:opacity-80 inline-flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {fraseBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      {fraseBusy ? "criando…" : "Criar frase pra mim"}
+                    </button>
+                  </div>
                   <Input
                     placeholder="Ex: Obrigada por celebrar comigo!"
                     value={frase}
@@ -1197,6 +1282,14 @@ export default function Criar() {
                         <Download className="h-4 w-4 mr-2" />
                         Baixar PNG
                       </Button>
+                      <Button
+                        onClick={baixarSvgHibrido}
+                        variant="outline"
+                        className="w-full h-10 rounded-full text-xs font-semibold"
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
+                        SVG (linhas de corte vetoriais)
+                      </Button>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={() => handleDownloadPDF("landscape")}
@@ -1393,6 +1486,28 @@ function LoadingState({
   previewSrc?: string | null;
   isFinal?: boolean;
 }) {
+  // progresso estimado: sobe rápido no começo, desacelera perto do fim,
+  // dá um salto quando a prévia chega e fecha em 100 na arte final
+  const [pct, setPct] = useState(3);
+  useEffect(() => {
+    if (isFinal) { setPct(100); return; }
+    const id = setInterval(() => {
+      setPct((p) => {
+        const teto = previewSrc ? 96 : 88;
+        if (p >= teto) return p;
+        const passo = p < 35 ? 2.4 : p < 65 ? 1.1 : 0.35;
+        return Math.min(teto, p + passo);
+      });
+    }, 420);
+    return () => clearInterval(id);
+  }, [previewSrc, isFinal]);
+
+  const etapa =
+    pct < 25 ? "Preparando o molde…"
+    : pct < 55 ? "Pintando o tema…"
+    : pct < 80 ? "Caprichando nos detalhes…"
+    : "Quase pronto…";
+
   return (
     <div className="max-w-md mx-auto py-10 sm:py-16 flex flex-col items-center gap-6">
       <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-secondary flex items-center justify-center">
@@ -1408,19 +1523,25 @@ function LoadingState({
             {!isFinal && (
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
             )}
-            {!isFinal && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 bg-background/90 glass px-3 py-1.5 rounded-full text-[11px] font-medium text-foreground shadow-soft">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Renderizando…
-              </div>
-            )}
           </>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-14 w-14 rounded-2xl bg-background flex items-center justify-center shadow-soft">
-              <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+          <div className="flex flex-col items-center gap-4 w-full px-10">
+            <p className="font-display text-5xl font-bold text-foreground tabular-nums">
+              {Math.round(pct)}<span className="text-2xl text-muted-foreground">%</span>
+            </p>
+            <div className="w-full h-2.5 rounded-full bg-background overflow-hidden shadow-inner">
+              <div
+                className="h-full rounded-full gradient-hero transition-all duration-500"
+                style={{ width: `${pct}%` }}
+              />
             </div>
-            <p className="text-[11px] text-muted-foreground">Preparando IA…</p>
+            <p className="text-xs text-muted-foreground">{etapa}</p>
+          </div>
+        )}
+        {previewSrc && !isFinal && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 bg-background/90 glass px-3 py-1.5 rounded-full text-[11px] font-medium text-foreground shadow-soft">
+            <span className="tabular-nums font-semibold">{Math.round(pct)}%</span>
+            Deixando nítida…
           </div>
         )}
       </div>
@@ -1430,7 +1551,7 @@ function LoadingState({
         <p className="text-xs text-muted-foreground/60 pt-1">
           {previewSrc && !isFinal
             ? "Você já está vendo uma prévia. A versão final chega em segundos."
-            : "Pode levar alguns minutos dependendo da fila e da complexidade da arte. Fique tranquilo, logo estará pronto."}
+            : "Sua arte está sendo montada com todo o carinho — vale a espera. 💖"}
         </p>
       </div>
     </div>
