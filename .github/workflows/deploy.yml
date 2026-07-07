@@ -1,8 +1,8 @@
 name: Deploy to VPS
 
-# Disparo automático no push será reativado quando a VPS estiver definida
-# (secrets VPS_HOST/VPS_USER/VPS_SSH_KEY/VPS_TARGET_DIR configurados).
 on:
+  push:
+    branches: [main]
   workflow_dispatch: {}
 
 concurrency:
