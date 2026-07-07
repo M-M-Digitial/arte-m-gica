@@ -1,229 +1,267 @@
-import { useState } from "react";
-import { Type, Palette, ImageIcon, Layers, Download, Eye, RotateCcw, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Sparkles, Download, FileText, Loader2, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  composeKit,
+  svgToPngDataUrl,
+  downloadText,
+  downloadDataUrl,
+  type TemaAsset,
+} from "@/lib/compose-kit";
 
-const fonts = ["Poppins", "Dancing Script", "Lobster", "Montserrat", "Pacifico", "Quicksand"];
-const colorPalettes = [
-  { name: "Rosa", colors: ["#FFB7C5", "#FF69B4", "#FFC0CB", "#FFE4E1"] },
-  { name: "Azul", colors: ["#87CEEB", "#4682B4", "#B0E0E6", "#E0F0FF"] },
-  { name: "Lilás", colors: ["#DDA0DD", "#BA55D3", "#E6E6FA", "#F5E6FF"] },
-  { name: "Dourado", colors: ["#FFD700", "#DAA520", "#F5F5DC", "#FFFACD"] },
-];
-
+// Compositor "padrão Alice": tema (biblioteca) + molde (vetor) + nome → SVG editável.
 export default function Editor() {
-  const [name, setName] = useState("Maria");
-  const [age, setAge] = useState("5");
-  const [phrase, setPhrase] = useState("Venha festejar comigo!");
-  const [selectedFont, setSelectedFont] = useState("Poppins");
-  const [selectedPalette, setSelectedPalette] = useState(0);
-  const [viewMode, setViewMode] = useState<"flat" | "3d">("flat");
+  const [themeSlug, setThemeSlug] = useState<string>("");
+  const [moldeId, setMoldeId] = useState<string>("");
+  const [nome, setNome] = useState("");
+  const [idade, setIdade] = useState("");
+  const [svg, setSvg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const { data: temas, isLoading: loadingTemas } = useQuery({
+    queryKey: ["biblioteca-temas"],
+    queryFn: async () => {
+      const { data: assets, error } = await (supabase as any)
+        .from("tema_assets")
+        .select("theme_slug");
+      if (error) throw error;
+      const slugs = [...new Set((assets ?? []).map((a: any) => a.theme_slug))];
+      if (slugs.length === 0) return [];
+      const { data: nomes } = await supabase
+        .from("modelos_prontos_temas")
+        .select("slug,name")
+        .in("slug", slugs);
+      const nameBySlug = new Map((nomes ?? []).map((t: any) => [t.slug, t.name]));
+      return slugs.map((s) => ({ slug: s, name: nameBySlug.get(s) ?? s }));
+    },
+  });
+
+  const { data: moldes, isLoading: loadingMoldes } = useQuery({
+    queryKey: ["moldes-vetoriais"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("moldes")
+        .select("id,name,image_url,svg_url,mask_url,faces_url")
+        .not("svg_url", "is", null)
+        .order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const molde = useMemo(
+    () => (moldes ?? []).find((m: any) => m.id === moldeId),
+    [moldes, moldeId]
+  );
+
+  const gerar = async () => {
+    if (!themeSlug || !molde || !nome.trim()) {
+      toast.error("Escolha o tema, o molde e digite o nome.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data: assets, error } = await (supabase as any)
+        .from("tema_assets")
+        .select("kind,name,url,role,meta")
+        .eq("theme_slug", themeSlug);
+      if (error) throw error;
+      const out = await composeKit({
+        molde: molde as any,
+        assets: (assets ?? []) as TemaAsset[],
+        nome: nome.trim(),
+        idade: idade.trim() || undefined,
+      });
+      setSvg(out);
+      toast.success("Kit composto! Pronto para baixar.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message ?? "Erro ao compor o kit.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const baixarSvg = () => {
+    if (!svg) return;
+    downloadText(`kit-${nome || "arte"}.svg`, svg);
+  };
+
+  const baixarPng = async () => {
+    if (!svg) return;
+    setBusy(true);
+    try {
+      downloadDataUrl(`kit-${nome || "arte"}.png`, await svgToPngDataUrl(svg));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const baixarPdf = async () => {
+    if (!svg) return;
+    setBusy(true);
+    try {
+      const png = await svgToPngDataUrl(svg, 2526);
+      const { default: jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const margin = 8;
+      doc.addImage(png, "PNG", margin, margin, 297 - margin * 2, (297 - margin * 2) * (1786 / 2526));
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Imprima em A4 · Escala 100% · Sem ajuste de página", margin, 210 - 6);
+      doc.text("MoldePronto", 297 - margin, 210 - 6, { align: "right" });
+      doc.save(`kit-${nome || "arte"}.pdf`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const previewSrc = useMemo(
+    () => (svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null),
+    [svg]
+  );
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Editor de Arte</h1>
-          <p className="text-muted-foreground mt-1">Personalize sua peça do seu jeito</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="border-border/50">
-            <RotateCcw className="h-4 w-4 mr-1" /> Resetar
-          </Button>
-          <Button variant="outline" size="sm" className="border-border/50">
-            <Eye className="h-4 w-4 mr-1" /> Preview
-          </Button>
-          <Button size="sm" className="gradient-hero border-0 text-primary-foreground">
-            <Download className="h-4 w-4 mr-1" /> Exportar
-          </Button>
-        </div>
+    <div className="animate-fade-in space-y-6 max-w-6xl">
+      <div>
+        <h1 className="text-3xl font-display font-bold text-foreground">Compositor de Kits</h1>
+        <p className="text-muted-foreground mt-1">
+          Tema da biblioteca + molde vetorial + nome — arte editável em segundos, sem custo de IA.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Tools */}
         <Card className="border-border/50 lg:col-span-1">
-          <CardContent className="p-4">
-            <Tabs defaultValue="text" className="w-full">
-              <TabsList className="w-full grid grid-cols-4 bg-muted">
-                <TabsTrigger value="text" className="text-xs"><Type className="h-3 w-3" /></TabsTrigger>
-                <TabsTrigger value="colors" className="text-xs"><Palette className="h-3 w-3" /></TabsTrigger>
-                <TabsTrigger value="images" className="text-xs"><ImageIcon className="h-3 w-3" /></TabsTrigger>
-                <TabsTrigger value="elements" className="text-xs"><Layers className="h-3 w-3" /></TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="text" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Nome</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} className="bg-muted/50 border-border/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Idade</Label>
-                  <Input value={age} onChange={(e) => setAge(e.target.value)} className="bg-muted/50 border-border/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Frase</Label>
-                  <Input value={phrase} onChange={(e) => setPhrase(e.target.value)} className="bg-muted/50 border-border/50" />
-                </div>
-                <Separator className="bg-border/50" />
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Fonte</Label>
-                  <Select value={selectedFont} onValueChange={setSelectedFont}>
-                    <SelectTrigger className="bg-muted/50 border-border/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fonts.map((f) => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="colors" className="space-y-4 mt-4">
-                <Label className="text-xs font-medium text-muted-foreground">Paleta de Cores</Label>
-                <div className="space-y-3">
-                  {colorPalettes.map((palette, i) => (
+          <CardContent className="p-5 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                1 · Tema
+              </Label>
+              {loadingTemas ? (
+                <Skeleton className="h-10 rounded-lg" />
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {(temas ?? []).map((t) => (
                     <button
-                      key={palette.name}
-                      onClick={() => setSelectedPalette(i)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                        selectedPalette === i ? "border-primary bg-primary/5 shadow-soft" : "border-border/50 hover:bg-muted/50"
+                      key={t.slug}
+                      onClick={() => setThemeSlug(t.slug)}
+                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                        themeSlug === t.slug
+                          ? "gradient-hero text-white shadow-soft"
+                          : "bg-secondary hover:bg-accent text-foreground"
                       }`}
                     >
-                      <div className="flex gap-1.5">
-                        {palette.colors.map((c, j) => (
-                          <div key={j} className="h-6 w-6 rounded-full border border-border/30" style={{ backgroundColor: c }} />
-                        ))}
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{palette.name}</span>
+                      {t.name}
                     </button>
                   ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="images" className="space-y-4 mt-4">
-                <Label className="text-xs font-medium text-muted-foreground">Adicionar Foto</Label>
-                <div className="border-2 border-dashed border-border/50 rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                  <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-xs text-muted-foreground">Clique ou arraste uma imagem</p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="elements" className="mt-4">
-                <Label className="text-xs font-medium text-muted-foreground">Elementos Decorativos</Label>
-                <div className="grid grid-cols-4 gap-2 mt-3">
-                  {["⭐", "🎈", "🎀", "🌸", "✨", "💫", "🦋", "🌈", "🎉", "❤️", "🎵", "🌺"].map((e) => (
-                    <button
-                      key={e}
-                      className="h-12 flex items-center justify-center rounded-lg border border-border/50 hover:bg-muted/50 hover:scale-105 transition-all text-xl"
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        {/* Center: Canvas Preview */}
-        <Card className="border-border/50 lg:col-span-2">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs text-muted-foreground font-medium">Caixinha Milk · Tema Safari</span>
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant={viewMode === "flat" ? "default" : "outline"}
-                  onClick={() => setViewMode("flat")}
-                  className={`text-xs ${viewMode === "flat" ? "gradient-hero border-0" : "border-border/50"}`}
-                >
-                  Planificado
-                </Button>
-                <Button
-                  size="sm"
-                  variant={viewMode === "3d" ? "default" : "outline"}
-                  onClick={() => setViewMode("3d")}
-                  className={`text-xs ${viewMode === "3d" ? "gradient-hero border-0" : "border-border/50"}`}
-                >
-                  Montado
-                </Button>
-              </div>
-            </div>
-
-            {/* Preview Area */}
-            <div className="aspect-[4/3] rounded-xl gradient-card border border-border/30 flex items-center justify-center relative overflow-hidden">
-              {viewMode === "flat" ? (
-                <div className="relative w-64 h-80 border-2 border-dashed border-primary/30 rounded-lg flex flex-col items-center justify-center p-4"
-                  style={{ backgroundColor: colorPalettes[selectedPalette].colors[3] }}>
-                  {/* Mold preview */}
-                  <div className="absolute top-2 left-2 right-2 border-b border-primary/20 pb-1">
-                    <p className="text-[8px] text-primary/50 text-center">— linha de corte —</p>
-                  </div>
-                  <div className="text-center space-y-2 mt-4">
-                    <p className="text-4xl">🦁</p>
-                    <h2 className="text-xl font-bold" style={{ fontFamily: selectedFont, color: colorPalettes[selectedPalette].colors[1] }}>
-                      {name}
-                    </h2>
-                    <p className="text-2xl font-bold" style={{ color: colorPalettes[selectedPalette].colors[1] }}>
-                      {age} anos
+                  {(temas ?? []).length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum tema na biblioteca ainda.
                     </p>
-                    <p className="text-xs italic" style={{ color: colorPalettes[selectedPalette].colors[1] }}>
-                      {phrase}
-                    </p>
-                    <div className="flex gap-1 justify-center mt-2">
-                      {colorPalettes[selectedPalette].colors.slice(0, 3).map((c, i) => (
-                        <div key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="absolute bottom-2 left-2 right-2 border-t border-primary/20 pt-1">
-                    <p className="text-[8px] text-primary/50 text-center">— linha de dobra —</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="w-32 h-44 rounded-t-lg shadow-lg transform perspective-500"
-                    style={{
-                      backgroundColor: colorPalettes[selectedPalette].colors[3],
-                      borderBottom: `4px solid ${colorPalettes[selectedPalette].colors[0]}`,
-                    }}>
-                    <div className="flex flex-col items-center justify-center h-full p-3 space-y-1">
-                      <p className="text-2xl">🦁</p>
-                      <h2 className="text-sm font-bold" style={{ fontFamily: selectedFont, color: colorPalettes[selectedPalette].colors[1] }}>
-                        {name}
-                      </h2>
-                      <p className="text-lg font-bold" style={{ color: colorPalettes[selectedPalette].colors[1] }}>
-                        {age}
-                      </p>
-                      <p className="text-[8px] italic text-center" style={{ color: colorPalettes[selectedPalette].colors[1] }}>
-                        {phrase}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3 text-center">Simulação montada</p>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Action Bar */}
-            <div className="flex gap-2 mt-4 justify-end">
-              <Button variant="outline" size="sm" className="border-border/50 text-xs">
-                <Eye className="h-3 w-3 mr-1" /> Pré-visualizar
-              </Button>
-              <Button size="sm" className="bg-accent text-accent-foreground text-xs">
-                <Sparkles className="h-3 w-3 mr-1" /> Gerar Mockup
-              </Button>
-              <Button size="sm" className="gradient-hero border-0 text-primary-foreground text-xs">
-                <Download className="h-3 w-3 mr-1" /> Baixar PDF
-              </Button>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                2 · Molde
+              </Label>
+              {loadingMoldes ? (
+                <Skeleton className="h-24 rounded-lg" />
+              ) : (
+                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+                  {(moldes ?? []).map((m: any) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setMoldeId(m.id)}
+                      className={`p-2 rounded-xl text-xs font-medium text-left transition-all ${
+                        moldeId === m.id
+                          ? "gradient-hero text-white shadow-soft"
+                          : "bg-secondary hover:bg-accent text-foreground"
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            <div className="space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                3 · Personalizar
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <Input
+                    placeholder="Nome (ex: Sofia)"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    maxLength={30}
+                    className="h-11 bg-secondary border-0 rounded-xl"
+                  />
+                </div>
+                <Input
+                  placeholder="Idade"
+                  value={idade}
+                  onChange={(e) => setIdade(e.target.value)}
+                  maxLength={3}
+                  className="h-11 bg-secondary border-0 rounded-xl"
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={gerar}
+              disabled={busy || !themeSlug || !moldeId || !nome.trim()}
+              className="w-full h-12 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
+            >
+              {busy ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              Compor kit
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 lg:col-span-2">
+          <CardContent className="p-5 space-y-4">
+            <div className="aspect-[2526/1786] rounded-xl bg-secondary overflow-hidden flex items-center justify-center">
+              {previewSrc ? (
+                <img src={previewSrc} alt="Kit composto" className="w-full h-full object-contain" />
+              ) : (
+                <p className="text-sm text-muted-foreground px-8 text-center">
+                  Escolha tema, molde e nome — a composição é instantânea e o resultado é um
+                  SVG editável (abre no Canva, troca nome e cores).
+                </p>
+              )}
+            </div>
+            {svg && (
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
+                  <Download className="h-4 w-4 mr-1.5" /> SVG editável
+                </Button>
+                <Button onClick={baixarPng} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                  <Download className="h-4 w-4 mr-1.5" /> PNG
+                </Button>
+                <Button onClick={baixarPdf} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                  <FileText className="h-4 w-4 mr-1.5" /> PDF p/ imprimir
+                </Button>
+                <Button onClick={gerar} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                  <RefreshCw className="h-4 w-4 mr-1.5" /> Recompor
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,0 +1,13 @@
+{
+  "name": "moldepronto-ingestao",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@napi-rs/canvas": "^0.1",
+    "@resvg/resvg-js": "^2",
+    "fontkit": "^2",
+    "jsdom": "^22",
+    "pdfjs-dist": "2.6.347",
+    "potrace": "^2"
+  }
+}
