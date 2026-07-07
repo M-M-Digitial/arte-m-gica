@@ -14,7 +14,6 @@ import Moldes from "./pages/Moldes";
 import ModelosProntos from "./pages/ModelosProntos";
 import Temas from "./pages/Temas";
 import Editor from "./pages/Editor";
-import Mockups from "./pages/Mockups";
 import Perfil from "./pages/Perfil";
 import AdminMoldesUpload from "./pages/AdminMoldesUpload";
 import NotFound from "./pages/NotFound";
@@ -50,7 +49,6 @@ const App = () => (
               <Route path="/modelos-prontos" element={<ModelosProntos />} />
               <Route path="/temas" element={<Temas />} />
               <Route path="/editor" element={<Editor />} />
-              <Route path="/mockups" element={<Mockups />} />
               <Route path="/agentes" element={<Agentes />} />
               <Route path="/agentes/:agentId" element={<AgenteChat />} />
               <Route path="/perfil" element={<Perfil />} />
