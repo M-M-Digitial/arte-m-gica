@@ -125,9 +125,19 @@ export async function composeKit({ molde, assets, nome, idade }: ComposeInput): 
     const plW = Math.min(availW * 0.9, 520);
     const plH = placa ? plW * ((placa.meta?.h || 202) / (placa.meta?.w || 320)) : plW * 0.55;
     const plY = cy - plH * 0.55;
+    // placa genérica caprichada (usada quando o tema não tem placa própria):
+    // medalhão branco com borda dupla nas cores do tema + estrelinhas
+    const genericPlaque = `
+      <g>
+        <rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.28}" fill="${corNome}" opacity="0.25"/>
+        <rect x="${cx - plW / 2 + 6}" y="${plY + 6}" width="${plW - 12}" height="${plH - 12}" rx="${plH * 0.24}" fill="#FFFFFF" opacity="0.96" stroke="${corNome}" stroke-width="6"/>
+        <rect x="${cx - plW / 2 + 16}" y="${plY + 16}" width="${plW - 32}" height="${plH - 32}" rx="${plH * 0.2}" fill="none" stroke="${corIdade}" stroke-width="2.5" stroke-dasharray="1 8" stroke-linecap="round"/>
+        <path d="M0,-9 L2.6,-2.8 9,-2.8 4,1.6 5.8,8 0,4.4 -5.8,8 -4,1.6 -9,-2.8 -2.6,-2.8 Z" transform="translate(${cx - plW / 2 + 4} ${plY + plH / 2}) scale(1.6)" fill="${corIdade}"/>
+        <path d="M0,-9 L2.6,-2.8 9,-2.8 4,1.6 5.8,8 0,4.4 -5.8,8 -4,1.6 -9,-2.8 -2.6,-2.8 Z" transform="translate(${cx + plW / 2 - 4} ${plY + plH / 2}) scale(1.6)" fill="${corIdade}"/>
+      </g>`;
     const bg = placaUri
       ? `<image href="${placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}"/>`
-      : `<rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.2}" fill="#FFFFFF" opacity="0.92" stroke="${corNome}" stroke-width="5"/>`;
+      : genericPlaque;
     return `${bg}
     <text x="${cx}" y="${plY + plH * 0.5}" text-anchor="middle" font-family="${family}" font-size="${plW * 0.155}" fill="${corNome}">${esc(nome)}</text>
     ${idade ? `<text x="${cx}" y="${plY + plH * 0.86}" text-anchor="middle" font-family="${family}" font-size="${plW * 0.075}" fill="#FFFFFF" stroke="${corIdade}" stroke-width="1.5" paint-order="stroke">${esc(idade)} anos</text>` : ""}`;
