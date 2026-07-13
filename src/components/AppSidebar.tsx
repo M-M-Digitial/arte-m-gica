@@ -5,7 +5,10 @@ import {
   UserCircle,
   Library,
   Wand2,
+  CreditCard,
+  UploadCloud,
 } from "lucide-react";
+import { useSubscription } from "@/hooks/use-subscription";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -32,10 +35,16 @@ const mainItems = [
   { title: "Agentes da Papelaria", url: "/agentes", icon: Bot },
 ];
 
+const adminItems = [
+  { title: "Assinaturas", url: "/admin/assinaturas", icon: CreditCard },
+  { title: "Upload de Moldes", url: "/admin/moldes", icon: UploadCloud },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { user } = useAuth();
+  const { isAdmin } = useSubscription();
   const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null }>({ display_name: null, avatar_url: null });
 
   useEffect(() => {
@@ -84,6 +93,33 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-0.5 px-2">
+                {!collapsed && (
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    Admin
+                  </p>
+                )}
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-accent"
+                        activeClassName="bg-primary/10 text-primary font-semibold"
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       {user && (

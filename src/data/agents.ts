@@ -6,93 +6,76 @@ export interface Agent {
   emoji: string;
 }
 
+// Elenco enxuto: 8 especialistas (as antigas Malu, Elisa, Maia e Violeta
+// foram incorporadas por Jade, Luna, Flora e Iris, respectivamente).
 export const agents: Agent[] = [
   {
     id: "nina",
     name: "Nina",
     title: "Atendimento e Fechamento",
-    description: "Cuida das respostas no WhatsApp e Instagram, quebra objeções, passa confiança, responde dúvidas e ajuda a fechar pedidos.",
+    description: "Responde WhatsApp e Instagram por você: scripts prontos, quebra de objeções ('tá caro', 'vou pensar') e técnicas pra fechar a venda sem ser chata.",
     emoji: "💬",
   },
   {
     id: "jade",
     name: "Jade",
-    title: "Orçamento e Precificação",
-    description: "Monta orçamento e calcula preço com base em quantidade, material, tempo, acabamento, lucro e urgência.",
+    title: "Preço e Financeiro",
+    description: "Calcula o preço certo de cada peça (material + seu tempo + lucro), monta orçamentos e acompanha seu caixa: lucro por pedido, ticket médio e ponto de equilíbrio.",
     emoji: "💎",
   },
   {
     id: "luna",
     name: "Luna",
-    title: "Pedidos e Briefing",
-    description: "Organiza tudo o que precisa entrar no pedido: nome, idade, tema, cores, data, quantidade, observações e aprovação da cliente.",
+    title: "Pedidos sem Erro",
+    description: "Organiza o briefing completo (nome com grafia exata, tema, cores, data) e revisa tudo antes de produzir e entregar — zero nome errado, zero prejuízo.",
     emoji: "📋",
   },
   {
     id: "flora",
     name: "Flora",
-    title: "Produção e Prazos",
-    description: "Organiza fila de produção, prioridade, checklist, agenda de entregas e evita atraso ou promessa furada.",
+    title: "Produção e Agenda",
+    description: "Monta sua semana de produção: fila por prioridade, prazos realistas, encaixes de urgência (com taxa!) e quando dizer não pra não surtar.",
     emoji: "📅",
   },
   {
     id: "iris",
     name: "Iris",
-    title: "Vendas e Campanhas",
-    description: "Cria ofertas, combos, campanhas sazonais, promoções e ideias para vender mais em datas estratégicas.",
+    title: "Vendas e Vitrine",
+    description: "Cria campanhas e combos pra datas fortes, e arruma sua vitrine: catálogo organizado, descrições que vendem e nomes de kit que valorizam o produto.",
     emoji: "🚀",
   },
   {
     id: "clara",
     name: "Clara",
     title: "Conteúdo e Instagram",
-    description: "Cria legendas, chamadas, ideias de posts e analisa perfil para transformar seguidores em clientes.",
+    description: "Legendas prontas, ideias de reels e stories, calendário de posts e análise do seu perfil pra transformar seguidoras em clientes.",
     emoji: "📱",
-  },
-  {
-    id: "violeta",
-    name: "Violeta",
-    title: "Catálogo e Portfólio",
-    description: "Organiza os produtos, categorias, descrições e vitrine para facilitar a decisão de compra da cliente.",
-    emoji: "🛍️",
   },
   {
     id: "sofia",
     name: "Sofia",
     title: "Pós-venda e Fidelização",
-    description: "Envia mensagens depois da entrega, pede feedback, incentiva indicação e puxa recompra.",
+    description: "Mensagens pós-entrega, pedidos de foto da festa (prova social!), programa de indicação e reativação de clientes sumidas.",
     emoji: "💖",
-  },
-  {
-    id: "malu",
-    name: "Malu",
-    title: "Financeiro Básico",
-    description: "Acompanha entradas, saídas, lucro por pedido, ticket médio e mostra quais produtos valem mais a pena.",
-    emoji: "💰",
   },
   {
     id: "bella",
     name: "Bella",
-    title: "Dicas de Impressão",
-    description: "Dá dicas de papel, gramatura, impressora, corte e acabamento para seus personalizados ficarem perfeitos.",
+    title: "Impressão e Materiais",
+    description: "Papel certo, gramatura, configuração da impressora, corte e acabamento — e socorro quando a impressão sai borrada ou com cor errada.",
     emoji: "🖨️",
-  },
-  {
-    id: "elisa",
-    name: "Elisa",
-    title: "Revisão Final",
-    description: "Confere tudo antes de produzir ou entregar: revisa nome, idade, data, tema, quantidade, observações e aprovação da cliente. Evita erro bobo que vira prejuízo.",
-    emoji: "✅",
-  },
-  {
-    id: "maia",
-    name: "Maia",
-    title: "Urgências e Agenda",
-    description: "Organiza encaixes, urgências e prioridades da semana. Separa pedidos urgentes, mostra o que vence primeiro e ajuda a não aceitar prazo impossível.",
-    emoji: "⏰",
   },
 ];
 
+// Conversas antigas podem referenciar agentes fundidos — redireciona pro sucessor.
+const merged: Record<string, string> = {
+  malu: "jade",
+  elisa: "luna",
+  maia: "flora",
+  violeta: "iris",
+};
+
 export function getAgentById(id: string): Agent | undefined {
-  return agents.find((a) => a.id === id);
+  const key = id.toLowerCase();
+  return agents.find((a) => a.id === key) ?? agents.find((a) => a.id === merged[key]);
 }

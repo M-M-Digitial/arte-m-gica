@@ -16,7 +16,9 @@ import Temas from "./pages/Temas";
 import Editor from "./pages/Editor";
 import Perfil from "./pages/Perfil";
 import AdminMoldesUpload from "./pages/AdminMoldesUpload";
+import AdminAssinaturas from "./pages/AdminAssinaturas";
 import NotFound from "./pages/NotFound";
+import { RequireAssinatura } from "@/components/RequireAssinatura";
 
 const queryClient = new QueryClient();
 
@@ -44,15 +46,16 @@ const App = () => (
               }
             >
               <Route path="/" element={<Dashboard />} />
-              <Route path="/criar" element={<Criar />} />
+              <Route path="/criar" element={<RequireAssinatura><Criar /></RequireAssinatura>} />
               <Route path="/moldes" element={<Moldes />} />
-              <Route path="/modelos-prontos" element={<ModelosProntos />} />
+              <Route path="/modelos-prontos" element={<RequireAssinatura><ModelosProntos /></RequireAssinatura>} />
               <Route path="/temas" element={<Temas />} />
-              <Route path="/editor" element={<Editor />} />
-              <Route path="/agentes" element={<Agentes />} />
-              <Route path="/agentes/:agentId" element={<AgenteChat />} />
+              <Route path="/editor" element={<RequireAssinatura><Editor /></RequireAssinatura>} />
+              <Route path="/agentes" element={<RequireAssinatura><Agentes /></RequireAssinatura>} />
+              <Route path="/agentes/:agentId" element={<RequireAssinatura><AgenteChat /></RequireAssinatura>} />
               <Route path="/perfil" element={<Perfil />} />
               <Route path="/admin/moldes" element={<AdminMoldesUpload />} />
+              <Route path="/admin/assinaturas" element={<AdminAssinaturas />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
