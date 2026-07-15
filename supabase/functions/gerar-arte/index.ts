@@ -8,6 +8,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const COTA_MENSAL = 30; // artes com IA por usuário/mês (admins: ilimitado)
+
+// extrai user id/email do JWT já verificado pelo gateway (verify_jwt=true)
+function parseJwt(authHeader: string | null): { sub: string | null; email: string | null } {
+  try {
+    const token = (authHeader ?? "").replace(/^Bearer\s+/i, "");
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return { sub: payload.sub ?? null, email: payload.email ?? null };
+  } catch {
+    return { sub: null, email: null };
+  }
+}
+
 const normalizeTheme = (value: string) =>
   value
     .normalize("NFD")
@@ -198,6 +211,35 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminDb = createClient(supabaseUrl, supabaseKey);
+
+    // ---- COTA MENSAL (admins ilimitado) ----
+    const { sub: userId, email: userEmail } = parseJwt(req.headers.get("Authorization"));
+    if (userId) {
+      const { data: roleRow } = await adminDb
+        .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+      if (!roleRow) {
+        const inicioMes = new Date();
+        inicioMes.setUTCDate(1); inicioMes.setUTCHours(0, 0, 0, 0);
+        const { count } = await adminDb
+          .from("geracoes_ia")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .gte("created_at", inicioMes.toISOString());
+        if ((count ?? 0) >= COTA_MENSAL) {
+          return new Response(
+            JSON.stringify({
+              error: `Você já usou suas ${COTA_MENSAL} artes com IA deste mês! Elas renovam dia 1º. Enquanto isso, o Compositor de Kits é ilimitado 💖`,
+              code: "QUOTA_EXCEEDED",
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     const colorsDesc = corDominante
       ? `Cor dominante/principal: ${corDominante}. Use esta cor como destaque principal.`
       : temaColors?.length
@@ -310,11 +352,12 @@ REGRAS ABSOLUTAS (não negociáveis):
 
 DECORAÇÃO A APLICAR:
 - TEMA DECORATIVO SEGURO: ${safeThemeDesc}
-- PALAVRA EM DESTAQUE: "${nome}" — grande, legível, na face principal${idadeText}
+- PALAVRA EM DESTAQUE: escreva EXATAMENTE "${nome}" — confira LETRA POR LETRA (acentos incluídos), sem traduzir, sem abreviar, sem duplicar letras. Grande, legível, na face principal${idadeText}
 - ${colorsDesc}${fraseText}
 - ESTILO TIPOGRÁFICO: ${fonteDesc} para a palavra "${nome}" e demais textos.
 - ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
 - DENSIDADE VISUAL: ${densityDesc}.
+- ACABAMENTO: qualidade de estúdio de papelaria premium — ilustração nítida, cores vibrantes e harmônicas, composição equilibrada, sem ruído, sem artefatos, sem nenhum texto além dos especificados.
 
 PROIBIÇÕES DE CONTEÚDO:
 - Sem crianças, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.
@@ -446,8 +489,12 @@ REGRAS:
     if ("early" in resolved) return resolved.early;
     const response = resolved.ok;
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // geração aconteceu — registra o uso da cota (best-effort)
+    if (userId) {
+      adminDb.from("geracoes_ia").insert({ user_id: userId, email: userEmail }).then(({ error }) => {
+        if (error) console.warn("registro de cota falhou:", error.message);
+      });
+    }
 
     // Compõe as linhas do molde na imagem final, sobe pro Storage e emite o meta.
     const finalizeAndUpload = async (

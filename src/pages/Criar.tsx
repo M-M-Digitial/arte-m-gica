@@ -431,7 +431,8 @@ export default function Criar() {
         "gerar-arte",
         {
           moldeName: selectedMolde.name,
-          moldeTemplateUrl: (selectedMolde as any).image_url || undefined,
+          // template em alta resolução (2048px) quando existir; thumb como fallback
+          moldeTemplateUrl: (selectedMolde as any).template_png_url || (selectedMolde as any).image_url || undefined,
           temaNome: selectedTema.name,
           temaColors: selectedTema.colors,
           nome: nome.trim(),
