@@ -29,6 +29,29 @@ export default function AdminAssinaturas() {
   const [busca, setBusca] = useState("");
   const [novoEmail, setNovoEmail] = useState("");
 
+  const [checkoutUrl, setCheckoutUrl] = useState("");
+
+  useQuery({
+    queryKey: ["config-checkout-admin"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("app_config").select("value").eq("key", "hotmart_checkout_url").maybeSingle();
+      if (data?.value) setCheckoutUrl(data.value);
+      return data?.value ?? "";
+    },
+  });
+
+  const salvarCheckout = async () => {
+    const url = checkoutUrl.trim();
+    if (url && !/^https?:\/\//.test(url)) { toast.error("Cole a URL completa (https://...)"); return; }
+    const { error } = await (supabase as any)
+      .from("app_config")
+      .upsert({ key: "hotmart_checkout_url", value: url, updated_at: new Date().toISOString() });
+    if (error) toast.error(error.message);
+    else toast.success("Link de checkout salvo — o paywall já usa ele.");
+  };
+
   const { data: linhas, isLoading } = useQuery({
     queryKey: ["admin-assinaturas"],
     enabled: isAdmin,
@@ -132,6 +155,25 @@ export default function AdminAssinaturas() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-border/50">
+        <CardContent className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">
+              Link de checkout da Hotmart (usado nos botões "Assinar" do paywall)
+            </p>
+            <Input
+              placeholder="https://pay.hotmart.com/SEU_PRODUTO"
+              value={checkoutUrl}
+              onChange={(e) => setCheckoutUrl(e.target.value)}
+              className="h-10 bg-secondary border-0 rounded-xl"
+            />
+          </div>
+          <Button onClick={salvarCheckout} className="h-10 rounded-xl gradient-hero border-0 text-white sm:self-end">
+            Salvar link
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card className="border-border/50">
         <CardContent className="p-5 space-y-4">

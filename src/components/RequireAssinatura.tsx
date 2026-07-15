@@ -1,14 +1,30 @@
 import { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, Sparkles, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSubscription } from "@/hooks/use-subscription";
+import { supabase } from "@/integrations/supabase/client";
 import { HOTMART_CHECKOUT_URL, PLANOS, BENEFICIOS } from "@/config/billing";
 
 // Gate de assinatura: envolve as áreas premium. Admin sempre passa.
 export function RequireAssinatura({ children }: { children: ReactNode }) {
   const { loading, liberado, assinatura } = useSubscription();
+
+  // link de checkout configurável pelo painel admin (app_config), com fallback
+  const { data: checkoutUrl } = useQuery({
+    queryKey: ["config-checkout"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("app_config")
+        .select("value")
+        .eq("key", "hotmart_checkout_url")
+        .maybeSingle();
+      return (data?.value as string) || HOTMART_CHECKOUT_URL;
+    },
+  });
+  const linkCheckout = checkoutUrl || HOTMART_CHECKOUT_URL;
 
   if (loading) {
     return (
@@ -69,7 +85,7 @@ export function RequireAssinatura({ children }: { children: ReactNode }) {
                 }`}
                 variant={p.destaque ? "default" : "outline"}
               >
-                <a href={HOTMART_CHECKOUT_URL} target="_blank" rel="noreferrer">
+                <a href={linkCheckout} target="_blank" rel="noreferrer">
                   <Sparkles className="h-4 w-4 mr-2" />
                   Assinar {p.nome}
                 </a>
