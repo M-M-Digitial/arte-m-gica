@@ -10,6 +10,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { passwordValidationError } from "@/lib/password";
 
+function appUrl(path = "") {
+  const baseUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+  return new URL(path.replace(/^\//, ""), baseUrl).toString();
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const { session, loading: authLoading } = useAuth();
@@ -48,7 +53,7 @@ export default function Auth() {
           password,
           options: {
             data: { full_name: name },
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: appUrl(),
           },
         });
         if (error) throw error;
@@ -78,7 +83,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/perfil`,
+        redirectTo: appUrl("perfil"),
       });
       if (error) throw error;
       toast.success("Enviamos as instruções de recuperação para seu e-mail.");

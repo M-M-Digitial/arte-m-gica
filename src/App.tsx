@@ -24,6 +24,9 @@ import NotFound from "./pages/NotFound";
 import { RequireAssinatura } from "@/components/RequireAssinatura";
 
 const queryClient = new QueryClient();
+const routerBasename = import.meta.env.BASE_URL === "/"
+  ? undefined
+  : import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function LayoutWrapper() {
   return (
@@ -53,7 +56,7 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter basename={routerBasename}>
           <ScrollToTop />
           <Routes>
             <Route path="/auth" element={<Auth />} />

@@ -5,7 +5,8 @@ O Meu Ateliê Digital é servido como aplicação estática pelo Nginx, sem comp
 ## Endereços
 
 - VPS: `2.25.131.229`
-- Domínio: `appateliedigital.com.br` e `www.appateliedigital.com.br`
+- Slug pública estável: `https://www.appateliedigital.com.br/agentes-artesaos/`
+- Alias preparado: `https://appateliedigital.com.br/agentes-artesaos/`
 - Diretório: `/var/www/meu-atelie-digital`
 - Configuração Nginx: `/etc/nginx/sites-available/meu-atelie-digital`
 
@@ -18,41 +19,46 @@ O Meu Ateliê Digital é servido como aplicação estática pelo Nginx, sem comp
    ```
 
 2. Crie um diretório em `/var/www/meu-atelie-digital/releases/<data-hora>`.
-3. Envie o conteúdo de `dist/` para esse diretório.
+3. Envie o conteúdo de `dist/` para a pasta `agentes-artesaos/` desse diretório.
 4. Aponte o link `/var/www/meu-atelie-digital/current` para o novo release.
 5. Copie `deploy/nginx/meu-atelie-digital.conf` para `/etc/nginx/sites-available/meu-atelie-digital`.
 6. Habilite o site, valide com `nginx -t` e recarregue o Nginx.
-7. Teste antes do DNS usando o cabeçalho `Host: appateliedigital.com.br` contra `127.0.0.1` na VPS.
+7. Teste a slug usando o cabeçalho `Host: appateliedigital.com.br` contra `127.0.0.1` na VPS.
 
 O CRM continua em sua configuração e porta atuais. O deploy não deve editar `crmcreator.online` nem interromper o processo da porta `4177`.
 
 O workflow antigo do GitHub está limitado à execução manual até que uma chave exclusiva de deploy seja autorizada na nova VPS. Isso evita publicação acidental na hospedagem anterior.
 
-## Troca do domínio
+## Integração com o domínio existente
 
-No provedor de DNS do domínio:
+Não é necessário mudar DNS para a rota com `www`. O servidor que já atende o domínio deve encaminhar somente a slug para a VPS do CRM:
 
-1. Altere o registro `A` de `@` para `2.25.131.229`.
-2. Altere o registro `A` de `www` para `2.25.131.229`, ou use um `CNAME` de `www` para `appateliedigital.com.br`.
-3. Remova o destino antigo `72.60.137.128` para esses dois nomes.
-4. Use TTL de 300 segundos durante a migração.
-5. Aguarde `appateliedigital.com.br` e `www.appateliedigital.com.br` resolverem para `2.25.131.229` em resolvedores públicos.
+```nginx
+location = /agentes-artesaos {
+    return 308 /agentes-artesaos/;
+}
 
-Depois da propagação, emita o certificado:
+location = /agentes-artesãos {
+    return 308 /agentes-artesaos/;
+}
 
-```bash
-certbot --nginx \
-  -d appateliedigital.com.br \
-  -d www.appateliedigital.com.br \
-  --redirect
+location ^~ /agentes-artesaos/ {
+    proxy_pass http://2.25.131.229;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
 ```
 
-Valide a renovação com `certbot renew --dry-run`.
+O HTTPS continua terminado no servidor atual do domínio. A VPS do CRM recebe somente o tráfego encaminhado para a slug.
+
+O DNS atual do host sem `www` possui dois registros `A`, `2.57.91.91` e `72.60.137.128`. Enquanto ambos existirem, esse alias pode chegar a servidores diferentes. Isso não é causado pela nova aplicação; a URL com `www`, que aponta somente para `72.60.137.128`, permanece a rota estável sem mudança de DNS.
 
 ## Verificação
 
-- `/` redireciona para `/agentes` no modo escola.
-- `/auth` abre login, cadastro e recuperação de senha.
+- `/agentes-artesaos/` redireciona internamente para a lista de agentes.
+- `/agentes-artesaos/auth` abre login, cadastro e recuperação de senha.
 - Usuária sem assinatura vê o bloqueio de acesso.
 - Usuária com assinatura ativa abre os nove agentes.
 - O chat recebe resposta em streaming e salva a conversa.

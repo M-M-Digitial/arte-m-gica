@@ -5,7 +5,7 @@ Base compartilhada de dois produtos para artesãs:
 - **Meu Ateliê Digital**: nove assistentes de IA para atendimento, orçamento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda.
 - **MoldePronto**: gerador de moldes personalizados para exportação em PDF, PNG e SVG.
 
-O domínio `https://www.appateliedigital.com.br` publica o modo **Meu Ateliê Digital**.
+O modo **Meu Ateliê Digital** é publicado em `https://www.appateliedigital.com.br/agentes-artesaos/`, sem substituir o aplicativo existente na raiz do domínio. A mesma rota também aceita o host sem `www` quando ele chega ao servidor principal.
 
 ## Meu Ateliê Digital
 
