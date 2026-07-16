@@ -1,81 +1,159 @@
+export const agentIds = [
+  "nina",
+  "jade",
+  "iris",
+  "clara",
+  "violeta",
+  "sofia",
+  "bella",
+  "elisa",
+  "maia",
+] as const;
+
+export type AgentId = (typeof agentIds)[number];
+
 export interface Agent {
-  id: string;
+  id: AgentId;
   name: string;
   title: string;
   description: string;
-  emoji: string;
+  deliverables: readonly string[];
+  starters: readonly string[];
 }
 
-// Elenco enxuto: 8 especialistas (as antigas Malu, Elisa, Maia e Violeta
-// foram incorporadas por Jade, Luna, Flora e Iris, respectivamente).
 export const agents: Agent[] = [
   {
     id: "nina",
     name: "Nina",
     title: "Atendimento e Fechamento",
-    description: "Responde WhatsApp e Instagram por você: scripts prontos, quebra de objeções ('tá caro', 'vou pensar') e técnicas pra fechar a venda sem ser chata.",
-    emoji: "💬",
+    description:
+      "Prepara respostas para WhatsApp e Instagram, contorna objeções e conduz a cliente até o fechamento com clareza.",
+    deliverables: ["Resposta pronta", "Quebra de objeção", "Próximo passo da venda"],
+    starters: [
+      "Crie uma resposta para uma cliente que achou caro.",
+      "Monte minha mensagem de boas-vindas no WhatsApp.",
+      "Ajude a fechar este pedido sem pressionar a cliente.",
+    ],
   },
   {
     id: "jade",
     name: "Jade",
-    title: "Preço e Financeiro",
-    description: "Calcula o preço certo de cada peça (material + seu tempo + lucro), monta orçamentos e acompanha seu caixa: lucro por pedido, ticket médio e ponto de equilíbrio.",
-    emoji: "💎",
-  },
-  {
-    id: "luna",
-    name: "Luna",
-    title: "Pedidos sem Erro",
-    description: "Organiza o briefing completo (nome com grafia exata, tema, cores, data) e revisa tudo antes de produzir e entregar — zero nome errado, zero prejuízo.",
-    emoji: "📋",
-  },
-  {
-    id: "flora",
-    name: "Flora",
-    title: "Produção e Agenda",
-    description: "Monta sua semana de produção: fila por prioridade, prazos realistas, encaixes de urgência (com taxa!) e quando dizer não pra não surtar.",
-    emoji: "📅",
+    title: "Orçamento e Precificação",
+    description:
+      "Calcula material, tempo, custos, taxas e lucro para montar preços sustentáveis e orçamentos fáceis de enviar.",
+    deliverables: ["Custo detalhado", "Preço sugerido", "Orçamento para enviar"],
+    starters: [
+      "Calcule o preço de 50 caixinhas personalizadas.",
+      "Monte um orçamento profissional para este pedido.",
+      "Descubra se estou tendo lucro neste produto.",
+    ],
   },
   {
     id: "iris",
     name: "Iris",
-    title: "Vendas e Vitrine",
-    description: "Cria campanhas e combos pra datas fortes, e arruma sua vitrine: catálogo organizado, descrições que vendem e nomes de kit que valorizam o produto.",
-    emoji: "🚀",
+    title: "Vendas e Campanhas",
+    description:
+      "Cria ofertas, combos, promoções e campanhas sazonais para vender melhor em cada data estratégica.",
+    deliverables: ["Oferta completa", "Campanha por canal", "Calendário de ação"],
+    starters: [
+      "Crie uma campanha para a próxima data comemorativa.",
+      "Monte três combos para aumentar meu ticket médio.",
+      "Preciso de uma promoção sem desvalorizar meu trabalho.",
+    ],
   },
   {
     id: "clara",
     name: "Clara",
     title: "Conteúdo e Instagram",
-    description: "Legendas prontas, ideias de reels e stories, calendário de posts e análise do seu perfil pra transformar seguidoras em clientes.",
-    emoji: "📱",
+    description:
+      "Transforma produtos e bastidores em legendas, posts, reels e stories que aproximam seguidoras e clientes.",
+    deliverables: ["Legenda pronta", "Roteiro de reel", "Sequência de stories"],
+    starters: [
+      "Crie uma legenda para divulgar minhas caixinhas.",
+      "Monte sete dias de conteúdo para meu Instagram.",
+      "Crie um roteiro de reel mostrando meu processo.",
+    ],
+  },
+  {
+    id: "violeta",
+    name: "Violeta",
+    title: "Catálogo e Portfólio",
+    description:
+      "Organiza produtos, categorias, nomes e descrições para a cliente entender a vitrine e decidir com mais facilidade.",
+    deliverables: ["Categorias da vitrine", "Descrição de produto", "Ordem do catálogo"],
+    starters: [
+      "Organize meu catálogo por categorias.",
+      "Crie descrições que valorizem estes produtos.",
+      "Monte a ordem ideal da minha vitrine digital.",
+    ],
   },
   {
     id: "sofia",
     name: "Sofia",
     title: "Pós-venda e Fidelização",
-    description: "Mensagens pós-entrega, pedidos de foto da festa (prova social!), programa de indicação e reativação de clientes sumidas.",
-    emoji: "💖",
+    description:
+      "Cria mensagens após a entrega, pedidos de feedback, indicações e ações para a mesma cliente comprar novamente.",
+    deliverables: ["Mensagem pós-entrega", "Pedido de feedback", "Ação de recompra"],
+    starters: [
+      "Crie uma mensagem carinhosa para depois da entrega.",
+      "Como pedir foto e avaliação sem incomodar?",
+      "Monte uma campanha para reativar clientes antigas.",
+    ],
   },
   {
     id: "bella",
     name: "Bella",
-    title: "Impressão e Materiais",
-    description: "Papel certo, gramatura, configuração da impressora, corte e acabamento — e socorro quando a impressão sai borrada ou com cor errada.",
-    emoji: "🖨️",
+    title: "Impressão e Acabamento",
+    description:
+      "Orienta papel, gramatura, impressora, corte e acabamento e pesquisa o manual correto quando a configuração é específica.",
+    deliverables: ["Diagnóstico técnico", "Configuração segura", "Passo a passo de acabamento"],
+    starters: [
+      "Qual papel devo usar neste personalizado?",
+      "Minha impressão está com a cor errada. O que verifico?",
+      "Pesquise a configuração correta para minha impressora.",
+    ],
+  },
+  {
+    id: "elisa",
+    name: "Elisa",
+    title: "Revisão Final",
+    description:
+      "Confere dados, quantidades, observações, arte e aprovação da cliente antes de produzir ou entregar.",
+    deliverables: ["Status da revisão", "Pendências encontradas", "Checklist de liberação"],
+    starters: [
+      "Revise este pedido antes de eu produzir.",
+      "Crie um checklist de aprovação da cliente.",
+      "Confira esta arte e liste qualquer risco de erro.",
+    ],
+  },
+  {
+    id: "maia",
+    name: "Maia",
+    title: "Urgências e Agenda",
+    description:
+      "Organiza pedidos, encaixes e prioridades com prazos realistas para proteger a produção e a relação com a cliente.",
+    deliverables: ["Ordem de prioridade", "Agenda executável", "Mensagem sobre prazo"],
+    starters: [
+      "Organize meus pedidos desta semana por prioridade.",
+      "Veja se consigo aceitar este pedido urgente.",
+      "Crie uma mensagem para recusar um prazo impossível.",
+    ],
   },
 ];
 
-// Conversas antigas podem referenciar agentes fundidos — redireciona pro sucessor.
-const merged: Record<string, string> = {
+const legacyAgentIds: Record<string, AgentId> = {
   malu: "jade",
-  elisa: "luna",
-  maia: "flora",
-  violeta: "iris",
+  luna: "elisa",
+  flora: "maia",
 };
 
+export function getCanonicalAgentId(id: string): AgentId | undefined {
+  const key = id.trim().toLowerCase();
+  if ((agentIds as readonly string[]).includes(key)) return key as AgentId;
+  return legacyAgentIds[key];
+}
+
 export function getAgentById(id: string): Agent | undefined {
-  const key = id.toLowerCase();
-  return agents.find((a) => a.id === key) ?? agents.find((a) => a.id === merged[key]);
+  const canonicalId = getCanonicalAgentId(id);
+  return agents.find((agent) => agent.id === canonicalId);
 }

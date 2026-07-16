@@ -1,44 +1,48 @@
-# MoldePronto
+# Arte Mágica
 
-SaaS para papeleiras: artes de festa personalizadas (nome, tema, molde) prontas em segundos.
-No ar em **https://www.appateliedigital.com.br**.
+Base compartilhada de dois produtos para artesãs:
 
-## Como funciona
+- **Meu Ateliê Digital**: nove assistentes de IA para atendimento, orçamento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda.
+- **MoldePronto**: gerador de moldes personalizados para exportação em PDF, PNG e SVG.
 
-- **Compositor de Kits** (`/editor`) — motor principal, roda 100% no navegador e custa zero por arte:
-  molde vetorial (SVG) + biblioteca de assets do tema (papéis, cliparts, fonte) + nome como `<text>`
-  editável → SVG (abre no Canva) / PNG / PDF. 100 temas, 21 moldes, seletor de personagem.
-  Código: `src/lib/compose-kit.ts` + `src/pages/Editor.tsx`.
-- **Criar com IA** (`/criar`) — fallback para temas sem referência: gpt-image decora o molde
-  (edge `gerar-arte`, com máscara de edição + streaming). Cota de 30 artes/usuário/mês
-  (tabela `geracoes_ia`; admins ilimitado).
-- **8 agentes especialistas** (`/agentes`) — edge `chat-agente` (gpt-4o-mini, multimodal: leem
-  imagens anexadas). Prompts em `supabase/functions/chat-agente`.
+O domínio `https://www.appateliedigital.com.br` publica o modo **Meu Ateliê Digital**.
 
-## Monetização (Hotmart)
+## Meu Ateliê Digital
 
-- Planos em `src/config/billing.ts` (Mensal R$ 39,90 / Anual R$ 349).
-- Gate: `src/components/RequireAssinatura.tsx` + `src/hooks/use-subscription.ts`
-  (tabela `assinaturas`, match por e-mail; admin bypassa).
-- Webhook: edge `hotmart-webhook` (ativa/cancela pela Hotmart; valida secret `HOTMART_HOTTOK`).
-- Painel admin: `/admin/assinaturas` (stats, liberação manual, link de checkout configurável).
+As assistentes disponíveis em `/agentes` são Nina, Jade, Iris, Clara, Violeta, Sofia, Bella, Elisa e Maia. O chat usa a OpenAI Responses API com streaming, pesquisa pública, citações, leitura de imagens, transcrição de áudio e memória por usuária.
 
-## Infra
+O backend está em `supabase/functions/chat-agente/`. As conversas e memórias ficam no Postgres com RLS; anexos ficam em um bucket privado e são acessados por URLs assinadas.
 
-- **Supabase** projeto `qdwhwxboocplmnmczkfj` (sa-east-1): Postgres + Storage (bucket `moldes`
-  com SVGs/máscaras/faces dos moldes e assets por tema em `temas/<slug>/`) + 7 edge functions.
-- **Deploy**: push na `main` → GitHub Actions builda e faz rsync do `dist/` pra VPS (nginx).
-  Secrets `VPS_*` no repositório.
-- **Ingestão da biblioteca**: `tools/ingestao/` (PDF→SVG por potrace, detecção de faces +
-  máscara de interior, ingestão de temas do Drive, upload de assets). Ver README da pasta.
-
-## Desenvolvimento
+## Produtos e builds
 
 ```bash
 npm install
-npm run dev     # localhost:8080
-npm run build
+npm run dev             # Meu Ateliê Digital em http://localhost:8080
+npm run dev:escola      # Meu Ateliê Digital
+npm run dev:gerador     # MoldePronto
+npm run build:escola
+npm run build:gerador
 ```
 
-Secrets das edge functions: `OPENAI_API_KEY`, `HOTMART_HOTTOK`
-(`npx supabase secrets set NOME=valor --project-ref qdwhwxboocplmnmczkfj`).
+Os perfis ficam em `src/config/products.ts`, com variáveis públicas específicas em `.env.escola` e `.env.gerador`. O workflow de produção usa `npm run build:escola`.
+
+## Acesso e Hotmart
+
+O Meu Ateliê Digital oferece acesso vitalício por 9x de R$ 9,21 ou R$ 67 à vista. O gate usa `src/components/RequireAssinatura.tsx` e a tabela `assinaturas`, com correspondência pelo e-mail autenticado.
+
+O webhook `supabase/functions/hotmart-webhook/` ativa compras aprovadas e revoga reembolsos, cancelamentos e chargebacks. Ele exige `HOTMART_HOTTOK`; sem o segredo, falha de forma fechada. O checkout público pode ser configurado por `VITE_HOTMART_CHECKOUT_URL` ou pelo painel `/admin/assinaturas`.
+
+## Infraestrutura
+
+- Supabase: projeto `qdwhwxboocplmnmczkfj`.
+- OpenAI: `gpt-5.4-mini` para chat e memória; `gpt-4o-mini-transcribe` para áudio.
+- Deploy: push na `main` aciona o GitHub Actions e publica o build da escola na VPS.
+- Segredos das Edge Functions: `OPENAI_API_KEY` e `HOTMART_HOTTOK`.
+
+## Verificação
+
+```bash
+npm test
+npx tsc -b --pretty false
+npm run build:escola
+```

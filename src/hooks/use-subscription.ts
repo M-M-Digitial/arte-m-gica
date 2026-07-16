@@ -14,20 +14,24 @@ export interface Assinatura {
 // Admin sempre passa pelos gates.
 export function useSubscription() {
   const { user } = useAuth();
+  const localDevelopmentAccess = import.meta.env.DEV && import.meta.env.VITE_DEV_BYPASS_SUBSCRIPTION === "true";
 
   const { data, isLoading } = useQuery({
     queryKey: ["assinatura", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const [{ data: ass }, { data: roles }] = await Promise.all([
-        (supabase as any)
+      const [subscriptionResult, rolesResult] = await Promise.all([
+        supabase
           .from("assinaturas")
           .select("email,status,plano,valid_until,origem")
           .maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", user!.id),
       ]);
-      const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
-      const a = ass as Assinatura | null;
+      if (subscriptionResult.error) throw subscriptionResult.error;
+      if (rolesResult.error) throw rolesResult.error;
+
+      const isAdmin = (rolesResult.data ?? []).some((role) => role.role === "admin");
+      const a: Assinatura | null = subscriptionResult.data;
       const active =
         !!a &&
         a.status === "active" &&
@@ -41,6 +45,6 @@ export function useSubscription() {
     assinatura: data?.assinatura ?? null,
     active: data?.active ?? false,
     isAdmin: data?.isAdmin ?? false,
-    liberado: (data?.active || data?.isAdmin) ?? false,
+    liberado: localDevelopmentAccess || ((data?.active || data?.isAdmin) ?? false),
   };
 }

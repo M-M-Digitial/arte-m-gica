@@ -68,7 +68,7 @@
     font-family: 'Poppins', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.011em;
+    letter-spacing: 0;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
@@ -117,6 +117,6 @@
   }
   .font-display {
     font-family: 'Poppins', sans-serif;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
 }

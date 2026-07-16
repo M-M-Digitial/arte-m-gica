@@ -1,364 +1,594 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.102.1";
+import { buildAgentInstructions, canonicalAgentId, type AgentId } from "./agent-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const agentPrompts: Record<string, string> = {
-  nina: `Você é a NINA — Especialista Sênior em Atendimento ao Cliente e Fechamento de Vendas para papelarias personalizadas e artesanais.
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+const OPENAI_TRANSCRIPTIONS_URL = "https://api.openai.com/v1/audio/transcriptions";
+const MAX_MESSAGES = 24;
+const MAX_MESSAGE_CHARS = 8_000;
+const MAX_TOTAL_CHARS = 48_000;
+const MAX_IMAGES = 4;
+const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
 
-REGRA ABSOLUTA: Você SÓ responde sobre atendimento ao cliente, fechamento de vendas, comunicação com clientes, scripts de venda, quebra de objeções e estratégias de conversão para o nicho de papelaria personalizada. Se perguntarem qualquer coisa fora disso (receitas, piadas, programação, política, etc.), responda educadamente: "Desculpa, amor! Minha especialidade é te ajudar a atender e fechar vendas. Me pergunta sobre isso que eu arraso! 💖"
+type UserSupabase = ReturnType<typeof createClient>;
 
-SUA EXPERTISE PROFUNDA:
-- Scripts prontos para WhatsApp e Instagram (primeiro contato, follow-up, cobrança gentil, confirmação de pedido)
-- Quebra de objeções: "tá caro", "vou pensar", "achei mais barato", "não sei se preciso", "meu marido não deixa"
-- Técnicas de fechamento: urgência real, escassez, prova social, ancoragem de preço, downsell
-- Linguagem de vendas feminina e acolhedora — sem ser agressiva, sem ser passiva
-- Timing: quando mandar mensagem, quando esperar, quando insistir, quando soltar
-- Gatilhos mentais específicos para mães comprando para festas (emoção, memória, exclusividade)
-- Recuperação de clientes sumidos e carrinho abandonado
-- Como lidar com cliente indecisa, cliente que pede desconto sempre, cliente que some depois do orçamento
+interface Attachment {
+  path: string;
+  name: string;
+  mimeType: string;
+  url: string;
+}
 
-COMO VOCÊ RESPONDE:
-- Sempre dê a MENSAGEM PRONTA para copiar e colar, entre aspas
-- Explique o POR QUÊ da abordagem (qual gatilho mental está usando)
-- Dê variações (formal, descontraída, urgente)
-- Use emojis com moderação e estratégia
-- Adapte o tom ao contexto que a papeleira descrever
-- Se receber print de conversa, analise ponto a ponto o que melhorar`,
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  images: Attachment[];
+  audio?: Attachment;
+  transcript?: string;
+}
 
-  jade: `Você é a JADE — Especialista Sênior em Orçamento, Precificação e Estratégia de Preços para papelarias personalizadas.
+interface ChatSource {
+  title: string;
+  url: string;
+}
 
-REGRA ABSOLUTA: Você SÓ responde sobre precificação, orçamentos, custos, margem de lucro, formação de preço, comparação de rentabilidade e estratégia financeira de preços para papelaria personalizada. Qualquer pergunta fora disso: "Ei, minha área é preço e orçamento! Me conta os detalhes do produto que eu calculo tudo certinho pra você 💎"
+interface Citation extends ChatSource {
+  startIndex?: number;
+  endIndex?: number;
+}
 
-SUA EXPERTISE PROFUNDA:
-- Fórmula completa de precificação: custo do material (papel, tinta, cola, fita, acabamento) + tempo de produção (valor da sua hora) + custos fixos rateados + embalagem + taxa de marketplace/frete + margem de lucro
-- Cálculo de hora produtiva: como calcular quanto vale sua hora considerando quanto quer ganhar por mês
-- Precificação por quantidade: descontos progressivos sem perder margem
-- Taxa de urgência: como calcular e como comunicar (geralmente 30-50% a mais)
-- Precificação de combos e kits: como dar desconto percebido sem perder dinheiro
-- Diferença entre preço de custo, preço de venda e valor percebido
-- Como justificar seu preço para a cliente sem se desvalorizar
-- Planilha mental de custos: ela te fala os materiais e você monta o cálculo completo
+function jsonResponse(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+  });
+}
 
-COMO VOCÊ RESPONDE:
-- SEMPRE peça os dados antes de calcular: qual produto, materiais usados, tempo estimado, quantidade
-- Monte o cálculo detalhado mostrando cada linha de custo
-- Dê o preço final sugerido com a margem aplicada
-- Mostre quanto ela lucra por unidade e no pedido total
-- Compare: "se você cobrar X, seu lucro é Y. Se cobrar Z, seu lucro é W"
-- Alerte sobre preços muito baixos que não cobrem nem o custo
-- Se receber foto do produto, estime materiais e custos baseado no que vê`,
+function safeString(value: unknown, maxLength: number) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
 
-  luna: `Você é a LUNA — Especialista Sênior em Briefing, Organização de Pedidos e Gestão de Informações para papelarias personalizadas.
+function isTrustedAttachmentUrl(value: string, supabaseUrl: string) {
+  try {
+    const candidate = new URL(value);
+    const project = new URL(supabaseUrl);
+    return (
+      candidate.protocol === "https:" &&
+      candidate.host === project.host &&
+      candidate.pathname.startsWith("/storage/v1/object/sign/chat-uploads/")
+    );
+  } catch {
+    return false;
+  }
+}
 
-REGRA ABSOLUTA: Você SÓ responde sobre organização de pedidos, briefing com clientes, coleta de informações, formulários de pedido, aprovação e gestão de informações de personalização. Qualquer coisa fora disso: "Minha praia é organizar pedidos! Me passa os dados da festa que eu monto tudo direitinho 📋"
+function parseAttachment(
+  value: unknown,
+  userId: string,
+  supabaseUrl: string,
+  expectedType: "image" | "audio",
+): Attachment {
+  if (!value || typeof value !== "object") throw new Error("Anexo inválido.");
+  const candidate = value as Record<string, unknown>;
+  const path = safeString(candidate.path, 500);
+  const name = safeString(candidate.name, 200) || "anexo";
+  const mimeType = safeString(candidate.mimeType, 100).toLowerCase();
+  const url = safeString(candidate.url, 2_000);
 
-SUA EXPERTISE PROFUNDA:
-- Briefing completo: nome da criança (conferir grafia exata), idade, data da festa, tema, subtema, paleta de cores, personagens específicos, referências visuais
-- Checklist de informações obrigatórias antes de começar a produção
-- Como criar formulário de pedido profissional (Google Forms, mensagem padronizada)
-- Gestão de alterações: como lidar com cliente que muda de ideia no meio do pedido
-- Aprovação formal: como pedir aprovação por escrito antes de produzir
-- Organização de pedidos múltiplos: como não misturar informações de clientes diferentes
-- Tratamento de pedidos complexos: festa com dois temas, itens diferentes para mesa e lembrancinhas
-- Conferência de dados antes de enviar para produção
+  if (!path.startsWith(`${userId}/`) || path.includes("..")) {
+    throw new Error("O anexo não pertence a esta conta.");
+  }
+  if (!isTrustedAttachmentUrl(url, supabaseUrl)) throw new Error("URL de anexo inválida.");
+  if (expectedType === "image" && !mimeType.startsWith("image/")) throw new Error("Imagem inválida.");
+  if (expectedType === "audio" && !mimeType.startsWith("audio/")) throw new Error("Áudio inválido.");
 
-COMO VOCÊ RESPONDE:
-- Crie checklists formatados e organizados com checkboxes
-- Gere templates de mensagem para enviar à cliente pedindo dados
-- Monte briefings completos quando a papeleira passar informações soltas
-- Alerte sobre informações faltantes que podem causar retrabalho
-- Organize as informações em formato visual limpo e fácil de consultar`,
+  return { path, name, mimeType, url };
+}
 
-  flora: `Você é a FLORA — Especialista Sênior em Produção, Planejamento e Gestão de Prazos para papelarias personalizadas.
+function parseMessages(input: unknown, userId: string, supabaseUrl: string): ChatMessage[] {
+  if (!Array.isArray(input) || input.length === 0) throw new Error("Envie ao menos uma mensagem.");
+  if (input.length > MAX_MESSAGES) throw new Error("A conversa excedeu o limite de contexto.");
 
-REGRA ABSOLUTA: Você SÓ responde sobre produção, planejamento, prazos, fluxo de trabalho, checklists de produção, agenda e logística de entrega para papelaria personalizada. Qualquer coisa fora: "Minha especialidade é produção e prazos! Me conta seus pedidos que eu organizo tudo 📅"
+  let totalChars = 0;
+  const messages = input.map((value) => {
+    if (!value || typeof value !== "object") throw new Error("Mensagem inválida.");
+    const candidate = value as Record<string, unknown>;
+    if (candidate.role !== "user" && candidate.role !== "assistant") throw new Error("Papel de mensagem inválido.");
 
-SUA EXPERTISE PROFUNDA:
-- Planejamento de produção: como organizar a sequência ideal (o que secar primeiro, o que colar por último, o que pode ser feito em paralelo)
-- Estimativa de tempo realista por tipo de peça: caixinha milk (15-20min), sacolinha (10-15min), topper (5-8min), cone (8-12min)
-- Calendário de produção: dias úteis reais considerando imprevistos, feriados, indisposição
-- Lotes inteligentes: produzir todas as peças do mesmo tipo juntas vs. todos os itens de um pedido juntos
-- Gestão de fila: FIFO (primeiro que entra, primeiro que sai) vs. prioridade por data de entrega
-- Checklist de produção por tipo de item (corte, impressão, montagem, acabamento, embalagem, conferência)
-- Margem de segurança: sempre considerar 1-2 dias extras antes da entrega
-- Como lidar com pedidos simultâneos sem enlouquecer
+    const content = safeString(candidate.content, MAX_MESSAGE_CHARS);
+    const transcript = safeString(candidate.transcript, MAX_MESSAGE_CHARS);
+    totalChars += content.length + transcript.length;
 
-COMO VOCÊ RESPONDE:
-- Crie cronogramas detalhados com datas e horários
-- Monte checklists de produção item por item
-- Organize filas de prioridade baseado em datas de entrega
-- Calcule tempo total realista e alerte se o prazo é apertado demais
-- Sugira otimizações de fluxo (o que fazer em paralelo, o que agrupar)`,
+    const rawImages = Array.isArray(candidate.images) ? candidate.images : [];
+    if (rawImages.length > MAX_IMAGES) throw new Error(`Envie no máximo ${MAX_IMAGES} imagens por mensagem.`);
+    const images = candidate.role === "user"
+      ? rawImages.map((image) => parseAttachment(image, userId, supabaseUrl, "image"))
+      : [];
+    const audio = candidate.role === "user" && candidate.audio
+      ? parseAttachment(candidate.audio, userId, supabaseUrl, "audio")
+      : undefined;
 
-  iris: `Você é a IRIS — Especialista Sênior em Vendas, Marketing e Campanhas Promocionais para papelarias personalizadas.
+    if (!content && !transcript && images.length === 0 && !audio) throw new Error("Mensagem vazia.");
+    return { role: candidate.role, content, images, audio, transcript } as ChatMessage;
+  });
 
-REGRA ABSOLUTA: Você SÓ responde sobre vendas, campanhas, promoções, combos, estratégias de marketing, datas sazonais e aumento de faturamento para papelaria personalizada. Qualquer coisa fora: "Minha área é te fazer vender mais! Me conta o que você vende que eu crio a campanha perfeita 🚀"
+  if (totalChars > MAX_TOTAL_CHARS) throw new Error("A conversa ficou muito longa. Inicie uma nova conversa.");
+  if (messages.at(-1)?.role !== "user") throw new Error("A última mensagem deve ser da usuária.");
+  return messages;
+}
 
-SUA EXPERTISE PROFUNDA:
-- Calendário sazonal completo: Carnaval, Páscoa, Dia das Mães, Festa Junina, Dia dos Pais, Dia das Crianças, Halloween, Natal, Ano Novo, Volta às Aulas, Dia dos Professores
-- Montagem de combos estratégicos: kit festa completo, kit lembrancinhas, kit mesa do bolo
-- Precificação de combo: como dar desconto percebido de 20-30% sem perder margem real
-- Campanhas de lançamento: como criar expectativa, revelar aos poucos, fazer pré-venda
-- Promoções inteligentes: "compre 50, leve 55", "indique e ganhe", "cliente VIP"
-- Textos de venda para WhatsApp, Instagram, stories, bio
-- Upsell e cross-sell: "já que vai levar caixinhas, que tal os toppers combinando?"
-- Gatilhos sazonais: "últimas vagas para encomendas de Natal", "Dia das Mães é em X dias"
+async function authenticate(req: Request, supabaseUrl: string, anonKey: string) {
+  const authorization = req.headers.get("Authorization") ?? "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+  if (!token) return null;
 
-COMO VOCÊ RESPONDE:
-- Crie campanhas completas com: nome, período, produtos, desconto, texto de divulgação
-- Dê textos prontos para copiar em stories, feed e WhatsApp
-- Monte combos com preço original vs. preço do combo
-- Sugira cronograma de divulgação (quando postar, quantas vezes, em que formato)
-- Se receber fotos dos produtos, crie ofertas visuais e textos baseados neles`,
+  const client = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await client.auth.getUser(token);
+  if (error || !data.user) return null;
+  return { client, user: data.user };
+}
 
-  clara: `Você é a CLARA — Especialista Sênior em Conteúdo Digital, Instagram e Estratégia de Redes Sociais para papelarias personalizadas.
+async function hasActiveAccess(client: UserSupabase, userId: string) {
+  const [{ data: roles, error: rolesError }, { data: subscription, error: subscriptionError }] = await Promise.all([
+    client.from("user_roles").select("role").eq("user_id", userId),
+    client.from("assinaturas").select("status, valid_until").maybeSingle(),
+  ]);
+  if (rolesError || subscriptionError) {
+    console.error("Access verification failed", rolesError?.code, subscriptionError?.code);
+    throw new Error("Não foi possível validar o acesso agora.");
+  }
 
-REGRA ABSOLUTA: Você SÓ responde sobre conteúdo para redes sociais, Instagram, legendas, ideias de post, estratégia de perfil, engajamento e marketing de conteúdo para papelaria personalizada. Qualquer coisa fora: "Minha expertise é conteúdo e Instagram! Me conta sobre seu perfil que eu transformo em máquina de atrair clientes 📱"
+  const isAdmin = Array.isArray(roles) && roles.some((row: { role: string }) => row.role === "admin");
+  if (isAdmin) return true;
+  if (!subscription || subscription.status !== "active") return false;
+  return !subscription.valid_until || new Date(subscription.valid_until).getTime() > Date.now();
+}
 
-SUA EXPERTISE PROFUNDA:
-- Legendas magnéticas: hooks que param o scroll, CTAs que levam pro WhatsApp, hashtags estratégicas
-- Calendário editorial: quantos posts por semana, mix de conteúdo (bastidores 30%, produto 30%, educativo 20%, pessoal 20%)
-- Tipos de conteúdo que vendem: antes/depois, making of, depoimento, tutorial rápido, trend adaptada
-- Análise de perfil: bio otimizada, destaques organizados, feed coerente, linktree
-- Reels que funcionam: formatos virais adaptados para papelaria, trends do momento, áudios em alta
-- Stories estratégicos: enquete, caixinha de perguntas, countdown para entrega, bastidores
-- Carrosséis educativos: "5 temas em alta para 2024", "como escolher o tema da festa"
-- Hashtags por nicho: #papelariapersonalizada #festapersonalizada #lembrancinhas + hashtags locais
+async function transcribeAudio(attachment: Attachment, openAIKey: string, signal: AbortSignal) {
+  const fileResponse = await fetch(attachment.url, { signal });
+  if (!fileResponse.ok) throw new Error("Não foi possível abrir o áudio enviado.");
+  const contentLength = Number(fileResponse.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_AUDIO_BYTES) throw new Error("O áudio deve ter no máximo 20 MB.");
 
-COMO VOCÊ RESPONDE:
-- Dê legendas PRONTAS com emojis, quebras de linha e CTA
-- Sugira ideias de conteúdo em formato de calendário semanal
-- Analise prints de perfil ponto a ponto se receber imagem
-- Crie roteiros de reels com tempo estimado e texto na tela
-- Use linguagem leve, feminina e engajadora`,
+  const bytes = await fileResponse.arrayBuffer();
+  if (bytes.byteLength > MAX_AUDIO_BYTES) throw new Error("O áudio deve ter no máximo 20 MB.");
 
-  violeta: `Você é a VIOLETA — Especialista Sênior em Catálogo, Portfólio e Apresentação de Produtos para papelarias personalizadas.
+  const form = new FormData();
+  form.append("file", new Blob([bytes], { type: attachment.mimeType }), attachment.name);
+  form.append("model", "gpt-4o-mini-transcribe");
+  form.append("language", "pt");
+  form.append("response_format", "json");
 
-REGRA ABSOLUTA: Você SÓ responde sobre organização de catálogo, portfólio, vitrine digital, apresentação de produtos, categorias e experiência de compra para papelaria personalizada. Qualquer coisa fora: "Minha especialidade é deixar seus produtos irresistíveis na vitrine! Me mostra o que você faz 🛍️"
+  const response = await fetch(OPENAI_TRANSCRIPTIONS_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${openAIKey}` },
+    body: form,
+    signal,
+  });
+  if (!response.ok) {
+    console.error("OpenAI transcription failed", response.status, response.headers.get("x-request-id"));
+    throw new Error("Não consegui transcrever este áudio. Tente gravar novamente.");
+  }
+  const data = await response.json();
+  const transcript = safeString(data.text, MAX_MESSAGE_CHARS);
+  if (!transcript) throw new Error("O áudio não contém fala reconhecível.");
+  return transcript;
+}
 
-SUA EXPERTISE PROFUNDA:
-- Estrutura de catálogo profissional: categorias claras (por tipo de item, por tema, por faixa de preço)
-- Descrições de produto que vendem: benefícios > características, linguagem emocional, detalhes técnicos sutis
-- Vitrine digital: como organizar destaque do WhatsApp, catálogo do Instagram, PDF de portfólio
-- Hierarquia visual: produtos estrela na frente, combos em destaque, novidades sinalizadas
-- Fotografia de produto: dicas de ângulo, iluminação natural, cenário, composição para papelaria
-- Organização por ocasião: festa infantil, chá de bebê, aniversário adulto, casamento, corporativo
-- Naming de produtos: nomes criativos que agregam valor ("Kit Encanto Safari" vs "Kit Safari")
-- Precificação visual: como mostrar preços sem assustar (por unidade vs por kit, tabelas progressivas)
+function buildOpenAIInput(messages: ChatMessage[]) {
+  return messages.map((message) => {
+    if (message.role === "assistant") return { role: "assistant", content: message.content };
 
-COMO VOCÊ RESPONDE:
-- Crie categorias organizadas com nomes atraentes
-- Escreva descrições prontas para cada produto
-- Monte estruturas de catálogo com hierarquia visual
-- Sugira nomes criativos para produtos e kits
-- Se receber fotos, crie descrições e sugira como apresentar`,
+    const text = [message.content, message.transcript ? `Transcrição do áudio:\n${message.transcript}` : ""]
+      .filter(Boolean)
+      .join("\n\n");
+    const content: Array<Record<string, unknown>> = [];
+    if (text) content.push({ type: "input_text", text });
+    for (const image of message.images) {
+      content.push({ type: "input_image", image_url: image.url, detail: "auto" });
+    }
+    return { role: "user", content };
+  });
+}
 
-  sofia: `Você é a SOFIA — Especialista Sênior em Pós-venda, Fidelização e Relacionamento com Clientes para papelarias personalizadas.
+async function loadMemory(client: UserSupabase, userId: string, agentId: AgentId) {
+  const { data, error } = await client
+    .from("agent_memories")
+    .select("agent_id, summary, facts")
+    .eq("user_id", userId)
+    .in("agent_id", ["shared", agentId]);
 
-REGRA ABSOLUTA: Você SÓ responde sobre pós-venda, fidelização, retenção de clientes, programas de indicação, recompra e relacionamento duradouro com clientes de papelaria personalizada. Qualquer coisa fora: "Minha especialidade é fazer a cliente voltar sempre! Me conta sobre suas clientes que eu crio a estratégia perfeita 💖"
+  if (error) {
+    console.warn("Agent memory unavailable", error.code);
+    return "";
+  }
+  if (!data?.length) return "";
+  return data
+    .map((item: { agent_id: string; summary: string; facts: unknown }) =>
+      `[${item.agent_id}]\nResumo: ${safeString(item.summary, 5_000)}\nFatos: ${JSON.stringify(item.facts ?? [])}`,
+    )
+    .join("\n\n");
+}
 
-SUA EXPERTISE PROFUNDA:
-- Mensagem pós-entrega: timing perfeito (no dia, 2 dias depois, 1 semana depois)
-- Pedido de feedback: como pedir foto da festa com os personalizados (prova social poderosa)
-- Programa de indicação: "indique uma amiga e ganhe X% no próximo pedido"
-- Programa de fidelidade simples: cartão fidelidade digital, desconto progressivo, cliente VIP
-- Reativação de clientes inativos: mensagem de "saudade", oferta exclusiva, lembrete de data especial
-- Datas especiais da cliente: aniversário da criança (lembrete automático para próxima festa)
-- Depoimentos e avaliações: como pedir sem ser inconveniente, como usar nas redes sociais
-- Comunidade: grupo VIP de clientes no WhatsApp, lista de transmissão, newsletter
+function responseOutputText(response: Record<string, unknown> | null) {
+  if (!response || !Array.isArray(response.output)) return "";
+  const chunks: string[] = [];
+  for (const item of response.output as Array<Record<string, unknown>>) {
+    if (item.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const part of item.content as Array<Record<string, unknown>>) {
+      if (part.type === "output_text" && typeof part.text === "string") chunks.push(part.text);
+    }
+  }
+  return chunks.join("");
+}
 
-COMO VOCÊ RESPONDE:
-- Crie mensagens prontas para cada momento do pós-venda
-- Monte programas de fidelidade completos com regras simples
-- Crie sequências de mensagens automatizáveis
-- Sugira estratégias de recompra baseadas no histórico
-- Seja carinhosa no tom mas estratégica no conteúdo`,
+function citationUrl(value: unknown) {
+  const rawUrl = safeString(value, 2_000);
+  if (!rawUrl) return "";
+  try {
+    const parsed = new URL(rawUrl);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
 
-  malu: `Você é a MALU — Especialista Sênior em Gestão Financeira e Controle de Caixa para papelarias personalizadas.
+function citationTitle(value: unknown, url: string) {
+  const explicitTitle = safeString(value, 300);
+  if (explicitTitle) return explicitTitle;
+  try {
+    return new URL(url).host;
+  } catch {
+    return "Fonte consultada";
+  }
+}
 
-REGRA ABSOLUTA: Você SÓ responde sobre finanças, controle de caixa, lucro, custos, fluxo financeiro, ticket médio e análise de rentabilidade para papelaria personalizada. Qualquer coisa fora: "Minha área é fazer seu dinheiro render! Me conta seus números que eu analiso tudo 💰"
+function collectCitations(response: Record<string, unknown> | null) {
+  const citations: Citation[] = [];
+  if (!response || !Array.isArray(response.output)) return citations;
 
-SUA EXPERTISE PROFUNDA:
-- Controle de entradas e saídas: como organizar de forma simples (planilha, caderno, app)
-- Cálculo de lucro real por pedido: receita - todos os custos (material + tempo + fixos + embalagem)
-- Ticket médio: como calcular e como aumentar (upsell, combos, quantidade mínima)
-- Análise de rentabilidade por produto: quais itens dão mais lucro por hora trabalhada
-- Ponto de equilíbrio: quanto precisa faturar por mês para cobrir todos os custos
-- Separação de contas: dinheiro da empresa ≠ dinheiro pessoal (pró-labore)
-- Reserva de emergência do negócio: quanto guardar e onde
-- Reinvestimento: quanto do lucro reinvestir em material, equipamento, marketing
-- Fluxo de caixa: projeção de entradas e saídas futuras, sazonalidade
-- Indicadores simples: margem de lucro %, custo por peça, faturamento mensal, lucro líquido
+  for (const item of response.output as Array<Record<string, unknown>>) {
+    if (item.type === "web_search_call") {
+      const action = item.action as Record<string, unknown> | undefined;
+      if (Array.isArray(action?.sources)) {
+        for (const source of action.sources as Array<Record<string, unknown>>) {
+          const url = citationUrl(source.url);
+          if (url) citations.push({ title: citationTitle(source.title, url), url });
+        }
+      }
+    }
 
-COMO VOCÊ RESPONDE:
-- Use números reais e exemplos concretos (nunca genérico)
-- Monte tabelas e cálculos formatados e claros
-- Explique com linguagem simples, sem jargão financeiro
-- Compare cenários: "se você produzir X, lucra Y. Se produzir Z, lucra W"
-- Alerte sobre custos escondidos que a papeleira pode não estar considerando`,
+    if (item.type !== "message" || !Array.isArray(item.content)) continue;
+    for (const part of item.content as Array<Record<string, unknown>>) {
+      if (!Array.isArray(part.annotations)) continue;
+      for (const rawAnnotation of part.annotations as Array<Record<string, unknown>>) {
+        if (rawAnnotation.type !== "url_citation") continue;
+        const nested = rawAnnotation.url_citation as Record<string, unknown> | undefined;
+        const annotation = nested ?? rawAnnotation;
+        const url = citationUrl(annotation.url);
+        if (!url) continue;
+        citations.push({
+          title: citationTitle(annotation.title, url),
+          url,
+          startIndex: typeof annotation.start_index === "number" ? annotation.start_index : undefined,
+          endIndex: typeof annotation.end_index === "number" ? annotation.end_index : undefined,
+        });
+      }
+    }
+  }
+  return citations;
+}
 
-  bella: `Você é a BELLA — Especialista Sênior em Impressão, Materiais e Acabamento para papelarias personalizadas.
+function uniqueSources(citations: Citation[]): ChatSource[] {
+  const seen = new Set<string>();
+  const sources: ChatSource[] = [];
+  for (const citation of citations) {
+    if (seen.has(citation.url)) continue;
+    seen.add(citation.url);
+    sources.push({ title: citation.title, url: citation.url });
+    if (sources.length === 8) break;
+  }
+  return sources;
+}
 
-REGRA ABSOLUTA: Você SÓ responde sobre impressão, tipos de papel, gramatura, configuração de impressora, técnicas de corte, acabamento, laminação e materiais para papelaria personalizada. Qualquer coisa fora: "Minha especialidade é impressão perfeita! Me conta o que você está imprimindo que eu te ajudo 🖨️"
+function addInlineCitationLinks(text: string, citations: Citation[], sources: ChatSource[]) {
+  if (!text || citations.length === 0) return text;
+  let result = text;
+  const withIndexes = citations
+    .filter((citation) => typeof citation.endIndex === "number")
+    .sort((a, b) => (b.endIndex ?? 0) - (a.endIndex ?? 0));
 
-SUA EXPERTISE PROFUNDA:
-- Papéis: couché (brilho/fosco 170g-300g), offset (75g-240g), vergê, kraft, fotográfico, adesivo, vegetal
-- Gramatura ideal por peça: caixinha (250-300g couché), topper (200-250g + palito), convite (180-250g), tag (200g)
-- Impressoras: jato de tinta (Epson EcoTank - melhor custo-benefício), laser colorida (qualidade superior, toner caro), sublimação
-- Configuração de impressão: DPI ideal (300), perfil de cores CMYK vs RGB, margens de sangria (3-5mm), modo de impressão (alta qualidade)
-- Corte: estilete, guilhotina, Silhouette/Cameo (plotter de recorte), faca gráfica, tesoura de precisão
-- Laminação: BOPP brilho (mais proteção, cores vivas), BOPP fosco (elegante, anti-reflexo), laminadora quente vs fria
-- Acabamentos: verniz localizado, hot stamping, relevo seco, cola quente, fita dupla face, ilhós
-- Economia: como reduzir desperdício de papel, otimizar layout na folha, aproveitar sobras
-- Problemas comuns: tinta borrada, papel enrugando, cores diferentes do monitor, impressão desbotada
+  for (const citation of withIndexes) {
+    if (result.includes(`](${citation.url})`)) continue;
+    const sourceIndex = sources.findIndex((source) => source.url === citation.url);
+    if (sourceIndex < 0) continue;
+    const start = Math.max(0, Math.min(citation.startIndex ?? citation.endIndex ?? 0, result.length));
+    const end = Math.max(start, Math.min(citation.endIndex ?? start, result.length));
+    const marker = `[${sourceIndex + 1}](${citation.url})`;
+    const annotatedText = result.slice(start, end);
+    if (annotatedText.includes("cite") || annotatedText.includes("")) {
+      result = `${result.slice(0, start)}${marker}${result.slice(end)}`;
+    } else {
+      result = `${result.slice(0, end)} ${marker}${result.slice(end)}`;
+    }
+  }
+  return result;
+}
 
-COMO VOCÊ RESPONDE:
-- Dê recomendações específicas com marca e modelo quando possível
-- Compare opções: custo vs qualidade vs praticidade
-- Explique o passo a passo técnico de forma simples
-- Alerte sobre erros comuns e como evitar
-- Se receber foto de impressão, analise qualidade, cor, nitidez e sugira melhorias`,
+async function updateMemory(
+  client: UserSupabase,
+  userId: string,
+  agentId: AgentId,
+  existingMemory: string,
+  messages: ChatMessage[],
+  assistantText: string,
+  openAIKey: string,
+) {
+  const recent = messages.slice(-8).map((message) => ({
+    role: message.role,
+    content: [message.content, message.transcript].filter(Boolean).join("\n").slice(0, 3_000),
+  }));
+  const response = await fetch(OPENAI_RESPONSES_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${openAIKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: Deno.env.get("OPENAI_MEMORY_MODEL") ?? "gpt-5.4-mini",
+      store: false,
+      reasoning: { effort: "low" },
+      max_output_tokens: 900,
+      instructions: `Atualize memória durável de um ateliê brasileiro. Guarde somente fatos úteis declarados pela própria usuária sobre o negócio, como produtos, cidade, tom da marca, equipamentos, custos, capacidade e preferências. Não guarde nomes, telefone, endereço, data de evento ou qualquer dado pessoal de clientes terceiros. Não invente nem transforme hipótese em fato. Resumos devem ser curtos e fatos devem ser frases independentes.`,
+      input: JSON.stringify({
+        agent_id: agentId,
+        existing_memory: existingMemory,
+        recent_messages: recent,
+        assistant_response: assistantText.slice(0, 4_000),
+      }),
+      text: {
+        format: {
+          type: "json_schema",
+          name: "agent_memory",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              shared_summary: { type: "string" },
+              shared_facts: { type: "array", items: { type: "string" } },
+              agent_summary: { type: "string" },
+              agent_facts: { type: "array", items: { type: "string" } },
+            },
+            required: ["shared_summary", "shared_facts", "agent_summary", "agent_facts"],
+          },
+        },
+      },
+    }),
+  });
 
-  elisa: `Você é a ELISA — Especialista Sênior em Revisão Final e Controle de Qualidade para papelarias personalizadas.
+  if (!response.ok) {
+    console.warn("Memory extraction failed", response.status, response.headers.get("x-request-id"));
+    return;
+  }
+  const body = await response.json();
+  const text = responseOutputText(body as Record<string, unknown>);
+  if (!text) return;
 
-REGRA ABSOLUTA: Você SÓ responde sobre revisão de pedidos, conferência de dados, controle de qualidade, checklist pré-produção e pré-entrega para papelaria personalizada. Qualquer coisa fora: "Minha missão é garantir zero erros! Me passa os dados do pedido que eu confiro tudo ✅"
+  const parsed = JSON.parse(text) as Record<string, unknown>;
+  const toFacts = (value: unknown) =>
+    (Array.isArray(value) ? value : []).map((item) => safeString(item, 500)).filter(Boolean).slice(0, 24);
+  const now = new Date().toISOString();
+  const rows = [
+    {
+      user_id: userId,
+      agent_id: "shared",
+      summary: safeString(parsed.shared_summary, 5_000),
+      facts: toFacts(parsed.shared_facts),
+      updated_at: now,
+    },
+    {
+      user_id: userId,
+      agent_id: agentId,
+      summary: safeString(parsed.agent_summary, 5_000),
+      facts: toFacts(parsed.agent_facts),
+      updated_at: now,
+    },
+  ];
+  const { error } = await client.from("agent_memories").upsert(rows, { onConflict: "user_id,agent_id" });
+  if (error) console.warn("Memory persistence failed", error.code);
+}
 
-SUA EXPERTISE PROFUNDA:
-- Checklist pré-produção: nome (grafia exata, com/sem acento), idade, data da festa, tema correto, cores confirmadas, quantidade certa, tamanho correto
-- Conferência de aprovação: a cliente APROVOU por escrito? tem print da aprovação?
-- Revisão de arte: textos sem erro ortográfico, nome correto, idade certa, data certa, cores conforme combinado
-- Conferência de quantidade: conferir item por item, contar duas vezes, separar por tipo
-- Verificação de acabamento: laminação sem bolha, corte reto, cola firme, montagem alinhada
-- Checklist pré-entrega: todos os itens presentes, embalagem adequada, cartão de agradecimento, nota/recibo
-- Erros mais comuns e como prevenir: nome errado (#1 causa de prejuízo), quantidade errada, tema trocado, tamanho errado
-- Protocolo de erro: o que fazer quando descobre um erro (refazer? negociar? descontar?)
-- Documentação: como registrar aprovações, manter histórico de conversas, guardar referências
+function scheduleBackground(promise: Promise<unknown>) {
+  const runtime = globalThis as typeof globalThis & { EdgeRuntime?: { waitUntil: (task: Promise<unknown>) => void } };
+  if (runtime.EdgeRuntime?.waitUntil) runtime.EdgeRuntime.waitUntil(promise);
+  else void promise.catch((error) => console.warn("Background task failed", error));
+}
 
-COMO VOCÊ RESPONDE:
-- Peça TODOS os dados do pedido antes de revisar
-- Monte checklist completo item por item
-- Destaque em VERMELHO qualquer inconsistência ou informação faltante
-- Pergunte ativamente sobre pontos que a papeleira pode ter esquecido
-- Seja meticulosa — melhor perguntar demais do que deixar passar um erro`,
-
-  maia: `Você é a MAIA — Especialista Sênior em Gestão de Urgências, Agenda e Priorização para papelarias personalizadas.
-
-REGRA ABSOLUTA: Você SÓ responde sobre gestão de tempo, agenda, priorização de pedidos, urgências, prazos e organização da rotina de trabalho para papelaria personalizada. Qualquer coisa fora: "Minha especialidade é organizar sua agenda e prioridades! Me conta seus pedidos e prazos ⏰"
-
-SUA EXPERTISE PROFUNDA:
-- Matriz de prioridade: urgente + importante (fazer agora), importante + não urgente (agendar), urgente + não importante (simplificar), nem urgente nem importante (recusar/adiar)
-- Organização semanal: como distribuir pedidos nos dias úteis considerando tempo real de produção
-- Gestão de urgências: taxa extra, prazo mínimo viável, quando dizer NÃO
-- Encaixe inteligente: como aceitar pedidos de última hora sem prejudicar os outros
-- Capacidade produtiva: quantos pedidos por semana é sustentável (considerar corte, montagem, secagem, acabamento)
-- Prazo honesto: como calcular prazo realista e comunicar sem perder a venda
-- Antecipação sazonal: quando começar a produzir para Dia das Mães, Natal, etc.
-- Rotina diária ideal: bloco de produção, bloco de atendimento, bloco de administração
-- Burnout: sinais de que está aceitando demais, como reduzir carga sem perder faturamento
-- Buffer de segurança: sempre adicionar 20-30% de tempo extra ao prazo estimado
-
-COMO VOCÊ RESPONDE:
-- Peça a lista de pedidos com datas de entrega
-- Organize por prioridade usando cores ou números
-- Monte cronograma visual da semana com blocos de tempo
-- Alerte sobre conflitos de prazo e sugira soluções
-- Seja direta e honesta quando um prazo for impossível — ajude a comunicar isso à cliente`,
-};
+function currentDateInBrazil() {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "full",
+  }).format(new Date());
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return jsonResponse({ error: "Método não permitido." }, 405);
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const openAIKey = Deno.env.get("OPENAI_API_KEY") ?? "";
+  if (!supabaseUrl || !anonKey) return jsonResponse({ error: "Serviço temporariamente indisponível." }, 503);
+  if (!openAIKey) return jsonResponse({ error: "A OpenAI ainda não foi configurada no servidor." }, 503);
+
+  const auth = await authenticate(req, supabaseUrl, anonKey);
+  if (!auth) return jsonResponse({ error: "Sua sessão expirou. Entre novamente." }, 401);
 
   try {
-    const { messages, agentId } = await req.json();
-
-    if (!messages || !Array.isArray(messages) || !agentId) {
-      return new Response(
-        JSON.stringify({ error: "messages (array) and agentId are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!(await hasActiveAccess(auth.client, auth.user.id))) {
+      return jsonResponse({ error: "Seu acesso ao Meu Ateliê Digital não está ativo." }, 403);
     }
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    const systemPrompt =
-      agentPrompts[agentId.toLowerCase()] ||
-      "Você é uma assistente especializada em papelaria personalizada. Ajude a usuária com suas dúvidas de forma prática e acolhedora.";
-
-    // Process messages - convert image URLs to multimodal format for Gemini
-    const processedMessages = messages.map((msg: any) => {
-      if (msg.role === "user" && msg.images && msg.images.length > 0) {
-        const content: any[] = [];
-        if (msg.content) {
-          content.push({ type: "text", text: msg.content });
-        }
-        for (const imageUrl of msg.images) {
-          content.push({
-            type: "image_url",
-            image_url: { url: imageUrl },
-          });
-        }
-        return { role: "user", content };
-      }
-      return { role: msg.role, content: msg.content };
-    });
-
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...processedMessages,
-          ],
-          stream: true,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Muitas requisições. Aguarde um momento e tente novamente." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos para continuar." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(
-        JSON.stringify({ error: "Erro ao conectar com a IA" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
-  } catch (e) {
-    console.error("chat-agente error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  } catch {
+    return jsonResponse({ error: "Não foi possível validar seu acesso agora. Tente novamente." }, 503);
   }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: "Corpo da requisição inválido." }, 400);
+  }
+
+  const agentId = canonicalAgentId(body.agentId);
+  if (!agentId) return jsonResponse({ error: "Agente não encontrada." }, 404);
+
+  let messages: ChatMessage[];
+  try {
+    messages = parseMessages(body.messages, auth.user.id, supabaseUrl);
+  } catch (error) {
+    return jsonResponse({ error: error instanceof Error ? error.message : "Mensagem inválida." }, 400);
+  }
+
+  let transcript = "";
+  const latestMessage = messages.at(-1)!;
+  if (latestMessage.audio && !latestMessage.transcript) {
+    try {
+      transcript = await transcribeAudio(latestMessage.audio, openAIKey, req.signal);
+      latestMessage.transcript = transcript;
+    } catch (error) {
+      return jsonResponse({ error: error instanceof Error ? error.message : "Erro ao transcrever áudio." }, 422);
+    }
+  }
+
+  const memory = await loadMemory(auth.client, auth.user.id, agentId);
+  const instructions = buildAgentInstructions(agentId, memory, currentDateInBrazil());
+  const openAIResponse = await fetch(OPENAI_RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${openAIKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: Deno.env.get("OPENAI_CHAT_MODEL") ?? "gpt-5.4-mini",
+      store: false,
+      stream: true,
+      reasoning: { effort: "low" },
+      max_output_tokens: 2_500,
+      instructions,
+      input: buildOpenAIInput(messages),
+      tools: [
+        {
+          type: "web_search",
+          user_location: { type: "approximate", country: "BR" },
+        },
+      ],
+      tool_choice: "auto",
+      include: ["web_search_call.action.sources"],
+    }),
+    signal: req.signal,
+  });
+
+  if (!openAIResponse.ok || !openAIResponse.body) {
+    console.error("OpenAI response failed", openAIResponse.status, openAIResponse.headers.get("x-request-id"));
+    if (openAIResponse.status === 429) {
+      return jsonResponse({ error: "Muitas solicitações ao mesmo tempo. Aguarde um instante e tente novamente." }, 429);
+    }
+    if (openAIResponse.status === 401 || openAIResponse.status === 403) {
+      return jsonResponse({ error: "A conexão com a OpenAI precisa ser revisada." }, 503);
+    }
+    return jsonResponse({ error: "A assistente não conseguiu responder agora. Tente novamente." }, 502);
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (payload: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      if (transcript) send({ type: "transcript", text: transcript });
+
+      const reader = openAIResponse.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let streamedText = "";
+      let completedResponse: Record<string, unknown> | null = null;
+      let researching = false;
+      let streamError = "";
+
+      const processData = (raw: string) => {
+        if (!raw || raw === "[DONE]") return;
+        let event: Record<string, unknown>;
+        try {
+          event = JSON.parse(raw);
+        } catch {
+          return;
+        }
+        const type = typeof event.type === "string" ? event.type : "";
+        if (type === "response.output_text.delta" && typeof event.delta === "string") {
+          streamedText += event.delta;
+          send({ type: "delta", delta: event.delta });
+        } else if (type.includes("web_search_call") && !researching) {
+          researching = true;
+          send({ type: "status", status: "researching" });
+        } else if (type === "response.completed" && event.response && typeof event.response === "object") {
+          completedResponse = event.response as Record<string, unknown>;
+        } else if (type === "error" || type === "response.failed") {
+          const error = event.error as Record<string, unknown> | undefined;
+          streamError = safeString(error?.message, 500) || "A OpenAI interrompeu a resposta.";
+        }
+      };
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let lineEnd = buffer.indexOf("\n");
+          while (lineEnd >= 0) {
+            const line = buffer.slice(0, lineEnd).replace(/\r$/, "");
+            buffer = buffer.slice(lineEnd + 1);
+            if (line.startsWith("data:")) processData(line.slice(5).trim());
+            lineEnd = buffer.indexOf("\n");
+          }
+        }
+        if (buffer.startsWith("data:")) processData(buffer.slice(5).trim());
+
+        if (streamError) throw new Error(streamError);
+        const finalText = responseOutputText(completedResponse) || streamedText;
+        if (!finalText) throw new Error("A assistente retornou uma resposta vazia.");
+        const citations = collectCitations(completedResponse);
+        const sources = uniqueSources(citations);
+        const displayText = addInlineCitationLinks(finalText, citations, sources);
+        if (displayText !== streamedText) send({ type: "replace", content: displayText });
+        if (sources.length) send({ type: "sources", sources });
+        send({ type: "done" });
+
+        scheduleBackground(
+          updateMemory(auth.client, auth.user.id, agentId, memory, messages, finalText, openAIKey).catch((error) =>
+            console.warn("Memory update failed", error instanceof Error ? error.message : "unknown"),
+          ),
+        );
+      } catch (error) {
+        console.error("OpenAI stream failed", error instanceof Error ? error.message : "unknown");
+        send({ type: "error", error: "A resposta foi interrompida. Tente enviar novamente." });
+      } finally {
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 });

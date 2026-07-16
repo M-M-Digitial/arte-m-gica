@@ -1,4 +1,10 @@
-project_id = "pemjulrovatvcicnpvbo"
+project_id = "qdwhwxboocplmnmczkfj"
 
 [functions.list-modelos-prontos]
+verify_jwt = false
+
+[functions.chat-agente]
+verify_jwt = true
+
+[functions.hotmart-webhook]
 verify_jwt = false

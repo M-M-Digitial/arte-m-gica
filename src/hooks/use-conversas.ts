@@ -1,14 +1,27 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/use-auth";
+import type { ChatMessage } from "@/types/chat";
 
 export interface Conversa {
   id: string;
   agent_id: string;
   title: string;
-  messages: any[];
+  messages: ChatMessage[];
   created_at: string;
   updated_at: string;
+}
+
+function toConversa(row: Record<string, unknown>): Conversa {
+  return {
+    id: String(row.id),
+    agent_id: String(row.agent_id),
+    title: String(row.title),
+    messages: Array.isArray(row.messages) ? (row.messages as unknown as ChatMessage[]) : [],
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  };
 }
 
 export function useConversas(agentId: string) {
@@ -18,50 +31,77 @@ export function useConversas(agentId: string) {
   const [loading, setLoading] = useState(true);
 
   const fetchConversas = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
-    const { data } = await supabase
+    if (!user || !agentId) {
+      setConversas([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
       .from("conversas")
       .select("*")
       .eq("agent_id", agentId)
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
-    setConversas((data as Conversa[]) || []);
+    if (error) throw error;
+    setConversas((data ?? []).map((row) => toConversa(row as unknown as Record<string, unknown>)));
     setLoading(false);
   }, [user, agentId]);
 
-  useEffect(() => { fetchConversas(); }, [fetchConversas]);
+  useEffect(() => {
+    fetchConversas().catch((error) => {
+      console.error("Erro ao carregar conversas", error);
+      setLoading(false);
+    });
+  }, [fetchConversas]);
 
   const createConversa = useCallback(async (firstMessage?: string) => {
-    if (!user) return null;
-    const title = firstMessage
-      ? firstMessage.slice(0, 60) + (firstMessage.length > 60 ? "..." : "")
-      : "Nova conversa";
+    if (!user || !agentId) return null;
+    const cleanTitle = firstMessage?.trim() || "Nova conversa";
+    const title = cleanTitle.slice(0, 60) + (cleanTitle.length > 60 ? "..." : "");
     const { data, error } = await supabase
       .from("conversas")
       .insert({ user_id: user.id, agent_id: agentId, title, messages: [] })
       .select()
       .single();
-    if (error || !data) return null;
-    const conversa = data as Conversa;
-    setConversas((prev) => [conversa, ...prev]);
-    setActiveId(conversa.id);
+    if (error) throw error;
+    const conversa = toConversa(data as unknown as Record<string, unknown>);
+    setConversas((previous) => [conversa, ...previous]);
     return conversa;
   }, [user, agentId]);
 
-  const saveMessages = useCallback(async (conversaId: string, messages: any[], title?: string) => {
-    const updates: any = { messages, updated_at: new Date().toISOString() };
-    if (title) updates.title = title;
-    await supabase.from("conversas").update(updates).eq("id", conversaId);
-    setConversas((prev) =>
-      prev.map((c) => c.id === conversaId ? { ...c, ...updates } : c)
+  const saveMessages = useCallback(async (conversaId: string, messages: ChatMessage[], title?: string) => {
+    if (!user) return;
+    const updatedAt = new Date().toISOString();
+    const updates = {
+      messages: messages as unknown as Json,
+      updated_at: updatedAt,
+      ...(title ? { title } : {}),
+    };
+    const { error } = await supabase
+      .from("conversas")
+      .update(updates)
+      .eq("id", conversaId)
+      .eq("user_id", user.id);
+    if (error) throw error;
+    setConversas((previous) =>
+      previous.map((conversa) =>
+        conversa.id === conversaId ? { ...conversa, messages, updated_at: updatedAt, ...(title ? { title } : {}) } : conversa,
+      ),
     );
-  }, []);
+  }, [user]);
 
   const deleteConversa = useCallback(async (conversaId: string) => {
-    await supabase.from("conversas").delete().eq("id", conversaId);
-    setConversas((prev) => prev.filter((c) => c.id !== conversaId));
+    if (!user) return;
+    const { error } = await supabase
+      .from("conversas")
+      .delete()
+      .eq("id", conversaId)
+      .eq("user_id", user.id);
+    if (error) throw error;
+    setConversas((previous) => previous.filter((conversa) => conversa.id !== conversaId));
     if (activeId === conversaId) setActiveId(null);
-  }, [activeId]);
+  }, [activeId, user]);
 
   return {
     conversas,

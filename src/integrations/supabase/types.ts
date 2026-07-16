@@ -14,6 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_memories: {
+        Row: {
+          agent_id: string
+          created_at: string
+          facts: Json
+          id: string
+          summary: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          summary?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          facts?: Json
+          id?: string
+          summary?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      assinaturas: {
+        Row: {
+          created_at: string
+          email: string
+          hotmart_subscriber: string | null
+          hotmart_transaction: string | null
+          id: string
+          origem: string
+          plano: string | null
+          raw: Json | null
+          status: string
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          hotmart_subscriber?: string | null
+          hotmart_transaction?: string | null
+          id?: string
+          origem?: string
+          plano?: string | null
+          raw?: Json | null
+          status?: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          hotmart_subscriber?: string | null
+          hotmart_transaction?: string | null
+          id?: string
+          origem?: string
+          plano?: string | null
+          raw?: Json | null
+          status?: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       conversas: {
         Row: {
           agent_id: string
@@ -348,13 +438,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

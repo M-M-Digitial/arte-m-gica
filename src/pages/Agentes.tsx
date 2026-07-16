@@ -1,48 +1,62 @@
-import { Sparkles, ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { AgentIcon } from "@/components/AgentIcon";
 import { agents } from "@/data/agents";
 
 export default function Agentes() {
   return (
-    <div className="animate-fade-in max-w-4xl space-y-8">
-      <div className="space-y-2">
-        <div className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full">
-          <Sparkles className="h-3 w-3" />
-          Assistentes IA
+    <div className="animate-fade-in max-w-6xl space-y-7">
+      <header className="border-b border-border/60 pb-6">
+        <div className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+          <Sparkles className="h-3.5 w-3.5" />
+          Meu Ateliê Digital
         </div>
-        <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground tracking-tight">
-          Seus agentes <span className="text-gradient">inteligentes</span>
-        </h1>
-        <p className="text-muted-foreground text-sm max-w-lg leading-relaxed">
-          Cada agente é especialista em uma área. Escolha quem vai te ajudar hoje ✨
-        </p>
-      </div>
+        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground md:text-4xl">
+              Quem vai te ajudar hoje?
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Escolha a especialista, conte o que precisa e receba uma entrega pronta para aplicar no seu ateliê.
+            </p>
+          </div>
+          <p className="text-xs font-medium text-muted-foreground">9 assistentes especializadas</p>
+        </div>
+      </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Time de assistentes">
         {agents.map((agent) => (
           <Link
             to={`/agentes/${agent.id}`}
             key={agent.id}
-            className="group text-left p-5 rounded-2xl border border-border/60 bg-card hover:border-primary/30 hover:shadow-card transition-all duration-300 space-y-3"
+            className="group flex min-h-64 flex-col rounded-lg border border-border/70 bg-card p-5 transition-colors hover:border-primary/40 hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg shrink-0">
-                {agent.emoji}
-              </div>
-              <div>
+            <div className="flex items-start gap-3">
+              <AgentIcon agentId={agent.id} />
+              <div className="min-w-0">
                 <p className="text-sm font-bold text-foreground">{agent.name}</p>
-                <p className="text-xs text-primary font-medium">{agent.title}</p>
+                <p className="text-xs font-medium text-primary">{agent.title}</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {agent.description}
-            </p>
-            <div className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-              Conversar <ArrowRight className="h-3 w-3" />
+
+            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">{agent.description}</p>
+
+            <div className="mt-4 space-y-2">
+              {agent.deliverables.map((deliverable) => (
+                <div key={deliverable} className="flex items-center gap-2 text-xs text-foreground/80">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                  <span>{deliverable}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-auto flex items-center gap-1 pt-5 text-xs font-semibold text-primary">
+              Conversar com {agent.name}
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </div>
           </Link>
         ))}
-      </div>
+      </section>
     </div>
   );
 }

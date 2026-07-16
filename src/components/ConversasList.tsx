@@ -1,6 +1,6 @@
-import { Plus, MessageSquare, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Conversa } from "@/hooks/use-conversas";
+import type { Conversa } from "@/hooks/use-conversas";
 import { cn } from "@/lib/utils";
 
 interface ConversasListProps {
@@ -19,8 +19,7 @@ function timeAgo(dateStr: string) {
   if (mins < 60) return `${mins}min`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
+  return `${Math.floor(hours / 24)}d`;
 }
 
 export function ConversasList({ conversas, activeId, onSelect, onNew, onDelete, loading }: ConversasListProps) {
@@ -30,49 +29,55 @@ export function ConversasList({ conversas, activeId, onSelect, onNew, onDelete, 
         onClick={onNew}
         variant="outline"
         size="sm"
-        className="w-full rounded-xl gap-2 border-dashed border-primary/30 text-primary hover:bg-primary/5"
+        className="w-full gap-2 rounded-lg border-dashed border-primary/30 text-primary hover:bg-primary/5"
       >
         <Plus className="h-3.5 w-3.5" />
         Nova conversa
       </Button>
 
       {loading && (
-        <div className="space-y-2 mt-1">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-12 rounded-xl bg-muted/50 animate-pulse" />
+        <div className="mt-1 space-y-2">
+          {[1, 2, 3].map((item) => (
+            <div key={item} className="h-12 animate-pulse rounded-lg bg-muted/50" />
           ))}
         </div>
       )}
 
       {!loading && conversas.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-4">
-          Nenhuma conversa ainda
-        </p>
+        <p className="py-4 text-center text-xs text-muted-foreground">Nenhuma conversa ainda</p>
       )}
 
-      {conversas.map((c) => (
-        <button
-          key={c.id}
-          onClick={() => onSelect(c.id)}
+      {conversas.map((conversa) => (
+        <div
+          key={conversa.id}
           className={cn(
-            "group flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-xl transition-all text-sm",
-            activeId === c.id
-              ? "bg-primary/10 border border-primary/20 text-foreground"
-              : "hover:bg-secondary/70 text-muted-foreground hover:text-foreground"
+            "group flex w-full items-center rounded-lg border border-transparent transition-colors",
+            activeId === conversa.id
+              ? "border-primary/20 bg-primary/10 text-foreground"
+              : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
           )}
         >
-          <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
-          <div className="flex-1 min-w-0">
-            <p className="truncate text-xs font-medium">{c.title}</p>
-            <p className="text-[10px] opacity-50">{timeAgo(c.updated_at)}</p>
-          </div>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-            className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+            type="button"
+            onClick={() => onSelect(conversa.id)}
+            className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-left"
           >
-            <Trash2 className="h-3 w-3" />
+            <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-medium">{conversa.title}</span>
+              <span className="block text-[10px] opacity-50">{timeAgo(conversa.updated_at)}</span>
+            </span>
           </button>
-        </button>
+          <button
+            type="button"
+            aria-label={`Excluir conversa ${conversa.title}`}
+            title="Excluir conversa"
+            onClick={() => onDelete(conversa.id)}
+            className="mr-1 rounded-md p-2 opacity-50 transition-colors hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ))}
     </div>
   );

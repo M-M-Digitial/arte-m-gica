@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
+import { productMode } from "@/config/products";
 import { toast } from "sonner";
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/hotmart-webhook`;
@@ -24,6 +25,7 @@ const statusCor: Record<string, string> = {
 
 // Painel admin: assinaturas (Hotmart + manuais)
 export default function AdminAssinaturas() {
+  const isLifetimeProduct = productMode === "escola-agentes";
   const { isAdmin, loading: loadingSub } = useSubscription();
   const qc = useQueryClient();
   const [busca, setBusca] = useState("");
@@ -35,8 +37,9 @@ export default function AdminAssinaturas() {
     queryKey: ["config-checkout-admin"],
     enabled: isAdmin,
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data, error } = await supabase
         .from("app_config").select("value").eq("key", "hotmart_checkout_url").maybeSingle();
+      if (error) throw error;
       if (data?.value) setCheckoutUrl(data.value);
       return data?.value ?? "";
     },
@@ -45,7 +48,7 @@ export default function AdminAssinaturas() {
   const salvarCheckout = async () => {
     const url = checkoutUrl.trim();
     if (url && !/^https?:\/\//.test(url)) { toast.error("Cole a URL completa (https://...)"); return; }
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("app_config")
       .upsert({ key: "hotmart_checkout_url", value: url, updated_at: new Date().toISOString() });
     if (error) toast.error(error.message);
@@ -56,7 +59,7 @@ export default function AdminAssinaturas() {
     queryKey: ["admin-assinaturas"],
     enabled: isAdmin,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("assinaturas")
         .select("id,email,status,plano,origem,valid_until,created_at,updated_at")
         .order("updated_at", { ascending: false });
@@ -68,20 +71,22 @@ export default function AdminAssinaturas() {
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
     if (!q) return linhas ?? [];
-    return (linhas ?? []).filter((l: any) => l.email.includes(q) || l.status.includes(q));
+    return (linhas ?? []).filter((line) => line.email.includes(q) || line.status.includes(q));
   }, [linhas, busca]);
 
-  const ativas = (linhas ?? []).filter((l: any) => l.status === "active").length;
+  const ativas = (linhas ?? []).filter((line) => line.status === "active").length;
 
   const recarregar = () => qc.invalidateQueries({ queryKey: ["admin-assinaturas"] });
 
-  const mudarStatus = async (id: string, status: string, meses = 12) => {
-    const { error } = await (supabase as any)
+  const mudarStatus = async (id: string, status: string) => {
+    const { error } = await supabase
       .from("assinaturas")
       .update({
         status,
         valid_until: status === "active"
-          ? new Date(Date.now() + meses * 30 * 24 * 3600 * 1000).toISOString()
+          ? isLifetimeProduct
+            ? null
+            : new Date(Date.now() + 12 * 30 * 24 * 3600 * 1000).toISOString()
           : null,
       })
       .eq("id", id);
@@ -92,13 +97,13 @@ export default function AdminAssinaturas() {
   const adicionarManual = async () => {
     const email = novoEmail.trim().toLowerCase();
     if (!email.includes("@")) { toast.error("E-mail inválido."); return; }
-    const { error } = await (supabase as any).from("assinaturas").upsert(
+    const { error } = await supabase.from("assinaturas").upsert(
       {
         email,
         status: "active",
-        plano: "manual",
+        plano: isLifetimeProduct ? "vitalicio-manual" : "manual",
         origem: "manual",
-        valid_until: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+        valid_until: isLifetimeProduct ? null : new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
       },
       { onConflict: "email" }
     );
@@ -134,10 +139,10 @@ export default function AdminAssinaturas() {
               <CircleDollarSign className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">
-                R$ {(ativas * 39.9).toFixed(0)}
+              <p className="text-2xl font-bold text-foreground">R$ {(ativas * (isLifetimeProduct ? 67 : 39.9)).toFixed(0)}</p>
+              <p className="text-xs text-muted-foreground">
+                {isLifetimeProduct ? "valor bruto dos acessos*" : "receita mensal estimada*"}
               </p>
-              <p className="text-xs text-muted-foreground">receita mensal estimada*</p>
             </div>
           </CardContent>
         </Card>
@@ -216,7 +221,7 @@ export default function AdminAssinaturas() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtradas.map((l: any) => (
+                  {filtradas.map((l) => (
                     <tr key={l.id} className="border-b border-border/30">
                       <td className="py-2.5 pr-3 font-medium text-foreground">{l.email}</td>
                       <td className="py-2.5 pr-3">
@@ -227,7 +232,11 @@ export default function AdminAssinaturas() {
                       <td className="py-2.5 pr-3 text-muted-foreground">{l.plano ?? "—"}</td>
                       <td className="py-2.5 pr-3 text-muted-foreground">{l.origem}</td>
                       <td className="py-2.5 pr-3 text-muted-foreground">
-                        {l.valid_until ? new Date(l.valid_until).toLocaleDateString("pt-BR") : "—"}
+                        {l.valid_until
+                          ? new Date(l.valid_until).toLocaleDateString("pt-BR")
+                          : l.status === "active" && isLifetimeProduct
+                            ? "Vitalício"
+                            : "—"}
                       </td>
                       <td className="py-2.5">
                         {l.status === "active" ? (
@@ -250,8 +259,10 @@ export default function AdminAssinaturas() {
             </div>
           )}
           <p className="text-[11px] text-muted-foreground">
-            * estimativa simples: ativas × R$ 39,90 (plano mensal). Assinaturas via Hotmart entram
-            e saem automaticamente pelo webhook; as manuais você controla aqui.
+            * {isLifetimeProduct
+              ? "referência simples: acessos ativos × R$ 67, incluindo liberações manuais."
+              : "estimativa simples: ativas × R$ 39,90 (plano mensal)."} Acessos via Hotmart entram e saem
+            automaticamente pelo webhook; os manuais você controla aqui.
           </p>
         </CardContent>
       </Card>

@@ -1,81 +1,116 @@
 import {
-  LayoutDashboard,
-  Sparkles,
   Bot,
-  UserCircle,
-  Library,
-  Wand2,
+  Box,
   CreditCard,
+  GraduationCap,
+  LayoutDashboard,
+  Library,
+  Palette,
+  Sparkles,
   UploadCloud,
+  Wand2,
+  type LucideIcon,
 } from "lucide-react";
-import { useSubscription } from "@/hooks/use-subscription";
+import { useEffect, useState } from "react";
 import { NavLink } from "@/components/NavLink";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { activeProduct, hasProductFeature, productMode, type ProductFeature } from "@/config/products";
 import { useAuth } from "@/hooks/use-auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useEffect, useState } from "react";
+import { useSubscription } from "@/hooks/use-subscription";
 import { supabase } from "@/integrations/supabase/client";
 
+type SidebarItem = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  feature?: ProductFeature;
+};
+
 const mainItems = [
-  { title: "Início", url: "/", icon: LayoutDashboard },
-  { title: "Compositor de Kits", url: "/editor", icon: Wand2 },
-  { title: "Criar com IA", url: "/criar", icon: Sparkles },
-  { title: "Modelos Prontos", url: "/modelos-prontos", icon: Library },
-  { title: "Agentes da Papelaria", url: "/agentes", icon: Bot },
-];
+  { title: "Inicio", url: "/", icon: LayoutDashboard },
+  { title: "Gerador automatico", url: "/editor", icon: Wand2, feature: "generator" },
+  { title: "Criar com IA", url: "/criar", icon: Sparkles, feature: "generator" },
+  { title: "Biblioteca de Moldes", url: "/moldes", icon: Box, feature: "generator" },
+  { title: "Modelos Prontos", url: "/modelos-prontos", icon: Library, feature: "generator" },
+  { title: "Temas", url: "/temas", icon: Palette, feature: "generator" },
+  { title: "Rotinas práticas", url: "/trilhas", icon: GraduationCap, feature: "agent-school" },
+  { title: "Minhas assistentes", url: "/agentes", icon: Bot, feature: "agent-school" },
+] satisfies SidebarItem[];
 
 const adminItems = [
-  { title: "Assinaturas", url: "/admin/assinaturas", icon: CreditCard },
-  { title: "Upload de Moldes", url: "/admin/moldes", icon: UploadCloud },
-];
+  { title: "Assinaturas", url: "/admin/assinaturas", icon: CreditCard, feature: "admin-assinaturas" },
+  { title: "Upload de Moldes", url: "/admin/moldes", icon: UploadCloud, feature: "admin-moldes" },
+] satisfies SidebarItem[];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { user } = useAuth();
   const { isAdmin } = useSubscription();
-  const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null }>({ display_name: null, avatar_url: null });
+  const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null }>({
+    display_name: null,
+    avatar_url: null,
+  });
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("display_name, avatar_url").eq("user_id", user.id).maybeSingle()
-      .then(({ data }) => { if (data) setProfile(data); });
+    supabase
+      .from("profiles")
+      .select("display_name, avatar_url")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setProfile(data);
+      });
   }, [user]);
 
   const initials = profile.display_name
-    ? profile.display_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    ? profile.display_name
+        .split(" ")
+        .map((name) => name[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
     : user?.email?.charAt(0).toUpperCase() || "?";
+  const visibleMainItems = mainItems.filter(
+    (item) => (!item.feature || hasProductFeature(item.feature)) && !(productMode === "escola-agentes" && item.url === "/"),
+  );
+  const visibleAdminItems = adminItems.filter((item) => !item.feature || hasProductFeature(item.feature));
+  const BrandIcon = hasProductFeature("agent-school") && !hasProductFeature("generator") ? GraduationCap : Sparkles;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/40">
       <SidebarHeader className="p-5 pb-6">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl gradient-hero shadow-soft">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
+            <BrandIcon className="h-3.5 w-3.5 text-white" />
           </div>
           {!collapsed && (
             <span className="text-[15px] font-bold tracking-tight text-foreground">
-              Molde<span className="text-gradient">Pronto</span>
+              {activeProduct.wordmark.primary}
+              <span className="text-gradient">{activeProduct.wordmark.accent}</span>
             </span>
           )}
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-0.5 px-2">
-              {mainItems.map((item) => (
+              {visibleMainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -93,7 +128,8 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {isAdmin && (
+
+        {isAdmin && visibleAdminItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-0.5 px-2">
@@ -102,7 +138,7 @@ export function AppSidebar() {
                     Admin
                   </p>
                 )}
-                {adminItems.map((item) => (
+                {visibleAdminItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { passwordValidationError } from "@/lib/password";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,25 +25,26 @@ export default function Perfil() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user) fetchProfile();
-  }, [user]);
-
-  const fetchProfile = async () => {
     if (!user) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
 
-    if (data) {
-      setDisplayName(data.display_name || "");
-      setPhone(data.phone || "");
-      setAvatarUrl(data.avatar_url);
-    }
-    setLoading(false);
-  };
+    const fetchProfile = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (data) {
+        setDisplayName(data.display_name || "");
+        setPhone(data.phone || "");
+        setAvatarUrl(data.avatar_url);
+      }
+      setLoading(false);
+    };
+
+    void fetchProfile();
+  }, [user]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -97,8 +99,9 @@ export default function Perfil() {
   };
 
   const handlePasswordChange = async () => {
-    if (newPassword.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
+    const passwordError = passwordValidationError(newPassword);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -259,9 +262,9 @@ export default function Perfil() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres"
               className="h-10"
-              minLength={6}
+              minLength={8}
             />
           </div>
           <div className="space-y-2">

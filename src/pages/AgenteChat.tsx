@@ -1,466 +1,773 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Send, Loader2, ImagePlus, Mic, Square, X, History } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getAgentById, Agent } from "@/data/agents";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  ExternalLink,
+  History,
+  ImagePlus,
+  Loader2,
+  Mic,
+  Search,
+  Send,
+  ShieldCheck,
+  Square,
+  X,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { AgentIcon } from "@/components/AgentIcon";
+import { ConversasList } from "@/components/ConversasList";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getAgentById, type AgentId } from "@/data/agents";
 import { useAuth } from "@/hooks/use-auth";
 import { useConversas } from "@/hooks/use-conversas";
-import { ConversasList } from "@/components/ConversasList";
-
-type MessageContent = {
-  role: "user" | "assistant";
-  content: string;
-  images?: string[];
-};
+import { supabase } from "@/integrations/supabase/client";
+import type { ChatAttachment, ChatMessage, ChatSource } from "@/types/chat";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-agente`;
+const CHAT_BUCKET = "chat-uploads";
+const SIGNED_URL_TTL_SECONDS = 60 * 60;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-async function streamChat({
-  messages, agentId, onDelta, onDone, signal,
-}: {
-  messages: MessageContent[]; agentId: string;
-  onDelta: (text: string) => void; onDone: () => void; signal?: AbortSignal;
-}) {
-  const resp = await fetch(CHAT_URL, {
+interface StreamHandlers {
+  onDelta: (text: string) => void;
+  onReplace: (text: string) => void;
+  onSources: (sources: ChatSource[]) => void;
+  onTranscript: (text: string) => void;
+  onStatus: (status: string) => void;
+}
+
+function storedAttachment(attachment: ChatAttachment): ChatAttachment {
+  return {
+    path: attachment.path,
+    name: attachment.name,
+    mimeType: attachment.mimeType,
+  };
+}
+
+function serializeMessages(messages: ChatMessage[]) {
+  return messages.map((message) => ({
+    ...message,
+    images: message.images?.map(storedAttachment),
+    audio: message.audio ? storedAttachment(message.audio) : undefined,
+  }));
+}
+
+function mimeTypeFromName(name: string, fallback: "image" | "audio") {
+  const extension = name.split(".").pop()?.toLowerCase();
+  const known: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+    webm: "audio/webm",
+    mp3: "audio/mpeg",
+    m4a: "audio/mp4",
+    wav: "audio/wav",
+    ogg: "audio/ogg",
+  };
+  return (extension && known[extension]) || `${fallback}/*`;
+}
+
+function pathFromStorageUrl(value: string) {
+  try {
+    const pathname = decodeURIComponent(new URL(value).pathname);
+    const marker = "/chat-uploads/";
+    const index = pathname.indexOf(marker);
+    return index >= 0 ? pathname.slice(index + marker.length) : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeAttachment(value: unknown, fallback: "image" | "audio"): ChatAttachment | null {
+  if (typeof value === "string") {
+    const path = pathFromStorageUrl(value);
+    const name = path.split("/").pop() || `${fallback}-antigo`;
+    return path ? { path, name, mimeType: mimeTypeFromName(name, fallback), url: value } : null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.path !== "string" || !candidate.path) return null;
+  const name = typeof candidate.name === "string" && candidate.name
+    ? candidate.name
+    : candidate.path.split("/").pop() || "anexo";
+  return {
+    path: candidate.path,
+    name,
+    mimeType: typeof candidate.mimeType === "string" ? candidate.mimeType : mimeTypeFromName(name, fallback),
+    url: typeof candidate.url === "string" ? candidate.url : undefined,
+  };
+}
+
+async function hydrateMessages(rawMessages: ChatMessage[], userId: string) {
+  const normalized = rawMessages.map((rawMessage) => {
+    const message = rawMessage as unknown as Record<string, unknown>;
+    const images = Array.isArray(message.images)
+      ? message.images.map((image) => normalizeAttachment(image, "image")).filter(Boolean) as ChatAttachment[]
+      : [];
+    const audio = normalizeAttachment(message.audio, "audio") ?? undefined;
+    return {
+      role: message.role === "assistant" ? "assistant" : "user",
+      content: typeof message.content === "string" ? message.content : "",
+      transcript: typeof message.transcript === "string" ? message.transcript : undefined,
+      sources: Array.isArray(message.sources) ? message.sources as unknown as ChatSource[] : undefined,
+      images: images.length ? images : undefined,
+      audio,
+    } as ChatMessage;
+  });
+
+  const ownedPaths = Array.from(new Set(
+    normalized.flatMap((message) => [
+      ...(message.images ?? []).map((image) => image.path),
+      ...(message.audio ? [message.audio.path] : []),
+    ]).filter((path) => path.startsWith(`${userId}/`)),
+  ));
+  if (ownedPaths.length === 0) return normalized;
+
+  const { data, error } = await supabase.storage.from(CHAT_BUCKET).createSignedUrls(ownedPaths, SIGNED_URL_TTL_SECONDS);
+  if (error) {
+    console.error("Erro ao assinar anexos", error);
+    return normalized;
+  }
+  const signedUrls = new Map(data.map((item) => [item.path, item.signedUrl]));
+  return normalized.map((message) => ({
+    ...message,
+    images: message.images?.map((image) => ({ ...image, url: signedUrls.get(image.path) ?? image.url })),
+    audio: message.audio
+      ? { ...message.audio, url: signedUrls.get(message.audio.path) ?? message.audio.url }
+      : undefined,
+  }));
+}
+
+async function prepareMessagesForRequest(messages: ChatMessage[], userId: string) {
+  const ownedPaths = Array.from(new Set(
+    messages.flatMap((message) => [
+      ...(message.images ?? []).map((image) => image.path),
+      ...(message.audio ? [message.audio.path] : []),
+    ]).filter((path) => path.startsWith(`${userId}/`)),
+  ));
+  const signedUrls = new Map<string, string>();
+  if (ownedPaths.length) {
+    const { data, error } = await supabase.storage.from(CHAT_BUCKET).createSignedUrls(ownedPaths, SIGNED_URL_TTL_SECONDS);
+    if (error) throw new Error("Não foi possível abrir os anexos. Envie-os novamente.");
+    for (const item of data) {
+      if (item.signedUrl) signedUrls.set(item.path, item.signedUrl);
+    }
+  }
+
+  return messages.map((message) => ({
+    ...message,
+    images: message.images
+      ?.filter((image) => image.path.startsWith(`${userId}/`) && signedUrls.has(image.path))
+      .map((image) => ({ ...image, url: signedUrls.get(image.path) })),
+    audio: message.audio?.path.startsWith(`${userId}/`) && signedUrls.has(message.audio.path)
+      ? { ...message.audio, url: signedUrls.get(message.audio.path) }
+      : undefined,
+  }));
+}
+
+async function uploadFile(file: File, userId: string): Promise<ChatAttachment> {
+  const rawExtension = file.name.split(".").pop()?.toLowerCase() || (file.type.startsWith("audio/") ? "webm" : "bin");
+  const extension = rawExtension.replace(/[^a-z0-9]/g, "").slice(0, 10) || "bin";
+  const path = `${userId}/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from(CHAT_BUCKET).upload(path, file, {
+    contentType: file.type,
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) throw new Error(`Erro ao enviar ${file.name}: ${error.message}`);
+  const { data, error: signError } = await supabase.storage
+    .from(CHAT_BUCKET)
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  if (signError) throw new Error("O arquivo foi enviado, mas não pôde ser aberto.");
+  return { path, name: file.name, mimeType: file.type, url: data.signedUrl };
+}
+
+async function streamChat(
+  messages: ChatMessage[],
+  agentId: AgentId,
+  accessToken: string,
+  handlers: StreamHandlers,
+  signal: AbortSignal,
+) {
+  const response = await fetch(CHAT_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ messages, agentId }),
     signal,
   });
 
-  if (!resp.ok) {
-    const data = await resp.json().catch(() => ({}));
-    throw new Error(data.error || `Erro ${resp.status}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Erro ${response.status}`);
   }
-  if (!resp.body) throw new Error("Sem resposta do servidor");
+  if (!response.body) throw new Error("O servidor não iniciou a resposta.");
 
-  const reader = resp.body.getReader();
+  const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let textBuffer = "";
+  let buffer = "";
+
+  const processData = (raw: string) => {
+    if (!raw || raw === "[DONE]") return;
+    let event: Record<string, unknown>;
+    try {
+      event = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (event.type === "delta" && typeof event.delta === "string") handlers.onDelta(event.delta);
+    if (event.type === "replace" && typeof event.content === "string") handlers.onReplace(event.content);
+    if (event.type === "transcript" && typeof event.text === "string") handlers.onTranscript(event.text);
+    if (event.type === "status" && typeof event.status === "string") handlers.onStatus(event.status);
+    if (event.type === "sources" && Array.isArray(event.sources)) {
+      handlers.onSources(event.sources as unknown as ChatSource[]);
+    }
+    if (event.type === "error") throw new Error(typeof event.error === "string" ? event.error : "A resposta foi interrompida.");
+  };
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    textBuffer += decoder.decode(value, { stream: true });
-
-    let newlineIndex: number;
-    while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-      let line = textBuffer.slice(0, newlineIndex);
-      textBuffer = textBuffer.slice(newlineIndex + 1);
-      if (line.endsWith("\r")) line = line.slice(0, -1);
-      if (line.startsWith(":") || line.trim() === "") continue;
-      if (!line.startsWith("data: ")) continue;
-      const jsonStr = line.slice(6).trim();
-      if (jsonStr === "[DONE]") { onDone(); return; }
-      try {
-        const parsed = JSON.parse(jsonStr);
-        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-        if (content) onDelta(content);
-      } catch {
-        textBuffer = line + "\n" + textBuffer;
-        break;
-      }
+    buffer += decoder.decode(value, { stream: true });
+    let lineEnd = buffer.indexOf("\n");
+    while (lineEnd >= 0) {
+      const line = buffer.slice(0, lineEnd).replace(/\r$/, "");
+      buffer = buffer.slice(lineEnd + 1);
+      if (line.startsWith("data:")) processData(line.slice(5).trim());
+      lineEnd = buffer.indexOf("\n");
     }
   }
-  onDone();
+  if (buffer.startsWith("data:")) processData(buffer.slice(5).trim());
 }
-
-async function uploadFile(file: File): Promise<string> {
-  const ext = file.name.split(".").pop() || "bin";
-  const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("chat-uploads").upload(path, file);
-  if (error) throw new Error("Erro ao enviar arquivo: " + error.message);
-  const { data } = supabase.storage.from("chat-uploads").getPublicUrl(path);
-  return data.publicUrl;
-}
-
-const agentSuggestions: Record<string, string[]> = {
-  nina: ["Como responder quando pedem desconto?", "Monte uma mensagem de boas-vindas", "Como fechar pedido pelo WhatsApp?"],
-  jade: ["Calcule o preço de 50 caixinhas", "Como cobrar taxa de urgência?", "Qual margem de lucro ideal?"],
-  luna: ["Crie um checklist de briefing", "Quais perguntas fazer à cliente?", "Monte um formulário de pedido"],
-  flora: ["Organize minha fila de produção", "Crie um checklist de produção", "Como evitar atrasos?"],
-  iris: ["Crie uma campanha de Dia das Mães", "Monte um combo promocional", "Ideias para Black Friday"],
-  clara: ["Crie uma legenda para post de caixinha", "Analise meu perfil do Instagram", "Ideias de reels para papelaria"],
-  violeta: ["Organize meu catálogo por categorias", "Crie descrições para meus produtos", "Monte uma vitrine digital"],
-  sofia: ["Mensagem de pós-venda criativa", "Como pedir indicação?", "Crie um programa de fidelidade simples"],
-  malu: ["Calcule meu lucro neste pedido", "Como calcular ticket médio?", "Quais produtos dão mais lucro?"],
-  bella: ["Qual papel usar para caixinhas?", "Dicas de laminação", "Como configurar a impressora?"],
-  elisa: ["Revise este pedido para mim", "Checklist antes de produzir", "O que conferir antes de entregar?"],
-  maia: ["Organize meus pedidos da semana", "Quais pedidos são urgentes?", "Como recusar prazo impossível?"],
-};
 
 export default function AgenteChat() {
-  const { agentId } = useParams<{ agentId: string }>();
-  const agent = getAgentById(agentId || "");
-  const { user } = useAuth();
-  const { conversas, activeId, setActiveId, loading: conversasLoading, createConversa, saveMessages, deleteConversa } = useConversas(agentId || "");
+  const { agentId: routeAgentId = "" } = useParams<{ agentId: string }>();
+  const agent = getAgentById(routeAgentId);
+  const { session, user } = useAuth();
+  const {
+    conversas,
+    activeId,
+    setActiveId,
+    loading: conversasLoading,
+    createConversa,
+    saveMessages,
+    deleteConversa,
+  } = useConversas(agent?.id ?? "");
 
-  const [messages, setMessages] = useState<MessageContent[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);
+  const [status, setStatus] = useState("Analisando seu pedido...");
+  const [pendingImages, setPendingImages] = useState<Array<{ file: File; preview: string }>>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [currentConversaId, setCurrentConversaId] = useState<string | null>(null);
+  const [copiedMessage, setCopiedMessage] = useState<number | null>(null);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesScrollRef = useRef<HTMLElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const currentConversaIdRef = useRef<string | null>(null);
+  const recordingTimeRef = useRef(0);
+  const pendingImagesRef = useRef<Array<{ file: File; preview: string }>>([]);
+  const submitAudioRef = useRef<(attachment: ChatAttachment) => Promise<void>>(async () => undefined);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesRef.current = messages;
   }, [messages]);
 
-  // Load conversation when activeId changes
   useEffect(() => {
-    if (activeId) {
-      const conversa = conversas.find((c) => c.id === activeId);
-      if (conversa) {
-        setMessages(conversa.messages as MessageContent[]);
-        setCurrentConversaId(conversa.id);
-        setShowHistory(false);
-      }
-    }
-  }, [activeId, conversas]);
+    currentConversaIdRef.current = currentConversaId;
+  }, [currentConversaId]);
 
-  const suggestions = agent ? (agentSuggestions[agent.id] || []) : [];
+  useEffect(() => {
+    pendingImagesRef.current = pendingImages;
+  }, [pendingImages]);
 
-  if (!agent) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <p className="text-muted-foreground">Agente não encontrado</p>
-        <Link to="/agentes">
-          <Button variant="outline" className="rounded-full">Voltar</Button>
-        </Link>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const scrollContainer = messagesScrollRef.current;
+    scrollContainer?.scrollTo({ top: scrollContainer.scrollHeight, behavior: "smooth" });
+  }, [messages, status]);
 
-  const startNewChat = () => {
-    setMessages([]);
-    setCurrentConversaId(null);
-    setActiveId(null);
-    setShowHistory(false);
-  };
-
-  const handleSelectConversa = (id: string) => {
-    setActiveId(id);
-  };
-
-  const persistMessages = async (msgs: MessageContent[], conversaId: string | null, firstUserText?: string) => {
-    if (!user) return conversaId;
-    if (!conversaId) {
-      const conversa = await createConversa(firstUserText);
-      if (conversa) {
-        setCurrentConversaId(conversa.id);
-        await saveMessages(conversa.id, msgs);
-        return conversa.id;
-      }
-      return null;
-    }
-    await saveMessages(conversaId, msgs);
-    return conversaId;
-  };
-
-  const send = async (overrideText?: string) => {
-    const text = (overrideText || input).trim();
-    if ((!text && pendingImages.length === 0) || isLoading) return;
-
-    let imageUrls: string[] = [];
-    if (pendingImages.length > 0) {
-      try {
-        imageUrls = await Promise.all(pendingImages.map((p) => uploadFile(p.file)));
-      } catch (e: any) {
-        toast.error(e.message);
-        return;
-      }
-    }
-
-    const userMsg: MessageContent = {
-      role: "user",
-      content: text || "Analise esta imagem",
-      images: imageUrls.length > 0 ? imageUrls : undefined,
+  useEffect(() => {
+    if (!activeId || activeId === currentConversaId || isLoading || !user) return;
+    const conversa = conversas.find((item) => item.id === activeId);
+    if (!conversa) return;
+    let cancelled = false;
+    hydrateMessages(conversa.messages, user.id).then((hydrated) => {
+      if (cancelled) return;
+      setMessages(hydrated);
+      messagesRef.current = hydrated;
+      setCurrentConversaId(conversa.id);
+      currentConversaIdRef.current = conversa.id;
+      setShowHistory(false);
+    });
+    return () => {
+      cancelled = true;
     };
+  }, [activeId, conversas, currentConversaId, isLoading, user]);
 
-    setInput("");
-    setPendingImages([]);
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
-    setIsLoading(true);
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    if (timerRef.current) clearInterval(timerRef.current);
+    pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.preview));
+  }, []);
 
-    // Persist immediately with user message
-    const cId = await persistMessages(newMessages, currentConversaId, text);
+  const setConversationId = useCallback((id: string | null) => {
+    currentConversaIdRef.current = id;
+    setCurrentConversaId(id);
+    setActiveId(id);
+  }, [setActiveId]);
 
-    let assistantSoFar = "";
-    const upsertAssistant = (chunk: string) => {
-      assistantSoFar += chunk;
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === "assistant") {
-          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
-        }
-        return [...prev, { role: "assistant", content: assistantSoFar }];
-      });
+  const runAgent = useCallback(async (baseMessages: ChatMessage[], conversaId: string | null) => {
+    if (!user || !session?.access_token || !agent) throw new Error("Sua sessão expirou. Entre novamente.");
+    const requestMessages = await prepareMessagesForRequest(baseMessages, user.id);
+    let workingMessages = requestMessages;
+    let assistantContent = "";
+    let sources: ChatSource[] = [];
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const render = () => {
+      const next = assistantContent
+        ? [...workingMessages, { role: "assistant", content: assistantContent, sources } as ChatMessage]
+        : workingMessages;
+      messagesRef.current = next;
+      setMessages(next);
     };
 
     try {
-      await streamChat({
-        messages: newMessages,
-        agentId: agent.id,
-        onDelta: upsertAssistant,
-        onDone: () => {
-          setIsLoading(false);
-          // Save final messages with assistant response
-          setMessages((prev) => {
-            if (cId) saveMessages(cId, prev);
-            return prev;
-          });
+      await streamChat(
+        requestMessages,
+        agent.id,
+        session.access_token,
+        {
+          onDelta: (delta) => {
+            assistantContent += delta;
+            render();
+          },
+          onReplace: (content) => {
+            assistantContent = content;
+            render();
+          },
+          onSources: (nextSources) => {
+            sources = nextSources;
+            render();
+          },
+          onTranscript: (transcript) => {
+            workingMessages = workingMessages.map((message, index) =>
+              index === workingMessages.length - 1 ? { ...message, transcript } : message,
+            );
+            render();
+          },
+          onStatus: (nextStatus) => {
+            setStatus(nextStatus === "researching" ? "Pesquisando em fontes públicas..." : "Preparando a resposta...");
+          },
         },
+        controller.signal,
+      );
+      if (!assistantContent) throw new Error("A assistente não retornou conteúdo. Tente novamente.");
+    } finally {
+      abortRef.current = null;
+      const finalMessages = assistantContent
+        ? [...workingMessages, { role: "assistant", content: assistantContent, sources } as ChatMessage]
+        : workingMessages;
+      messagesRef.current = finalMessages;
+      setMessages(finalMessages);
+      if (conversaId) {
+        await saveMessages(conversaId, serializeMessages(finalMessages));
+      }
+    }
+  }, [agent, saveMessages, session?.access_token, user]);
+
+  const submitUserMessage = useCallback(async (userMessage: ChatMessage) => {
+    const baseMessages = [...messagesRef.current, userMessage];
+    messagesRef.current = baseMessages;
+    setMessages(baseMessages);
+    let conversaId = currentConversaIdRef.current;
+    const title = userMessage.content || (userMessage.audio ? "Áudio enviado" : "Imagem enviada");
+
+    try {
+      if (!conversaId) {
+        const conversa = await createConversa(title);
+        if (conversa) {
+          conversaId = conversa.id;
+          setConversationId(conversa.id);
+        }
+      }
+      if (conversaId) await saveMessages(conversaId, serializeMessages(baseMessages));
+    } catch (error) {
+      console.error("Erro ao salvar conversa", error);
+      toast.error("A conversa não pôde ser salva, mas você ainda pode receber a resposta.");
+    }
+
+    await runAgent(baseMessages, conversaId);
+  }, [createConversa, runAgent, saveMessages, setConversationId]);
+
+  useEffect(() => {
+    submitAudioRef.current = async (attachment) => {
+      await submitUserMessage({
+        role: "user",
+        content: "Ouça este áudio e me ajude com o pedido.",
+        audio: attachment,
       });
-    } catch (e: any) {
-      console.error(e);
+    };
+  }, [submitUserMessage]);
+
+  const send = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if ((!text && pendingImages.length === 0) || isLoading || isRecording || !user) return;
+    setIsLoading(true);
+    setStatus(pendingImages.length ? "Enviando imagens com segurança..." : "Analisando seu pedido...");
+
+    try {
+      const images = pendingImages.length
+        ? await Promise.all(pendingImages.map((pending) => uploadFile(pending.file, user.id)))
+        : [];
+      pendingImages.forEach((pending) => URL.revokeObjectURL(pending.preview));
+      setPendingImages([]);
+      setInput("");
+      await submitUserMessage({
+        role: "user",
+        content: text || "Analise estas imagens e me diga o que devo fazer.",
+        images: images.length ? images : undefined,
+      });
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        console.error(error);
+        toast.error(error instanceof Error ? error.message : "Erro ao enviar a mensagem.");
+      }
+    } finally {
       setIsLoading(false);
-      toast.error(e.message || "Erro ao enviar mensagem");
+      setStatus("Analisando seu pedido...");
+    }
+  }, [input, isLoading, isRecording, pendingImages, submitUserMessage, user]);
+
+  const startNewChat = () => {
+    abortRef.current?.abort();
+    messagesRef.current = [];
+    setMessages([]);
+    setConversationId(null);
+    setShowHistory(false);
+    setIsLoading(false);
+  };
+
+  const handleDeleteConversa = async (id: string) => {
+    try {
+      await deleteConversa(id);
+      if (currentConversaIdRef.current === id) startNewChat();
+    } catch {
+      toast.error("Não foi possível excluir esta conversa.");
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-  };
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const newImages = files.map((file) => ({ file, preview: URL.createObjectURL(file) }));
-    setPendingImages((prev) => [...prev, ...newImages].slice(0, 4));
-    e.target.value = "";
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    const valid = selected.filter((file) => {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} não é uma imagem válida.`);
+        return false;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error(`${file.name} ultrapassa o limite de 8 MB.`);
+        return false;
+      }
+      return true;
+    });
+    setPendingImages((previous) => {
+      const available = Math.max(0, 4 - previous.length);
+      const next = valid.slice(0, available).map((file) => ({ file, preview: URL.createObjectURL(file) }));
+      if (valid.length > available) toast.error("Você pode enviar até quatro imagens por mensagem.");
+      return [...previous, ...next];
+    });
+    event.target.value = "";
   };
 
   const removeImage = (index: number) => {
-    setPendingImages((prev) => {
-      const updated = [...prev];
-      URL.revokeObjectURL(updated[index].preview);
-      updated.splice(index, 1);
-      return updated;
+    setPendingImages((previous) => {
+      URL.revokeObjectURL(previous[index].preview);
+      return previous.filter((_, itemIndex) => itemIndex !== index);
     });
   };
 
   const startRecording = async () => {
+    if (isLoading || isRecording) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      toast.error("Este navegador não oferece gravação de áudio.");
+      return;
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = mediaStream;
+      const preferredType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
+      const recorder = preferredType ? new MediaRecorder(mediaStream, { mimeType: preferredType }) : new MediaRecorder(mediaStream);
+      mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunksRef.current.push(event.data);
+      };
       recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
+        mediaStream.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = null;
+        const mimeType = recorder.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        if (!blob.size || !user) return;
+        setIsLoading(true);
+        setStatus("Transcrevendo seu áudio...");
         try {
-          const url = await uploadFile(file);
-          const audioMsg: MessageContent = {
-            role: "user",
-            content: `[Áudio enviado](${url}) — por favor, analise o contexto e me ajude.`,
-          };
-          const newMsgs = [...messages, audioMsg];
-          setMessages(newMsgs);
-          setIsLoading(true);
-          const cId = await persistMessages(newMsgs, currentConversaId, "Áudio enviado");
-
-          let assistantSoFar = "";
-          const upsertAssistant = (chunk: string) => {
-            assistantSoFar += chunk;
-            setMessages((prev) => {
-              const last = prev[prev.length - 1];
-              if (last?.role === "assistant") {
-                return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
-              }
-              return [...prev, { role: "assistant", content: assistantSoFar }];
-            });
-          };
-
-          await streamChat({
-            messages: newMsgs,
-            agentId: agent.id,
-            onDelta: upsertAssistant,
-            onDone: () => {
-              setIsLoading(false);
-              setMessages((prev) => { if (cId) saveMessages(cId, prev); return prev; });
-            },
-          });
-        } catch (e: any) {
-          toast.error("Erro ao enviar áudio");
+          const extension = mimeType.includes("ogg") ? "ogg" : "webm";
+          const file = new File([blob], `audio-${Date.now()}.${extension}`, { type: mimeType.split(";")[0] });
+          const attachment = await uploadFile(file, user.id);
+          await submitAudioRef.current(attachment);
+        } catch (error) {
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            toast.error(error instanceof Error ? error.message : "Não foi possível enviar o áudio.");
+          }
+        } finally {
           setIsLoading(false);
+          setStatus("Analisando seu pedido...");
         }
       };
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setIsRecording(true);
+      recorder.start(500);
+      recordingTimeRef.current = 0;
       setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
+      setIsRecording(true);
+      timerRef.current = setInterval(() => {
+        recordingTimeRef.current += 1;
+        setRecordingTime(recordingTimeRef.current);
+        if (recordingTimeRef.current >= 300 && mediaRecorderRef.current?.state === "recording") {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+        }
+      }, 1_000);
     } catch {
-      toast.error("Permissão de microfone negada");
+      toast.error("Permita o uso do microfone para enviar um áudio.");
     }
   };
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
     setIsRecording(false);
-    if (timerRef.current) clearInterval(timerRef.current);
   };
 
-  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+  const stopGeneration = () => {
+    abortRef.current?.abort();
+    setStatus("Resposta interrompida.");
+  };
+
+  const copyResponse = async (index: number, content: string) => {
+    await navigator.clipboard.writeText(content);
+    setCopiedMessage(index);
+    window.setTimeout(() => setCopiedMessage(null), 1_500);
+  };
+
+  const formatTime = (seconds: number) =>
+    `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
+
+  if (!agent) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Agente não encontrada.</p>
+        <Link to="/agentes"><Button variant="outline">Voltar aos agentes</Button></Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-[calc(100svh-3rem)]">
-      {/* History sidebar */}
+    <div className="relative flex h-[calc(100svh-3rem)] overflow-hidden">
       {showHistory && (
-        <div className="w-72 border-r border-border/40 bg-background/95 p-3 overflow-y-auto shrink-0 animate-fade-in">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold text-foreground">Histórico</p>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setShowHistory(false)}>
-              <X className="h-3.5 w-3.5" />
+        <aside className="absolute inset-y-0 left-0 z-30 w-[min(20rem,88vw)] overflow-y-auto border-r border-border bg-background p-3 shadow-lg md:relative md:z-auto md:w-72 md:shadow-none">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-bold text-foreground">Histórico da {agent.name}</p>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => setShowHistory(false)} aria-label="Fechar histórico">
+              <X className="h-4 w-4" />
             </Button>
           </div>
           <ConversasList
             conversas={conversas}
             activeId={currentConversaId}
-            onSelect={handleSelectConversa}
+            onSelect={setActiveId}
             onNew={startNewChat}
-            onDelete={deleteConversa}
+            onDelete={handleDeleteConversa}
             loading={conversasLoading}
           />
-        </div>
+        </aside>
       )}
 
-      {/* Main chat area */}
-      <div className="flex flex-col flex-1 min-w-0">
-        {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 md:px-6 py-3 border-b border-border/40 bg-background/80 glass">
-          <Link to="/agentes">
-            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 shrink-0">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex min-h-16 items-center gap-3 border-b border-border/60 bg-background/95 px-3 py-3 md:px-5">
+          <Link to="/agentes" aria-label="Voltar aos agentes">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-base shrink-0">
-            {agent.emoji}
-          </div>
+          <AgentIcon agentId={agent.id} className="h-9 w-9" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-foreground leading-tight truncate">{agent.name}</p>
-            <p className="text-[11px] text-primary font-medium truncate">{agent.title}</p>
+            <p className="truncate text-sm font-bold text-foreground">{agent.name}</p>
+            <p className="truncate text-[11px] font-medium text-primary">{agent.title}</p>
           </div>
-          {user && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
-              onClick={() => setShowHistory(!showHistory)}
-            >
-              <History className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-md text-muted-foreground"
+                onClick={() => setShowHistory((visible) => !visible)}
+                aria-label="Abrir histórico"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Histórico</TooltipContent>
+          </Tooltip>
+        </header>
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+        <main ref={messagesScrollRef} className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-3xl space-y-6 px-3 py-6 md:px-6">
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center pt-12 pb-8 gap-4 text-center">
-                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl">
-                  {agent.emoji}
+              <section className="mx-auto flex max-w-xl flex-col items-center py-8 text-center md:py-14">
+                <AgentIcon agentId={agent.id} className="h-14 w-14" iconClassName="h-6 w-6" />
+                <h1 className="mt-4 text-xl font-bold text-foreground">Olá, eu sou a {agent.name}</h1>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{agent.description}</p>
+                <div className="mt-6 grid w-full gap-2 sm:grid-cols-3">
+                  {agent.starters.map((starter) => (
+                    <button
+                      key={starter}
+                      type="button"
+                      onClick={() => send(starter)}
+                      disabled={isLoading}
+                      className="min-h-20 rounded-lg border border-border bg-card px-3 py-3 text-left text-xs leading-relaxed text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 disabled:opacity-50"
+                    >
+                      {starter}
+                    </button>
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  <p className="text-lg font-bold text-foreground">
-                    Olá! Eu sou a {agent.name} ✨
-                  </p>
-                  <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                    {agent.description}
-                  </p>
-                </div>
-                {suggestions.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-2 pt-4 max-w-lg">
-                    {suggestions.map((s, i) => (
-                      <button
-                        key={i}
-                        onClick={() => send(s)}
-                        className="text-xs px-4 py-2.5 rounded-full border border-border/60 bg-card hover:border-primary/40 hover:bg-primary/5 text-foreground transition-all"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </section>
             )}
 
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
-                {msg.role === "assistant" && (
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-sm shrink-0 mt-1">
-                    {agent.emoji}
-                  </div>
-                )}
-                <div className={`max-w-[80%] space-y-2 ${msg.role === "user" ? "order-first" : ""}`}>
-                  {msg.images && msg.images.length > 0 && (
-                    <div className={`flex flex-wrap gap-2 ${msg.role === "user" ? "justify-end" : ""}`}>
-                      {msg.images.map((url, j) => (
-                        <img key={j} src={url} alt="Imagem enviada" className="rounded-xl max-h-48 max-w-[200px] object-cover shadow-card cursor-pointer" onClick={() => window.open(url, "_blank")} />
-                      ))}
+            {messages.map((message, index) => (
+              <article key={`${index}-${message.role}`} className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                {message.role === "assistant" && <AgentIcon agentId={agent.id} className="mt-1 h-8 w-8" />}
+                <div className={`min-w-0 max-w-[88%] md:max-w-[80%] ${message.role === "user" ? "order-first" : ""}`}>
+                  {message.images?.length ? (
+                    <div className="mb-2 grid grid-cols-2 gap-2">
+                      {message.images.map((image) => image.url ? (
+                        <img
+                          key={image.path}
+                          src={image.url}
+                          alt={image.name}
+                          className="aspect-square w-full rounded-lg border border-border object-cover"
+                        />
+                      ) : null)}
                     </div>
+                  ) : null}
+                  {message.audio?.url && (
+                    <audio controls preload="metadata" src={message.audio.url} className="mb-2 h-10 max-w-full" aria-label="Áudio enviado" />
                   )}
-                  {msg.content && (
-                    <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${msg.role === "user" ? "gradient-hero text-white rounded-tr-md ml-auto" : "bg-secondary/70 text-foreground rounded-tl-md"}`}>
-                      {msg.role === "assistant" ? (
-                        <div className="prose prose-sm max-w-none prose-p:my-1.5 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-strong:text-foreground prose-a:text-primary">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <div
+                    className={message.role === "user"
+                      ? "rounded-lg bg-primary px-4 py-3 text-sm leading-relaxed text-primary-foreground"
+                      : "rounded-lg border border-border/70 bg-card px-4 py-3 text-sm leading-relaxed text-foreground"}
+                  >
+                    {message.role === "assistant" ? (
+                      <div className="prose prose-sm max-w-none break-words prose-headings:mb-2 prose-headings:mt-3 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 prose-a:text-primary">
+                        <ReactMarkdown
+                          components={{
+                            a: ({ ...props }) => <a {...props} target="_blank" rel="noreferrer noopener" />,
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                    )}
+                    {message.transcript && (
+                      <div className={`mt-3 border-t pt-3 text-xs ${message.role === "user" ? "border-white/20 text-white/85" : "border-border text-muted-foreground"}`}>
+                        <span className="font-semibold">Transcrição:</span> {message.transcript}
+                      </div>
+                    )}
+                    {message.role === "assistant" && message.sources?.length ? (
+                      <div className="mt-4 border-t border-border pt-3">
+                        <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+                          <ShieldCheck className="h-3.5 w-3.5" /> Fontes consultadas
+                        </p>
+                        <div className="space-y-1.5">
+                          {message.sources.map((source, sourceIndex) => (
+                            <a
+                              key={`${source.url}-${sourceIndex}`}
+                              href={source.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="flex items-start gap-1.5 text-xs text-primary hover:underline"
+                            >
+                              <span>{sourceIndex + 1}. {source.title}</span>
+                              <ExternalLink className="mt-0.5 h-3 w-3 shrink-0" />
+                            </a>
+                          ))}
                         </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                      )}
+                      </div>
+                    ) : null}
+                  </div>
+                  {message.role === "assistant" && message.content && (
+                    <div className="mt-1 flex justify-end">
+                      <button
+                        type="button"
+                        title="Copiar resposta"
+                        aria-label="Copiar resposta"
+                        onClick={() => copyResponse(index, message.content)}
+                        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      >
+                        {copiedMessage === index ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
                     </div>
                   )}
                 </div>
-                {msg.role === "user" && (
-                  <div className="h-7 w-7 rounded-lg gradient-hero flex items-center justify-center text-white text-[10px] font-bold shrink-0 mt-1">
-                    Eu
-                  </div>
-                )}
-              </div>
+              </article>
             ))}
 
-            {isLoading && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex gap-3">
-                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-sm shrink-0">{agent.emoji}</div>
-                <div className="bg-secondary/70 rounded-2xl rounded-tl-md px-4 py-3">
-                  <div className="flex gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
+            {isLoading && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground" role="status">
+                <AgentIcon agentId={agent.id} className="h-8 w-8" />
+                {status.includes("Pesquisando") ? <Search className="h-4 w-4 animate-pulse text-primary" /> : <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                <span>{status}</span>
               </div>
             )}
-            <div ref={messagesEndRef} />
           </div>
-        </div>
+        </main>
 
-        {/* Input area */}
-        <div className="border-t border-border/40 bg-background">
-          <div className="max-w-2xl mx-auto px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <footer className="border-t border-border/60 bg-background px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-5">
+          <div className="mx-auto max-w-3xl">
             {pendingImages.length > 0 && (
-              <div className="flex gap-2 mb-3 flex-wrap">
-                {pendingImages.map((img, i) => (
-                  <div key={i} className="relative group">
-                    <img src={img.preview} alt="Preview" className="h-16 w-16 rounded-xl object-cover border border-border/40" />
-                    <button onClick={() => removeImage(i)} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                {pendingImages.map((pending, index) => (
+                  <div key={pending.preview} className="relative h-16 w-16 shrink-0">
+                    <img src={pending.preview} alt="Imagem selecionada" className="h-full w-full rounded-lg border border-border object-cover" />
+                    <button
+                      type="button"
+                      aria-label="Remover imagem"
+                      onClick={() => removeImage(index)}
+                      className="absolute right-1 top-1 rounded-md bg-background/90 p-1 text-foreground shadow-sm"
+                    >
                       <X className="h-3 w-3" />
                     </button>
                   </div>
@@ -469,33 +776,101 @@ export default function AgenteChat() {
             )}
 
             {isRecording && (
-              <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-sm font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
-                Gravando {formatTime(recordingTime)}
-                <button onClick={stopRecording} className="ml-auto h-8 w-8 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/90 transition-colors">
-                  <Square className="h-3 w-3 fill-current" />
-                </button>
+              <div className="mb-2 flex items-center gap-2 text-xs font-medium text-destructive" role="status">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+                Gravando {formatTime(recordingTime)} de 5:00
               </div>
             )}
 
-            <div className="flex items-end gap-2 bg-secondary/50 rounded-2xl p-1.5 border border-border/40 focus-within:border-primary/30 transition-colors">
-              <input type="file" ref={fileInputRef} accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
-              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 shrink-0 text-muted-foreground hover:text-primary" onClick={() => fileInputRef.current?.click()} disabled={isLoading || isRecording}>
-                <ImagePlus className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className={`rounded-xl h-9 w-9 shrink-0 transition-colors ${isRecording ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-primary"}`} onClick={isRecording ? stopRecording : startRecording} disabled={isLoading}>
-                {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-              </Button>
-              <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={`Mensagem para ${agent.name}...`} rows={1} disabled={isRecording} className="flex-1 bg-transparent resize-none text-sm px-2 py-2 outline-none placeholder:text-muted-foreground/50 max-h-32 disabled:opacity-50" style={{ fieldSizing: "content" } as any} />
-              <Button onClick={() => send()} disabled={(!input.trim() && pendingImages.length === 0) || isLoading || isRecording} size="icon" className="rounded-xl h-9 w-9 shrink-0 gradient-hero border-0 text-white shadow-soft disabled:opacity-30">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+            <div className="flex items-end gap-2 rounded-lg border border-border bg-card p-2 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                multiple
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 rounded-md text-muted-foreground"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading || isRecording || pendingImages.length >= 4}
+                    aria-label="Anexar imagens"
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Anexar imagens</TooltipContent>
+              </Tooltip>
+
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value.slice(0, 8_000))}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    send();
+                  }
+                }}
+                placeholder={`Peça ajuda à ${agent.name}...`}
+                rows={1}
+                disabled={isLoading || isRecording}
+                className="max-h-32 min-h-9 min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60"
+              />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className={`h-9 w-9 shrink-0 rounded-md ${isRecording ? "text-destructive" : "text-muted-foreground"}`}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isLoading}
+                    aria-label={isRecording ? "Parar gravação" : "Gravar áudio"}
+                  >
+                    {isRecording ? <Square className="h-3.5 w-3.5 fill-current" /> : <Mic className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{isRecording ? "Parar gravação" : "Gravar áudio"}</TooltipContent>
+              </Tooltip>
+
+              {isLoading ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-9 w-9 shrink-0 rounded-md"
+                  onClick={stopGeneration}
+                  aria-label="Interromper resposta"
+                  title="Interromper resposta"
+                >
+                  <Square className="h-3.5 w-3.5 fill-current" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 rounded-md"
+                  onClick={() => send()}
+                  disabled={!input.trim() && pendingImages.length === 0}
+                  aria-label="Enviar mensagem"
+                  title="Enviar mensagem"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            <p className="text-[10px] text-muted-foreground/50 text-center mt-2">
-              As respostas são geradas por IA e podem conter imprecisões.
+            <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+              Confira valores, datas e dados da cliente antes de usar a resposta.
             </p>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
