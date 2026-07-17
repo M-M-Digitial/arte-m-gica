@@ -1,10 +1,14 @@
-name: Deploy to VPS
+name: Deploy MoldePronto (gerador)
 
+# App dos moldes na RAIZ do domínio. O slug agentes-artesaos/ é preservado
+# (é o Meu Ateliê Digital, publicado pelo workflow deploy.yml).
 on:
+  push:
+    branches: [main]
   workflow_dispatch: {}
 
 concurrency:
-  group: deploy-vps
+  group: deploy-gerador
   cancel-in-progress: true
 
 jobs:
@@ -23,8 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build:escola
+      - name: Build (gerador de moldes)
+        run: npm run build:gerador
 
       - name: Setup SSH
         run: |
@@ -33,10 +37,9 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "${{ secrets.VPS_PORT || '22' }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy dist/ to VPS
+      - name: Deploy dist/ para a raiz (preservando o slug da escola)
         run: |
-          # publica a escola DENTRO do slug, sem tocar no app dos moldes na raiz
-          rsync -avz --delete \
+          rsync -avz --delete --exclude 'agentes-artesaos' \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || '22' }}" \
             dist/ \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}agentes-artesaos/"
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}"
