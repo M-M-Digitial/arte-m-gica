@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -250,6 +250,7 @@ async function streamChat(
 
 export default function AgenteChat() {
   const { agentId: routeAgentId = "" } = useParams<{ agentId: string }>();
+  const navigate = useNavigate();
   const agent = getAgentById(routeAgentId);
   const { session, user } = useAuth();
   const {
@@ -615,11 +616,19 @@ export default function AgenteChat() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex min-h-16 items-center gap-3 border-b border-border/60 bg-background/95 px-3 py-3 md:px-5">
-          <Link to="/agentes" aria-label="Voltar aos agentes">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-md">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
+          {/* Na conversa: a seta volta pra própria agente (nova conversa); sem conversa: volta pra lista */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-md"
+            aria-label={messages.length > 0 || currentConversaId ? `Voltar para a ${agent.name}` : "Voltar aos agentes"}
+            onClick={() => {
+              if (messages.length > 0 || currentConversaId) startNewChat();
+              else navigate("/agentes");
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <AgentIcon agentId={agent.id} className="h-9 w-9" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-foreground">{agent.name}</p>

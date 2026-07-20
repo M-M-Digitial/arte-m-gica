@@ -137,10 +137,15 @@ async function authenticate(req: Request, supabaseUrl: string, anonKey: string) 
   return { client, user: data.user };
 }
 
-async function hasActiveAccess(client: UserSupabase, userId: string) {
+async function hasActiveAccess(client: UserSupabase, userId: string, userEmail: string) {
   const [{ data: roles, error: rolesError }, { data: subscription, error: subscriptionError }] = await Promise.all([
     client.from("user_roles").select("role").eq("user_id", userId),
-    client.from("assinaturas").select("status, valid_until").maybeSingle(),
+    client
+      .from("assinaturas")
+      .select("status, valid_until")
+      // admins enxergam todas as linhas pela RLS — escopa pra própria assinatura
+      .eq("email", userEmail.toLowerCase())
+      .maybeSingle(),
   ]);
   if (rolesError || subscriptionError) {
     console.error("Access verification failed", rolesError?.code, subscriptionError?.code);
@@ -198,6 +203,25 @@ function buildOpenAIInput(messages: ChatMessage[]) {
     }
     return { role: "user", content };
   });
+}
+
+async function loadProfile(client: UserSupabase, userId: string) {
+  const { data, error } = await client
+    .from("atelie_perfil")
+    .select("atelie_nome, produtos, publico, ticket_medio, canais, cidade, observacoes")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return "";
+  const linhas = [
+    data.atelie_nome ? `Ateliê: ${safeString(data.atelie_nome, 200)}` : null,
+    `Produtos que vende: ${safeString(data.produtos, 800)}`,
+    data.publico ? `Público: ${safeString(data.publico, 400)}` : null,
+    data.ticket_medio ? `Ticket médio: ${safeString(data.ticket_medio, 200)}` : null,
+    data.canais ? `Canais de venda: ${safeString(data.canais, 400)}` : null,
+    data.cidade ? `Cidade: ${safeString(data.cidade, 120)}` : null,
+    data.observacoes ? `Observações: ${safeString(data.observacoes, 800)}` : null,
+  ].filter(Boolean);
+  return linhas.join("\n");
 }
 
 async function loadMemory(client: UserSupabase, userId: string, agentId: AgentId) {
@@ -432,7 +456,7 @@ serve(async (req) => {
   if (!auth) return jsonResponse({ error: "Sua sessão expirou. Entre novamente." }, 401);
 
   try {
-    if (!(await hasActiveAccess(auth.client, auth.user.id))) {
+    if (!(await hasActiveAccess(auth.client, auth.user.id, auth.user.email ?? ""))) {
       return jsonResponse({ error: "Seu acesso ao Meu Ateliê Digital não está ativo." }, 403);
     }
   } catch {
@@ -467,8 +491,11 @@ serve(async (req) => {
     }
   }
 
-  const memory = await loadMemory(auth.client, auth.user.id, agentId);
-  const instructions = buildAgentInstructions(agentId, memory, currentDateInBrazil());
+  const [memory, profile] = await Promise.all([
+    loadMemory(auth.client, auth.user.id, agentId),
+    loadProfile(auth.client, auth.user.id),
+  ]);
+  const instructions = buildAgentInstructions(agentId, memory, currentDateInBrazil(), profile);
   const openAIResponse = await fetch(OPENAI_RESPONSES_URL, {
     method: "POST",
     headers: {

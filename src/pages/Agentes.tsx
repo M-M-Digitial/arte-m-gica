@@ -1,9 +1,41 @@
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, CheckCircle2, Settings2, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AgentIcon } from "@/components/AgentIcon";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PerfilAtelieForm, useAteliePerfil } from "@/components/PerfilAtelie";
 import { agents } from "@/data/agents";
 
 export default function Agentes() {
+  const { carregando, completo } = useAteliePerfil();
+  const [editandoPerfil, setEditandoPerfil] = useState(false);
+
+  if (carregando) {
+    return (
+      <div className="max-w-6xl space-y-4 py-4">
+        <Skeleton className="h-16 w-2/3 rounded-lg" />
+        <Skeleton className="h-72 rounded-lg" />
+      </div>
+    );
+  }
+
+  // Onboarding obrigatório: as assistentes só funcionam bem conhecendo o ateliê
+  if (!completo || editandoPerfil) {
+    return (
+      <div className="animate-fade-in max-w-6xl space-y-6 py-4">
+        <PerfilAtelieForm onSaved={() => setEditandoPerfil(false)} />
+        {editandoPerfil && (
+          <p className="text-center">
+            <button className="text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => setEditandoPerfil(false)}>
+              Voltar para as assistentes sem salvar
+            </button>
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in max-w-6xl space-y-7">
       <header className="border-b border-border/60 pb-6">
@@ -20,7 +52,12 @@ export default function Agentes() {
               Escolha a especialista, conte o que precisa e receba uma entrega pronta para aplicar no seu ateliê.
             </p>
           </div>
-          <p className="text-xs font-medium text-muted-foreground">9 assistentes especializadas</p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs font-medium text-muted-foreground">9 assistentes especializadas</p>
+            <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs" onClick={() => setEditandoPerfil(true)}>
+              <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Meu ateliê
+            </Button>
+          </div>
         </div>
       </header>
 

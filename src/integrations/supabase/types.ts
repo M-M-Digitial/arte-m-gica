@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       agent_memories: {
@@ -104,6 +129,45 @@ export type Database = {
         }
         Relationships: []
       }
+      atelie_perfil: {
+        Row: {
+          atelie_nome: string | null
+          canais: string | null
+          cidade: string | null
+          created_at: string
+          observacoes: string | null
+          produtos: string
+          publico: string | null
+          ticket_medio: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          atelie_nome?: string | null
+          canais?: string | null
+          cidade?: string | null
+          created_at?: string
+          observacoes?: string | null
+          produtos: string
+          publico?: string | null
+          ticket_medio?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          atelie_nome?: string | null
+          canais?: string | null
+          cidade?: string | null
+          created_at?: string
+          observacoes?: string | null
+          produtos?: string
+          publico?: string | null
+          ticket_medio?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversas: {
         Row: {
           agent_id: string
@@ -130,6 +194,27 @@ export type Database = {
           messages?: Json
           title?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      geracoes_ia: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
           user_id?: string
         }
         Relationships: []
@@ -196,12 +281,16 @@ export type Database = {
           created_at: string
           description: string | null
           emoji: string | null
+          faces_url: string | null
           id: string
           image_url: string | null
+          mask_url: string | null
           name: string
           popular: boolean
           sort_order: number
+          svg_url: string | null
           template_pdf_url: string | null
+          template_png_url: string | null
           updated_at: string
         }
         Insert: {
@@ -209,12 +298,16 @@ export type Database = {
           created_at?: string
           description?: string | null
           emoji?: string | null
+          faces_url?: string | null
           id?: string
           image_url?: string | null
+          mask_url?: string | null
           name: string
           popular?: boolean
           sort_order?: number
+          svg_url?: string | null
           template_pdf_url?: string | null
+          template_png_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -222,12 +315,16 @@ export type Database = {
           created_at?: string
           description?: string | null
           emoji?: string | null
+          faces_url?: string | null
           id?: string
           image_url?: string | null
+          mask_url?: string | null
           name?: string
           popular?: boolean
           sort_order?: number
+          svg_url?: string | null
           template_pdf_url?: string | null
+          template_png_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -318,6 +415,144 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quiz_custos: {
+        Row: {
+          atualizado: string
+          campanha: string
+          gasto: number
+        }
+        Insert: {
+          atualizado?: string
+          campanha: string
+          gasto?: number
+        }
+        Update: {
+          atualizado?: string
+          campanha?: string
+          gasto?: number
+        }
+        Relationships: []
+      }
+      quiz_leads: {
+        Row: {
+          classificacao: string | null
+          concluido: string | null
+          data_inicio: string
+          desejo: string | null
+          device: string | null
+          dor: string | null
+          eliminado: string | null
+          email: string | null
+          etapa: string | null
+          faturamento: string | null
+          idade: string | null
+          investimento: string | null
+          nome: string | null
+          pagamento: string | null
+          promessa: string | null
+          score: number | null
+          session_id: string
+          ultima_atualizacao: string
+          urgencia: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          classificacao?: string | null
+          concluido?: string | null
+          data_inicio?: string
+          desejo?: string | null
+          device?: string | null
+          dor?: string | null
+          eliminado?: string | null
+          email?: string | null
+          etapa?: string | null
+          faturamento?: string | null
+          idade?: string | null
+          investimento?: string | null
+          nome?: string | null
+          pagamento?: string | null
+          promessa?: string | null
+          score?: number | null
+          session_id: string
+          ultima_atualizacao?: string
+          urgencia?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          classificacao?: string | null
+          concluido?: string | null
+          data_inicio?: string
+          desejo?: string | null
+          device?: string | null
+          dor?: string | null
+          eliminado?: string | null
+          email?: string | null
+          etapa?: string | null
+          faturamento?: string | null
+          idade?: string | null
+          investimento?: string | null
+          nome?: string | null
+          pagamento?: string | null
+          promessa?: string | null
+          score?: number | null
+          session_id?: string
+          ultima_atualizacao?: string
+          urgencia?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      tema_assets: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          meta: Json
+          name: string
+          role: string | null
+          sort_order: number
+          theme_slug: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          meta?: Json
+          name: string
+          role?: string | null
+          sort_order?: number
+          theme_slug: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          name?: string
+          role?: string | null
+          sort_order?: number
+          theme_slug?: string
+          url?: string
+        }
+        Relationships: []
       }
       temas: {
         Row: {
@@ -567,6 +802,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],

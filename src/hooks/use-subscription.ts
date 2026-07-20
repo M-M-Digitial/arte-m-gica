@@ -24,6 +24,8 @@ export function useSubscription() {
         supabase
           .from("assinaturas")
           .select("email,status,plano,valid_until,origem")
+          // admins enxergam todas as linhas pela RLS — escopa pra própria assinatura
+          .eq("email", (user!.email ?? "").toLowerCase())
           .maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", user!.id),
       ]);

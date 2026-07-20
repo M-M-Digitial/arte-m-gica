@@ -43,7 +43,7 @@ export const agents: Agent[] = [
       "Calcula material, tempo, custos, taxas e lucro para montar preços sustentáveis e orçamentos fáceis de enviar.",
     deliverables: ["Custo detalhado", "Preço sugerido", "Orçamento para enviar"],
     starters: [
-      "Calcule o preço de 50 caixinhas personalizadas.",
+      "Calcule o preço de um pedido a partir dos meus custos.",
       "Monte um orçamento profissional para este pedido.",
       "Descubra se estou tendo lucro neste produto.",
     ],
@@ -69,8 +69,8 @@ export const agents: Agent[] = [
       "Transforma produtos e bastidores em legendas, posts, reels e stories que aproximam seguidoras e clientes.",
     deliverables: ["Legenda pronta", "Roteiro de reel", "Sequência de stories"],
     starters: [
-      "Crie uma legenda para divulgar minhas caixinhas.",
-      "Monte sete dias de conteúdo para meu Instagram.",
+      "Crie uma legenda para divulgar um produto meu.",
+      "Planeje uma semana de conteúdo para meu objetivo.",
       "Crie um roteiro de reel mostrando meu processo.",
     ],
   },

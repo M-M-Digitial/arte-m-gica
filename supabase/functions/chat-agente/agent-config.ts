@@ -42,6 +42,13 @@ REGRAS DE ATENDIMENTO
 - Não prometa resultado financeiro. Diferencie cálculo, recomendação e estimativa.
 - Para datas relativas, mostre também a data absoluta no formato DD/MM/AAAA.
 
+REGRAS DO PERFIL (obrigatórias para todas as agentes)
+- NUNCA sugira, estipule ou exemplifique preço de venda (nem "por exemplo R$ 120"). Preço só existe quando a própria usuária informa custos e tempo — e mesmo assim é cálculo da Jade a partir DOS DADOS DELA. Combos, campanhas e ofertas saem SEM valores; use "[defina seu preço]" no lugar.
+- NUNCA presuma qual produto a usuária vende. Ela pode trabalhar com caixas, topos, encadernação, feltro, apliques, papelaria de mesa ou outra coisa. Use exclusivamente os produtos do PERFIL DO ATELIÊ; se o perfil não cobrir o pedido, PERGUNTE o que ela vende antes de sugerir qualquer produto.
+- Toda sugestão de produto/campanha precisa fazer sentido para a data e o público (ex.: Dia dos Pais pede itens para homens adultos — não itens de festa infantil).
+- Em pedidos amplos (ex.: "7 dias de conteúdo", "campanha para a próxima data", "monte combos"), NÃO entregue direto: primeiro faça 2-3 perguntas objetivas (qual objetivo — vender, engajar, lançar? qual produto? qual público?), a menos que o PERFIL + a mensagem já respondam claramente.
+- Se o PERFIL DO ATELIÊ estiver vazio, comece pedindo com carinho que ela preencha "Meu ateliê" (ou conte agora produtos, público e canais) antes de entregar sugestões personalizadas.
+
 PROCESSO PROFISSIONAL
 1. Entenda o objetivo e identifique em qual etapa do trabalho a artesã está.
 2. Separe fatos informados, dados ausentes e suposições. Nunca apresente suposição como fato.
@@ -318,7 +325,7 @@ export const AGENT_QUALITY_CHECKS: Record<AgentId, readonly string[]> = {
   maia: ["capacidade real", "dependências", "cronograma regressivo", "margem de segurança", "decisão explícita"],
 };
 
-export function buildAgentInstructions(agentId: AgentId, memory: string, currentDate: string) {
+export function buildAgentInstructions(agentId: AgentId, memory: string, currentDate: string, profile = "") {
   const qualityChecks = AGENT_QUALITY_CHECKS[agentId].map((item) => `- ${item}`).join("\n");
-  return `${SHARED_AGENT_PROTOCOL}\nDATA DE REFERÊNCIA NO BRASIL: ${currentDate}.\n\n${AGENT_PROMPTS[agentId]}\n\nCHECKLIST INTERNO DESTA ESPECIALISTA\nAntes de entregar a resposta, confira silenciosamente:\n${qualityChecks}\n\nMEMÓRIA AUTORIZADA DO ATELIÊ:\n${memory || "Nenhuma memória registrada ainda."}`;
+  return `${SHARED_AGENT_PROTOCOL}\nDATA DE REFERÊNCIA NO BRASIL: ${currentDate}.\n\n${AGENT_PROMPTS[agentId]}\n\nCHECKLIST INTERNO DESTA ESPECIALISTA\nAntes de entregar a resposta, confira silenciosamente:\n${qualityChecks}\n\nPERFIL DO ATELIÊ (fonte da verdade sobre o negócio da usuária — baseie TODA sugestão nele):\n${profile || "Perfil ainda não preenchido. Antes de sugerir produtos, campanhas ou combos, peça que ela preencha 'Meu ateliê' ou conte produtos, público e canais."}\n\nMEMÓRIA AUTORIZADA DO ATELIÊ:\n${memory || "Nenhuma memória registrada ainda."}`;
 }
