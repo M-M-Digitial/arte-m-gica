@@ -2,14 +2,14 @@
 
 Base compartilhada de dois produtos para artesãs:
 
-- **Meu Ateliê Digital**: nove assistentes de IA para atendimento, orçamento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda.
+- **Meu Ateliê Digital**: oito assistentes de IA para atendimento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda.
 - **MoldePronto**: gerador de moldes personalizados para exportação em PDF, PNG e SVG.
 
 O modo **Meu Ateliê Digital** é publicado em `https://www.appateliedigital.com.br/agentes-artesaos/`, sem substituir o aplicativo existente na raiz do domínio. A mesma rota também aceita o host sem `www` quando ele chega ao servidor principal.
 
 ## Meu Ateliê Digital
 
-As assistentes disponíveis em `/agentes` são Nina, Jade, Iris, Clara, Violeta, Sofia, Bella, Elisa e Maia. O chat usa a OpenAI Responses API com streaming, pesquisa pública, citações, leitura de imagens, transcrição de áudio e memória por usuária.
+As assistentes disponíveis em `/agentes` são Nina, Iris, Clara, Violeta, Sofia, Bella, Elisa e Maia. O chat usa a OpenAI Responses API com streaming, pesquisa pública, citações, leitura de imagens, transcrição de áudio e memória por usuária.
 
 O backend está em `supabase/functions/chat-agente/`. As conversas e memórias ficam no Postgres com RLS; anexos ficam em um bucket privado e são acessados por URLs assinadas.
 

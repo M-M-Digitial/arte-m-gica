@@ -17,12 +17,6 @@ const routines: Array<{
     steps: ["Separar conversas por estágio", "Responder objeções", "Confirmar o próximo passo"],
   },
   {
-    title: "Precificar sem esquecer custos",
-    description: "Confira material, tempo, taxas e lucro antes de enviar um orçamento.",
-    agentId: "jade",
-    steps: ["Levantar custos", "Simular preço", "Gerar orçamento"],
-  },
-  {
     title: "Produzir sem atraso",
     description: "Revise pedidos e distribua as etapas da semana com margem para imprevistos.",
     agentId: "maia",

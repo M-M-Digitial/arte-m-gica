@@ -1,6 +1,5 @@
 export const agentIds = [
   "nina",
-  "jade",
   "iris",
   "clara",
   "violeta",
@@ -33,19 +32,6 @@ export const agents: Agent[] = [
       "Crie uma resposta para uma cliente que achou caro.",
       "Monte minha mensagem de boas-vindas no WhatsApp.",
       "Ajude a fechar este pedido sem pressionar a cliente.",
-    ],
-  },
-  {
-    id: "jade",
-    name: "Jade",
-    title: "Orçamento e Precificação",
-    description:
-      "Calcula material, tempo, custos, taxas e lucro para montar preços sustentáveis e orçamentos fáceis de enviar.",
-    deliverables: ["Custo detalhado", "Preço sugerido", "Orçamento para enviar"],
-    starters: [
-      "Calcule o preço de um pedido a partir dos meus custos.",
-      "Monte um orçamento profissional para este pedido.",
-      "Descubra se estou tendo lucro neste produto.",
     ],
   },
   {
@@ -142,7 +128,8 @@ export const agents: Agent[] = [
 ];
 
 const legacyAgentIds: Record<string, AgentId> = {
-  malu: "jade",
+  malu: "nina",
+  jade: "nina",
   luna: "elisa",
   flora: "maia",
 };

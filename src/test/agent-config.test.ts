@@ -11,8 +11,7 @@ import {
 describe("configuração operacional dos agentes", () => {
   it("mantém o backend alinhado ao catálogo", () => {
     expect(AGENT_IDS).toEqual([
-      "nina",
-      "jade",
+      "nina",
       "iris",
       "clara",
       "violeta",
@@ -32,8 +31,6 @@ describe("configuração operacional dos agentes", () => {
   });
 
   it("define critérios verificáveis para as áreas de maior risco", () => {
-    expect(AGENT_PROMPTS.jade).toContain("Fórmulas visíveis");
-    expect(AGENT_PROMPTS.jade).toContain("preço = custo total");
     expect(AGENT_PROMPTS.bella).toContain("manual ou suporte oficial");
     expect(AGENT_PROMPTS.elisa).toContain("APROVADO, PENDÊNCIA ou RISCO");
     expect(AGENT_PROMPTS.maia).toContain("ACEITAR, RENEGOCIAR ou RECUSAR");

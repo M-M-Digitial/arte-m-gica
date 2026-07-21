@@ -15,8 +15,7 @@ import type { AgentId } from "@/data/agents";
 import { cn } from "@/lib/utils";
 
 const icons: Record<AgentId, LucideIcon> = {
-  nina: MessageCircle,
-  jade: Calculator,
+  nina: MessageCircle,
   iris: Megaphone,
   clara: Instagram,
   violeta: LibraryBig,
@@ -27,8 +26,7 @@ const icons: Record<AgentId, LucideIcon> = {
 };
 
 const colors: Record<AgentId, string> = {
-  nina: "bg-rose-50 text-rose-600",
-  jade: "bg-emerald-50 text-emerald-700",
+  nina: "bg-rose-50 text-rose-600",
   iris: "bg-amber-50 text-amber-700",
   clara: "bg-sky-50 text-sky-700",
   violeta: "bg-violet-50 text-violet-700",
