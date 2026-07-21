@@ -29,14 +29,17 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.ESCOLA_VPS_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "${{ secrets.VPS_PORT || '22' }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.ESCOLA_VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy dist/ to VPS
+      - name: Deploy (release + symlink na VPS da escola)
         run: |
-          # publica a escola DENTRO do slug, sem tocar no app dos moldes na raiz
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.VPS_PORT || '22' }}" \
-            dist/ \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_TARGET_DIR }}agentes-artesaos/"
+          # A escola é servida via proxy da autobox -> crmcreator, de
+          # $ESCOLA_VPS_BASE/current/agentes-artesaos (esquema de releases).
+          REL="$(date +%Y%m%d-%H%M%S)-gh-${GITHUB_SHA::7}"
+          BASE="${{ secrets.ESCOLA_VPS_BASE }}"
+          DEST="${{ secrets.ESCOLA_VPS_USER }}@${{ secrets.ESCOLA_VPS_HOST }}"
+          ssh -i ~/.ssh/deploy_key "$DEST" "mkdir -p '$BASE/releases/$REL/agentes-artesaos'"
+          rsync -az -e "ssh -i ~/.ssh/deploy_key" dist/ "$DEST:$BASE/releases/$REL/agentes-artesaos/"
+          ssh -i ~/.ssh/deploy_key "$DEST" "ln -sfn '$BASE/releases/$REL' '$BASE/current' && ls '$BASE/current/agentes-artesaos/index.html' && cd '$BASE/releases' && ls -dt */ | tail -n +6 | xargs -r rm -rf"
