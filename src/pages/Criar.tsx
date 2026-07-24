@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
-import { streamImageEdgeFunction } from "@/lib/stream-image";
+import { runImageGenerationJob } from "@/lib/image-job";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -427,7 +427,7 @@ export default function Criar() {
     try {
       let gotMeta = false;
       let lastFrameDataUrl: string | null = null;
-      await streamImageEdgeFunction(
+      await runImageGenerationJob(
         "gerar-arte",
         {
           moldeName: selectedMolde.name,
@@ -487,7 +487,7 @@ export default function Criar() {
     try {
       let gotMeta = false;
       let lastFrameDataUrl: string | null = null;
-      await streamImageEdgeFunction(
+      await runImageGenerationJob(
         "gerar-mockup",
         {
           arteImageUrl: generatedImage,

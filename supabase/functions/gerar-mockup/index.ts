@@ -7,6 +7,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// O mockup roda como job em background na OpenAI (Responses API): o "start"
+// cria o job e devolve o id; o front consulta "status" até a imagem ficar
+// pronta. Mesmo modelo do gerar-arte — nenhuma conexão fica presa esperando.
+
 function bytesToBase64(bytes: Uint8Array): string {
   let bin = "";
   const chunk = 0x8000;
@@ -16,56 +20,37 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-function findBase64Image(value: unknown): string | null {
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  for (const key of ["b64_json", "partial_image_b64", "image_b64", "base64"]) {
-    const found = record[key];
-    if (typeof found === "string") return found.startsWith("data:image") ? found.split(",")[1] : found;
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+const isModerationError = (text: string) =>
+  /moderation_blocked|content_policy|safety/i.test(text);
+
+async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
+  const { arteImageUrl, moldeName, temaNome, nome, formato, quality: qualityRaw } = body as Record<string, any>;
+
+  if (!arteImageUrl || !moldeName || !temaNome) {
+    return jsonResponse({ error: "Campos obrigatórios: arteImageUrl, moldeName, temaNome" }, 400);
   }
-  for (const nested of Object.values(record)) {
-    if (Array.isArray(nested)) {
-      for (const item of nested) {
-        const found = findBase64Image(item);
-        if (found) return found;
-      }
-    } else if (nested && typeof nested === "object") {
-      const found = findBase64Image(nested);
-      if (found) return found;
-    }
-  }
-  return null;
-}
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const quality = qualityRaw === "low" ? "low" : qualityRaw === "high" ? "high" : "medium";
 
-  try {
-    const { arteImageUrl, moldeName, temaNome, nome, formato, quality: qualityRaw } = await req.json();
+  const formatoDesc = formato === "story"
+    ? "formato vertical 9:16 para Stories do Instagram"
+    : "formato quadrado 1:1 para Feed do Instagram";
 
-    if (!arteImageUrl || !moldeName || !temaNome) {
-      return new Response(
-        JSON.stringify({ error: "Campos obrigatórios: arteImageUrl, moldeName, temaNome" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const quality = qualityRaw === "low" ? "low" : qualityRaw === "high" ? "high" : "medium";
-
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
-
-    const formatoDesc = formato === "story"
-      ? "formato vertical 9:16 para Stories do Instagram"
-      : "formato quadrado 1:1 para Feed do Instagram";
-
-    const prompt = `Crie uma foto realista de produto para divulgação em redes sociais (${formatoDesc}).
+  const prompt = `Crie uma foto realista de produto para divulgação em redes sociais (${formatoDesc}).
 
 PRODUTO: Uma ${moldeName} montada e pronta, personalizada com o tema "${temaNome}" para "${nome || "festa"}".
 
+A imagem anexa é a ARTE OFICIAL do produto (molde planificado) — use as MESMAS cores, padrões, ilustrações e o mesmo lettering dela.
+
 A IMAGEM DEVE MOSTRAR:
 - A ${moldeName} MONTADA (3D, como produto finalizado, NÃO planificada)
-- Decorada com o tema "${temaNome}" — cores, padrões e elementos do tema
+- Decorada exatamente com a arte anexa aplicada nas faces
 - O nome "${nome}" visível na caixinha
 - Ambientação de mesa de festa com itens decorativos do tema ao fundo (balões, doces, confetes)
 - Iluminação profissional, suave e convidativa
@@ -73,159 +58,123 @@ A IMAGEM DEVE MOSTRAR:
 
 NÃO incluir: textos sobrepostos, watermarks, molduras, logos.`;
 
-    const size = formato === "story" ? "1024x1536" : "1024x1024";
+  const size = formato === "story" ? "1024x1536" : "1024x1024";
 
-    const openaiRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-image-2",
-        prompt,
-        size,
-        n: 1,
-        quality,
-        stream: true,
-        partial_images: 2,
-      }),
-    });
+  const content: Array<Record<string, unknown>> = [{ type: "input_text", text: prompt }];
+  if (typeof arteImageUrl === "string" && /^(https?:|data:image)/.test(arteImageUrl)) {
+    content.push({ type: "input_image", image_url: arteImageUrl });
+  }
 
-    if (!openaiRes.ok || !openaiRes.body) {
-      const errText = await openaiRes.text().catch(() => "");
-      console.error("OpenAI error:", openaiRes.status, errText);
-      const status = openaiRes.status === 429 ? 429 : 500;
-      const msg =
-        openaiRes.status === 429
-          ? "Muitas requisições. Aguarde alguns segundos."
-          : `Erro no serviço de IA: ${openaiRes.status}`;
-      return new Response(JSON.stringify({ error: msg }), {
-        status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-5.4-mini",
+      background: true,
+      store: true,
+      input: [{ role: "user", content }],
+      tools: [{ type: "image_generation", model: "gpt-image-2", size, quality, moderation: "low" }],
+      tool_choice: { type: "image_generation" },
+    }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    console.error("OpenAI create error:", res.status, txt);
+    if (res.status === 429) {
+      return jsonResponse({ error: "Muitas requisições. Aguarde alguns segundos." }, 429);
+    }
+    return jsonResponse({ error: `Erro no serviço de IA: ${res.status}` }, 500);
+  }
+
+  const job = await res.json();
+  if (!job?.id) {
+    console.error("OpenAI create sem id:", JSON.stringify(job).slice(0, 400));
+    return jsonResponse({ error: "A IA não iniciou o mockup. Tente novamente." }, 500);
+  }
+
+  console.log("Mockup job criado:", job.id, "status:", job.status);
+  return jsonResponse({ jobId: job.id });
+}
+
+async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: string) {
+  const jobId = typeof body.jobId === "string" ? body.jobId : "";
+  if (!/^resp_[a-zA-Z0-9_-]+$/.test(jobId)) {
+    return jsonResponse({ error: "jobId inválido" }, 400);
+  }
+
+  const res = await fetch(`https://api.openai.com/v1/responses/${jobId}`, {
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    console.error("OpenAI poll error:", res.status, txt);
+    return jsonResponse({ error: `Erro ao consultar o mockup: ${res.status}` }, 500);
+  }
+  const job = await res.json();
+
+  if (job.status === "queued" || job.status === "in_progress") {
+    return jsonResponse({ status: "processing" });
+  }
+
+  if (job.status !== "completed") {
+    const errText = JSON.stringify(job.error ?? job.incomplete_details ?? {});
+    console.error("Mockup job não completou:", job.status, errText);
+    if (isModerationError(errText)) {
+      return jsonResponse({
+        status: "error",
+        error: "A OpenAI bloqueou este mockup por segurança. Tente outro tema ou nome.",
+        code: "OPENAI_MODERATION_BLOCKED",
       });
     }
+    return jsonResponse({ status: "error", error: "A IA não conseguiu gerar o mockup. Tente novamente." });
+  }
 
-    const upstreamCT = openaiRes.headers.get("content-type") || "";
-    const isSSE = upstreamCT.includes("text/event-stream");
-    console.log("OpenAI upstream content-type:", upstreamCT, "isSSE:", isSSE);
+  const call = (job.output ?? []).find((o: Record<string, unknown>) => o.type === "image_generation_call");
+  const b64 = typeof call?.result === "string" ? call.result : null;
+  if (!b64) {
+    console.error("Mockup completou sem imagem:", JSON.stringify((job.output ?? []).map((o: Record<string, unknown>) => o.type)));
+    return jsonResponse({ status: "error", error: "A IA não retornou o mockup. Tente novamente." });
+  }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const finalizeAndUpload = async (
-      b64: string,
-      writer: WritableStreamDefaultWriter<Uint8Array>,
-      encoder: TextEncoder,
-    ) => {
-      try {
-        const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const fileName = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-        const filePath = `public/${fileName}`;
-        const { error: upErr } = await supabase.storage
-          .from("artes-geradas")
-          .upload(filePath, bytes, { contentType: "image/png", upsert: false });
-        if (upErr) { console.error("upload error:", upErr); return; }
-        const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
-        const meta = {
-          type: "meta.uploaded",
-          mockupUrl: pub.publicUrl,
-          mockupBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
-        };
-        await writer.write(encoder.encode(`event: meta.uploaded\ndata: ${JSON.stringify(meta)}\n\n`));
-      } catch (e) {
-        console.error("upload step error:", e);
-      }
-    };
-
-    if (!isSSE) {
-      const json = await openaiRes.json().catch((e) => {
-        console.error("Failed to parse OpenAI JSON:", e);
-        return null;
-      });
-      const b64: string | undefined = json?.data?.[0]?.b64_json;
-      if (!b64) {
-        console.error("OpenAI non-SSE response had no b64_json:", JSON.stringify(json).slice(0, 500));
-        return new Response(
-          JSON.stringify({ error: "A IA não retornou o mockup. Tente novamente." }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const { readable, writable } = new TransformStream();
-      const writer = writable.getWriter();
-      const encoder = new TextEncoder();
-      (async () => {
-        try {
-          const evt = { type: "image_generation.completed", b64_json: b64, created_at: Date.now() };
-          await writer.write(encoder.encode(`event: image_generation.completed\ndata: ${JSON.stringify(evt)}\n\n`));
-          await finalizeAndUpload(b64, writer, encoder);
-        } finally {
-          try { await writer.close(); } catch {}
-        }
-      })();
-      return new Response(readable, {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "X-Accel-Buffering": "no",
-        },
-      });
-    }
-
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const encoder = new TextEncoder();
-
-    (async () => {
-      const reader = openaiRes.body!.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let finalB64: string | null = null;
-      let lastB64: string | null = null;
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          await writer.write(value);
-          buf += decoder.decode(value, { stream: true });
-          let match;
-          while ((match = buf.match(/\r?\n\r?\n/))) {
-            const block = buf.slice(0, match.index);
-            buf = buf.slice((match.index ?? 0) + match[0].length);
-            let evt = "";
-            let data = "";
-            for (const line of block.split("\n")) {
-              if (line.startsWith("event:")) evt = line.slice(6).trim();
-              else if (line.startsWith("data:")) data += line.slice(5).trim();
-            }
-            if (evt.includes("image_generation") && data) {
-              try {
-                const b64 = findBase64Image(JSON.parse(data));
-                if (b64) {
-                  lastB64 = b64;
-                  if (evt.includes("completed") || evt.includes("final")) finalB64 = b64;
-                }
-              } catch {}
-            }
-          }
-        }
-        const imageToUpload = finalB64 || lastB64;
-        if (imageToUpload) await finalizeAndUpload(imageToUpload, writer, encoder);
-        else console.error("SSE stream ended without any image event");
-      } catch (e) {
-        console.error("stream pump error:", e);
-      } finally {
-        try { await writer.close(); } catch {}
-      }
-    })();
-
-    return new Response(readable, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no",
-      },
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const fileName = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+  const filePath = `public/${fileName}`;
+  const { error: upErr } = await supabase.storage
+    .from("artes-geradas")
+    .upload(filePath, bytes, { contentType: "image/png", upsert: false });
+  if (upErr) {
+    console.error("upload error:", upErr);
+    return jsonResponse({
+      status: "done",
+      mockupUrl: null,
+      mockupBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
     });
+  }
+  const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
+  return jsonResponse({
+    status: "done",
+    mockupUrl: pub.publicUrl,
+    mockupBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+
+    const body = (await req.json()) as Record<string, unknown>;
+
+    if (body.action === "status") {
+      return await handleStatus(body, OPENAI_API_KEY);
+    }
+    return await handleStart(body, OPENAI_API_KEY);
   } catch (error) {
     console.error("gerar-mockup error:", error);
     return new Response(

@@ -10,6 +10,11 @@ const corsHeaders = {
 
 const COTA_MENSAL = 30; // artes com IA por usuário/mês (admins: ilimitado)
 
+// A geração roda como job em background na OpenAI (Responses API): o "start"
+// cria o job e devolve o id; o front consulta "status" até a imagem ficar
+// pronta. Nenhuma requisição fica presa esperando a IA — o fluxo antigo de
+// stream morria quando a conexão edge→OpenAI caía no silêncio antes do final.
+
 // extrai user id/email do JWT já verificado pelo gateway (verify_jwt=true)
 function parseJwt(authHeader: string | null): { sub: string | null; email: string | null } {
   try {
@@ -24,7 +29,7 @@ function parseJwt(authHeader: string | null): { sub: string | null; email: strin
 const normalizeTheme = (value: string) =>
   value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
 
 const protectedThemeAlternatives: Array<[RegExp, string]> = [
@@ -167,180 +172,152 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-function findBase64Image(value: unknown): string | null {
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  for (const key of ["b64_json", "partial_image_b64", "image_b64", "base64"]) {
-    const found = record[key];
-    if (typeof found === "string") return found.startsWith("data:image") ? found.split(",")[1] : found;
-  }
-  for (const nested of Object.values(record)) {
-    if (Array.isArray(nested)) {
-      for (const item of nested) {
-        const found = findBase64Image(item);
-        if (found) return found;
-      }
-    } else if (nested && typeof nested === "object") {
-      const found = findBase64Image(nested);
-      if (found) return found;
-    }
-  }
-  return null;
-}
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+const isModerationError = (text: string) =>
+  /moderation_blocked|content_policy|safety/i.test(text);
+
+// ---- START: cria o job em background na OpenAI ----
+async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
+  const { moldeName, moldeTemplateUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode } = body as Record<string, any>;
+
+  const quality = qualityRaw === "low" ? "low" : "high";
+
+  if (!moldeName || !temaNome || !nome) {
+    return jsonResponse({ error: "Campos obrigatórios: moldeName, temaNome, nome" }, 400);
   }
 
-  try {
-    const { moldeName, moldeTemplateUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw } = await req.json();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const adminDb = createClient(supabaseUrl, supabaseKey);
 
-    // Rascunho rápido usa "low"; qualquer outro valor mantém "high" (comportamento de produção intacto).
-    const quality = qualityRaw === "low" ? "low" : "high";
-
-    if (!moldeName || !temaNome || !nome) {
-      return new Response(
-        JSON.stringify({ error: "Campos obrigatórios: moldeName, temaNome, nome" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
-    }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const adminDb = createClient(supabaseUrl, supabaseKey);
-
-    // ---- COTA MENSAL (admins ilimitado) ----
-    const { sub: userId, email: userEmail } = parseJwt(req.headers.get("Authorization"));
-    if (userId) {
-      const { data: roleRow } = await adminDb
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
-      if (!roleRow) {
-        const inicioMes = new Date();
-        inicioMes.setUTCDate(1); inicioMes.setUTCHours(0, 0, 0, 0);
-        const { count } = await adminDb
-          .from("geracoes_ia")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .gte("created_at", inicioMes.toISOString());
-        if ((count ?? 0) >= COTA_MENSAL) {
-          return new Response(
-            JSON.stringify({
-              error: `Você já usou suas ${COTA_MENSAL} artes com IA deste mês! Elas renovam dia 1º. Enquanto isso, o Compositor de Kits é ilimitado 💖`,
-              code: "QUOTA_EXCEEDED",
-            }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+  // ---- COTA MENSAL (admins ilimitado) ----
+  const { sub: userId, email: userEmail } = parseJwt(
+    (body.__authHeader as string | null) ?? null,
+  );
+  if (userId) {
+    const { data: roleRow } = await adminDb
+      .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+    if (!roleRow) {
+      const inicioMes = new Date();
+      inicioMes.setUTCDate(1); inicioMes.setUTCHours(0, 0, 0, 0);
+      const { count } = await adminDb
+        .from("geracoes_ia")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("created_at", inicioMes.toISOString());
+      if ((count ?? 0) >= COTA_MENSAL) {
+        return jsonResponse({
+          error: `Você já usou suas ${COTA_MENSAL} artes com IA deste mês! Elas renovam dia 1º. Enquanto isso, o Compositor de Kits é ilimitado 💖`,
+          code: "QUOTA_EXCEEDED",
+        });
       }
     }
+  }
 
-    const colorsDesc = corDominante
-      ? `Cor dominante/principal: ${corDominante}. Use esta cor como destaque principal.`
-      : temaColors?.length
-        ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
-        : "";
+  const colorsDesc = corDominante
+    ? `Cor dominante/principal: ${corDominante}. Use esta cor como destaque principal.`
+    : temaColors?.length
+      ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
+      : "";
 
-    const safeThemeDesc = getSafeThemeDescription(temaNome);
-    const idadeText = idade ? ` — incluir o número "${idade}" como numeral decorativo, sem mencionar idade ou aniversário` : "";
-    const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — usar como lettering curto em uma face secundária do molde.` : "";
+  const safeThemeDesc = getSafeThemeDescription(temaNome);
+  const idadeText = idade ? ` — incluir o número "${idade}" como numeral decorativo, sem mencionar idade ou aniversário` : "";
+  const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — usar como lettering curto em uma face secundária do molde.` : "";
 
-    const fonteMap: Record<string, string> = {
-      divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
-      elegante: "fonte fina, serifada e sofisticada",
-      negrito: "fonte grossa, bold e impactante tipo poster",
-      manuscrita: "fonte manuscrita/cursiva como escrita à mão",
-      fantasia: "fonte decorativa e fantasiosa combinando com o tema",
-      minimalista: "fonte clean, sans-serif moderna e minimalista",
-      retro: "fonte vintage/retrô com estilo nostálgico",
-    };
-    const fonteDesc = fonteMap[fonteEstilo || "divertida"] || fonteMap.divertida;
+  const fonteMap: Record<string, string> = {
+    divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
+    elegante: "fonte fina, serifada e sofisticada",
+    negrito: "fonte grossa, bold e impactante tipo poster",
+    manuscrita: "fonte manuscrita/cursiva como escrita à mão",
+    fantasia: "fonte decorativa e fantasiosa combinando com o tema",
+    minimalista: "fonte clean, sans-serif moderna e minimalista",
+    retro: "fonte vintage/retrô com estilo nostálgico",
+  };
+  const fonteDesc = fonteMap[fonteEstilo || "divertida"] || fonteMap.divertida;
 
-    const drawMap: Record<string, string> = {
-      cartoon: "estilo cartoon colorido, desenho animado vibrante com contornos definidos",
-      aquarela: "estilo aquarela artístico com pinceladas suaves, tons delicados e textura de papel",
-      flat: "estilo flat design vetorial, formas geométricas limpas, cores sólidas, sem sombras",
-      realista: "estilo realista com ilustrações detalhadas, texturas e sombras naturais",
-      kawaii: "estilo kawaii japonês, personagens fofos com olhos grandes, cores pastel suaves",
-      handdrawn: "estilo desenhado à mão, traço manual irregular, visual artesanal e autêntico",
-      "3d": "estilo 3D com volume, profundidade, sombras e efeitos de perspectiva",
-      pixel: "estilo pixel art retro, pixels visíveis, paleta limitada, visual de jogo clássico",
-    };
-    const drawDesc = drawMap[desenhoEstilo || "cartoon"] || drawMap.cartoon;
+  const drawMap: Record<string, string> = {
+    cartoon: "estilo cartoon colorido, desenho animado vibrante com contornos definidos",
+    aquarela: "estilo aquarela artístico com pinceladas suaves, tons delicados e textura de papel",
+    flat: "estilo flat design vetorial, formas geométricas limpas, cores sólidas, sem sombras",
+    realista: "estilo realista com ilustrações detalhadas, texturas e sombras naturais",
+    kawaii: "estilo kawaii japonês, personagens fofos com olhos grandes, cores pastel suaves",
+    handdrawn: "estilo desenhado à mão, traço manual irregular, visual artesanal e autêntico",
+    "3d": "estilo 3D com volume, profundidade, sombras e efeitos de perspectiva",
+    pixel: "estilo pixel art retro, pixels visíveis, paleta limitada, visual de jogo clássico",
+  };
+  const drawDesc = drawMap[desenhoEstilo || "cartoon"] || drawMap.cartoon;
 
-    const densityMap: Record<string, string> = {
-      minimalista: "design MINIMALISTA — poucos elementos, muito espaço em branco, clean e elegante, apenas o essencial",
-      equilibrado: "design EQUILIBRADO — quantidade moderada de elementos decorativos, nem vazio nem cheio demais",
-      decorado: "design DECORADO — bastante detalhes, enfeites, padrões e elementos decorativos em todas as faces",
-      maximalista: "design MAXIMALISTA — extremamente cheio de elementos, cores vibrantes, padrões complexos, sem espaço vazio, muitos detalhes e enfeites por toda parte",
-    };
-    const densityDesc = densityMap[densidadeVisual || "equilibrado"] || densityMap.equilibrado;
+  const densityMap: Record<string, string> = {
+    minimalista: "design MINIMALISTA — poucos elementos, muito espaço em branco, clean e elegante, apenas o essencial",
+    equilibrado: "design EQUILIBRADO — quantidade moderada de elementos decorativos, nem vazio nem cheio demais",
+    decorado: "design DECORADO — bastante detalhes, enfeites, padrões e elementos decorativos em todas as faces",
+    maximalista: "design MAXIMALISTA — extremamente cheio de elementos, cores vibrantes, padrões complexos, sem espaço vazio, muitos detalhes e enfeites por toda parte",
+  };
+  const densityDesc = densityMap[densidadeVisual || "equilibrado"] || densityMap.equilibrado;
 
-    // Baixa o template do molde
-    let templateBytes: Uint8Array | null = null;
-    let templateBlob: Blob | null = null;
-    let outputSize = "1024x1536";
-    if (moldeTemplateUrl) {
-      try {
-        const tmplRes = await fetch(moldeTemplateUrl);
-        if (tmplRes.ok) {
-          const buf = new Uint8Array(await tmplRes.arrayBuffer());
-          templateBytes = buf;
-          templateBlob = new Blob([buf], { type: tmplRes.headers.get("content-type") || "image/png" });
-          let w = 0, h = 0;
-          if (buf[0] === 0x89 && buf[1] === 0x50) {
-            w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
-            h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
-          } else if (buf[0] === 0xff && buf[1] === 0xd8) {
-            let i = 2;
-            while (i < buf.length) {
-              if (buf[i] !== 0xff) break;
-              const marker = buf[i + 1];
-              const len = (buf[i + 2] << 8) | buf[i + 3];
-              if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-                h = (buf[i + 5] << 8) | buf[i + 6];
-                w = (buf[i + 7] << 8) | buf[i + 8];
-                break;
-              }
-              i += 2 + len;
+  // Baixa o template do molde
+  let templateBytes: Uint8Array | null = null;
+  let outputSize = "1024x1536";
+  if (moldeTemplateUrl) {
+    try {
+      const tmplRes = await fetch(moldeTemplateUrl);
+      if (tmplRes.ok) {
+        const buf = new Uint8Array(await tmplRes.arrayBuffer());
+        templateBytes = buf;
+        let w = 0, h = 0;
+        if (buf[0] === 0x89 && buf[1] === 0x50) {
+          w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+          h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+        } else if (buf[0] === 0xff && buf[1] === 0xd8) {
+          let i = 2;
+          while (i < buf.length) {
+            if (buf[i] !== 0xff) break;
+            const marker = buf[i + 1];
+            const len = (buf[i + 2] << 8) | buf[i + 3];
+            if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+              h = (buf[i + 5] << 8) | buf[i + 6];
+              w = (buf[i + 7] << 8) | buf[i + 8];
+              break;
             }
+            i += 2 + len;
           }
-          if (w > 0 && h > 0) {
-            const ratio = w / h;
-            if (ratio > 1.15) outputSize = "1536x1024";
-            else if (ratio < 0.87) outputSize = "1024x1536";
-            else outputSize = "1024x1024";
-            console.log(`Template ${w}x${h} ratio=${ratio.toFixed(2)} -> output ${outputSize}`);
-          }
-        } else {
-          console.warn("Template fetch failed:", tmplRes.status);
         }
-      } catch (e) {
-        console.warn("Template fetch error:", e);
-      }
-    }
-
-    // A4 — constrói a máscara de edição a partir do template (só PNG).
-    let maskBlob: Blob | null = null;
-    if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
-      try {
-        const maskBytes = buildEditMask(templateBytes);
-        if (maskBytes) {
-          maskBlob = new Blob([new Uint8Array(maskBytes)], { type: "image/png" });
-          console.log("Máscara de edição construída.");
+        if (w > 0 && h > 0) {
+          const ratio = w / h;
+          if (ratio > 1.15) outputSize = "1536x1024";
+          else if (ratio < 0.87) outputSize = "1024x1536";
+          else outputSize = "1024x1024";
+          console.log(`Template ${w}x${h} ratio=${ratio.toFixed(2)} -> output ${outputSize}`);
         }
-      } catch (e) {
-        console.warn("Falha ao construir máscara — seguindo sem ela:", e);
+      } else {
+        console.warn("Template fetch failed:", tmplRes.status);
       }
+    } catch (e) {
+      console.warn("Template fetch error:", e);
     }
+  }
 
-    // Prompt de EDIÇÃO — o molde já está pronto na imagem de entrada
-    const editPrompt = `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
+  // A4 — constrói a máscara de edição a partir do template (só PNG).
+  let maskDataUrl: string | null = null;
+  if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
+    try {
+      const maskBytes = buildEditMask(templateBytes);
+      if (maskBytes) {
+        maskDataUrl = `data:image/png;base64,${bytesToBase64(new Uint8Array(maskBytes))}`;
+        console.log("Máscara de edição construída.");
+      }
+    } catch (e) {
+      console.warn("Falha ao construir máscara — seguindo sem ela:", e);
+    }
+  }
+
+  // Prompt de EDIÇÃO — o molde já está pronto na imagem de entrada
+  const editPrompt = `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
 
 TAREFA: aplicar decoração temática APENAS dentro das faces internas do molde, sem alterar absolutamente nada da estrutura.
 
@@ -365,48 +342,8 @@ PROIBIÇÕES DE CONTEÚDO:
 
 Resultado: o MESMO molde da entrada, com decoração aplicada dentro das faces, linhas técnicas intactas, fundo branco.`;
 
-    // Monta a requisição à OpenAI. `legacy` desliga os recursos novos
-    // (máscara + streaming) e reproduz o comportamento antigo comprovado.
-    const requestOpenAIImage = (activePrompt: string, useMask: boolean, legacy: boolean) => {
-      if (templateBlob) {
-        const form = new FormData();
-        form.append("model", "gpt-image-2");
-        form.append("prompt", activePrompt);
-        form.append("size", outputSize);
-        form.append("n", "1");
-        form.append("quality", quality);
-        if (!legacy) {
-          form.append("stream", "true");
-          form.append("partial_images", "2");
-        }
-        form.append("image", templateBlob, "template.png");
-        if (useMask && maskBlob) form.append("mask", maskBlob, "mask.png");
-        return fetch("https://api.openai.com/v1/images/edits", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-          body: form,
-        });
-      }
-      return fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-image-2",
-          prompt: activePrompt,
-          size: outputSize,
-          n: 1,
-          quality,
-          moderation: "low",
-          ...(legacy ? {} : { stream: true, partial_images: 2 }),
-        }),
-      });
-    };
-
-    const fallbackPrompt = templateBlob
-      ? `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
+  const fallbackPrompt = templateBytes
+    ? `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
 
 TAREFA: aplicar decoração genérica e segura APENAS dentro das faces internas, sem alterar a estrutura.
 
@@ -417,7 +354,7 @@ REGRAS ABSOLUTAS:
 
 DECORAÇÃO: ${safeThemeDesc}. ${colorsDesc} Estilo: ${drawDesc}. Densidade: ${densityDesc}.
 Sem nomes, sem idade, sem crianças, sem personagens registrados, sem marcas, sem pessoas reais. Apenas padrões, flores, estrelas, laços e elementos abstratos originais.`
-      : `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
+    : `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
 
 TEMA VISUAL: ${safeThemeDesc}.
 ${colorsDesc}
@@ -430,209 +367,191 @@ REGRAS:
 3. Linhas de corte contínuas, linhas de dobra pontilhadas, abas de colagem e fundo branco.
 4. Alta resolução, visual alegre, profissional e artesanal.`;
 
-    let usedSafeFallback = false;
+  const usedSafeFallback = safeMode === true;
+  const activePrompt = usedSafeFallback ? fallbackPrompt : editPrompt;
 
-    const json429 = () =>
-      new Response(
-        JSON.stringify({ error: "Muitas requisições. Aguarde alguns segundos e tente de novo." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-
-    const moderationBlockedJson = () =>
-      new Response(
-        JSON.stringify({
-          error: "A OpenAI bloqueou este tema por segurança. Gere uma arte segura pelo modelo alternativo do app.",
-          code: "OPENAI_MODERATION_BLOCKED",
-          fallback: {
-            safeThemeDescription: safeThemeDesc,
-            message: "Use o fallback local para criar uma arte decorativa sem personagens, marcas ou pessoas reais.",
-          },
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-
-    // Resolve a resposta da imagem com degradação graciosa:
-    // 1) tentativa moderna (máscara + streaming)
-    // 2) se falhar por parâmetro não suportado → modo legado (sem máscara/stream)
-    // 3) se for moderação → prompt seguro
-    const resolveImageResponse = async (): Promise<{ ok: Response } | { early: Response }> => {
-      // 1) moderna
-      let res = await requestOpenAIImage(editPrompt, true, false);
-      if (res.ok) return { ok: res };
-      if (res.status === 429) return { early: json429() };
-      let txt = await res.text();
-      console.error("OpenAI error:", res.status, txt);
-
-      if (!txt.includes("moderation_blocked")) {
-        // 2) pode ser rejeição de stream/mask → retenta no modo legado comprovado
-        console.warn("Retentando em modo legado (sem máscara/stream).");
-        res = await requestOpenAIImage(editPrompt, false, true);
-        if (res.ok) return { ok: res };
-        if (res.status === 429) return { early: json429() };
-        txt = await res.text();
-        console.error("OpenAI legacy error:", res.status, txt);
-        if (!txt.includes("moderation_blocked")) {
-          throw new Error(`Erro no serviço de IA: ${res.status}`);
-        }
-      }
-
-      // 3) moderação → prompt seguro (modo legado por segurança)
-      usedSafeFallback = true;
-      res = await requestOpenAIImage(fallbackPrompt, false, true);
-      if (res.ok) return { ok: res };
-      const ftxt = await res.text().catch(() => "");
-      console.error("OpenAI fallback error:", res.status, ftxt);
-      return { early: moderationBlockedJson() };
-    };
-
-    const resolved = await resolveImageResponse();
-    if ("early" in resolved) return resolved.early;
-    const response = resolved.ok;
-
-    // geração aconteceu — registra o uso da cota (best-effort)
-    if (userId) {
-      adminDb.from("geracoes_ia").insert({ user_id: userId, email: userEmail }).then(({ error }) => {
-        if (error) console.warn("registro de cota falhou:", error.message);
+  const createJob = async (withMask: boolean) => {
+    const content: Array<Record<string, unknown>> = [{ type: "input_text", text: activePrompt }];
+    if (templateBytes) {
+      content.push({
+        type: "input_image",
+        image_url: `data:image/png;base64,${bytesToBase64(templateBytes)}`,
       });
     }
-
-    // Compõe as linhas do molde na imagem final, sobe pro Storage e emite o meta.
-    const finalizeAndUpload = async (
-      b64: string,
-      writer: WritableStreamDefaultWriter<Uint8Array>,
-      encoder: TextEncoder,
-    ) => {
-      try {
-        let bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-        if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
-          try {
-            bytes = new Uint8Array(compositeMoldLines(templateBytes, bytes));
-            console.log("Mold lines composited successfully.");
-          } catch (e) {
-            console.warn("Composite step skipped:", e);
-          }
-        }
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const fileName = `arte_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-        const filePath = `public/${fileName}`;
-        const { error: upErr } = await supabase.storage
-          .from("artes-geradas")
-          .upload(filePath, bytes, { contentType: "image/png", upsert: false });
-        if (upErr) {
-          console.error("upload error:", upErr);
-          return;
-        }
-        const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
-        const meta = {
-          type: "meta.uploaded",
-          imageUrl: pub.publicUrl,
-          imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
-          usedSafeFallback,
-        };
-        await writer.write(encoder.encode(`event: meta.uploaded\ndata: ${JSON.stringify(meta)}\n\n`));
-      } catch (e) {
-        console.error("finalize step error:", e);
-      }
+    const tool: Record<string, unknown> = {
+      type: "image_generation",
+      model: "gpt-image-2",
+      size: outputSize,
+      quality,
+      moderation: "low",
     };
-
-    const upstreamCT = response.headers.get("content-type") || "";
-    const isSSE = upstreamCT.includes("text/event-stream");
-    console.log("OpenAI upstream content-type:", upstreamCT, "isSSE:", isSSE);
-
-    // Caminho sem streaming (modo legado ou upstream que devolveu JSON):
-    // embrulha a imagem única num evento SSE + meta, mantendo o front unificado.
-    if (!isSSE) {
-      const json = await response.json().catch((e) => {
-        console.error("Failed to parse OpenAI JSON:", e);
-        return null;
-      });
-      const b64: string | undefined = json?.data?.[0]?.b64_json;
-      if (!b64) {
-        console.error("OpenAI non-SSE response had no b64_json:", JSON.stringify(json).slice(0, 500));
-        return new Response(
-          JSON.stringify({ error: "A IA não gerou a imagem. Tente novamente." }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const { readable, writable } = new TransformStream();
-      const writer = writable.getWriter();
-      const encoder = new TextEncoder();
-      (async () => {
-        try {
-          const evt = { type: "image_generation.completed", b64_json: b64, created_at: Date.now() };
-          await writer.write(encoder.encode(`event: image_generation.completed\ndata: ${JSON.stringify(evt)}\n\n`));
-          await finalizeAndUpload(b64, writer, encoder);
-        } finally {
-          try { await writer.close(); } catch {}
-        }
-      })();
-      return new Response(readable, {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "X-Accel-Buffering": "no",
-        },
-      });
-    }
-
-    // Caminho com streaming: repassa os frames parciais ao cliente e, ao final,
-    // compõe as linhas + faz upload + emite meta.uploaded.
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const encoder = new TextEncoder();
-
-    (async () => {
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      let finalB64: string | null = null;
-      let lastB64: string | null = null;
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          await writer.write(value);
-          buf += decoder.decode(value, { stream: true });
-          let match;
-          while ((match = buf.match(/\r?\n\r?\n/))) {
-            const block = buf.slice(0, match.index);
-            buf = buf.slice((match.index ?? 0) + match[0].length);
-            let evt = "";
-            let data = "";
-            for (const line of block.split("\n")) {
-              if (line.startsWith("event:")) evt = line.slice(6).trim();
-              else if (line.startsWith("data:")) data += line.slice(5).trim();
-            }
-            if (evt.includes("image_generation") && data) {
-              try {
-                const b64 = findBase64Image(JSON.parse(data));
-                if (b64) {
-                  lastB64 = b64;
-                  if (evt.includes("completed") || evt.includes("final")) finalB64 = b64;
-                }
-              } catch {}
-            }
-          }
-        }
-        const imageToUpload = finalB64 || lastB64;
-        if (imageToUpload) await finalizeAndUpload(imageToUpload, writer, encoder);
-        else console.error("SSE stream ended without any image event");
-      } catch (e) {
-        console.error("stream pump error:", e);
-      } finally {
-        try { await writer.close(); } catch {}
-      }
-    })();
-
-    return new Response(readable, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no",
-      },
+    if (withMask && maskDataUrl) tool.input_image_mask = { image_url: maskDataUrl };
+    return await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-5.4-mini",
+        background: true,
+        store: true,
+        input: [{ role: "user", content }],
+        tools: [tool],
+        tool_choice: { type: "image_generation" },
+      }),
     });
+  };
+
+  let res = await createJob(true);
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error("OpenAI create error:", res.status, txt);
+    if (res.status === 429) {
+      return jsonResponse({ error: "Muitas requisições. Aguarde alguns segundos e tente de novo." }, 429);
+    }
+    if (isModerationError(txt) && !usedSafeFallback) {
+      return jsonResponse({
+        error: "A OpenAI bloqueou este tema por segurança.",
+        code: "OPENAI_MODERATION_BLOCKED",
+      });
+    }
+    // pode ser rejeição da máscara → retenta sem ela
+    res = await createJob(false);
+    if (!res.ok) {
+      const txt2 = await res.text();
+      console.error("OpenAI create (sem máscara) error:", res.status, txt2);
+      if (res.status === 429) {
+        return jsonResponse({ error: "Muitas requisições. Aguarde alguns segundos e tente de novo." }, 429);
+      }
+      if (isModerationError(txt2) && !usedSafeFallback) {
+        return jsonResponse({
+          error: "A OpenAI bloqueou este tema por segurança.",
+          code: "OPENAI_MODERATION_BLOCKED",
+        });
+      }
+      return jsonResponse({ error: `Erro no serviço de IA: ${res.status}` }, 500);
+    }
+  }
+
+  const job = await res.json();
+  if (!job?.id) {
+    console.error("OpenAI create sem id:", JSON.stringify(job).slice(0, 400));
+    return jsonResponse({ error: "A IA não iniciou a geração. Tente novamente." }, 500);
+  }
+
+  // job criado — registra o uso da cota (best-effort)
+  if (userId) {
+    adminDb.from("geracoes_ia").insert({ user_id: userId, email: userEmail }).then(({ error }) => {
+      if (error) console.warn("registro de cota falhou:", error.message);
+    });
+  }
+
+  console.log("Job criado:", job.id, "status:", job.status, "quality:", quality);
+  return jsonResponse({ jobId: job.id, usedSafeFallback });
+}
+
+// ---- STATUS: consulta o job; quando pronto, compõe as linhas + sobe pro Storage ----
+async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: string) {
+  const jobId = typeof body.jobId === "string" ? body.jobId : "";
+  if (!/^resp_[a-zA-Z0-9_-]+$/.test(jobId)) {
+    return jsonResponse({ error: "jobId inválido" }, 400);
+  }
+
+  const res = await fetch(`https://api.openai.com/v1/responses/${jobId}`, {
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => "");
+    console.error("OpenAI poll error:", res.status, txt);
+    return jsonResponse({ error: `Erro ao consultar a geração: ${res.status}` }, 500);
+  }
+  const job = await res.json();
+
+  if (job.status === "queued" || job.status === "in_progress") {
+    return jsonResponse({ status: "processing" });
+  }
+
+  if (job.status !== "completed") {
+    const errText = JSON.stringify(job.error ?? job.incomplete_details ?? {});
+    console.error("Job não completou:", job.status, errText);
+    if (isModerationError(errText)) {
+      return jsonResponse({
+        status: "error",
+        error: "A OpenAI bloqueou este tema por segurança.",
+        code: "OPENAI_MODERATION_BLOCKED",
+      });
+    }
+    return jsonResponse({ status: "error", error: "A IA não conseguiu gerar a imagem. Tente novamente." });
+  }
+
+  const call = (job.output ?? []).find((o: Record<string, unknown>) => o.type === "image_generation_call");
+  const b64 = typeof call?.result === "string" ? call.result : null;
+  if (!b64) {
+    console.error("Job completou sem imagem:", JSON.stringify((job.output ?? []).map((o: Record<string, unknown>) => o.type)));
+    return jsonResponse({ status: "error", error: "A IA não gerou a imagem. Tente novamente." });
+  }
+
+  let bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+  // Compõe as linhas do molde por cima da arte final (garantia determinística).
+  const moldeTemplateUrl = typeof body.moldeTemplateUrl === "string" ? body.moldeTemplateUrl : "";
+  if (moldeTemplateUrl) {
+    try {
+      const tmplRes = await fetch(moldeTemplateUrl);
+      if (tmplRes.ok) {
+        const templateBytes = new Uint8Array(await tmplRes.arrayBuffer());
+        if (templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
+          bytes = new Uint8Array(compositeMoldLines(templateBytes, bytes));
+          console.log("Mold lines composited successfully.");
+        }
+      }
+    } catch (e) {
+      console.warn("Composite step skipped:", e);
+    }
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const fileName = `arte_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+  const filePath = `public/${fileName}`;
+  const { error: upErr } = await supabase.storage
+    .from("artes-geradas")
+    .upload(filePath, bytes, { contentType: "image/png", upsert: false });
+  if (upErr) {
+    console.error("upload error:", upErr);
+    return jsonResponse({
+      status: "done",
+      imageUrl: null,
+      imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+    });
+  }
+  const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
+  return jsonResponse({
+    status: "done",
+    imageUrl: pub.publicUrl,
+    imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+  });
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
+    }
+
+    const body = (await req.json()) as Record<string, unknown>;
+
+    if (body.action === "status") {
+      return await handleStatus(body, OPENAI_API_KEY);
+    }
+
+    // o parseJwt precisa do header original — passa por dentro do body interno
+    body.__authHeader = req.headers.get("Authorization");
+    return await handleStart(body, OPENAI_API_KEY);
   } catch (error) {
     console.error("gerar-arte error:", error);
     return new Response(
