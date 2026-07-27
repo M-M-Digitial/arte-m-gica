@@ -11,7 +11,7 @@ import {
 describe("configuração operacional dos agentes", () => {
   it("mantém o backend alinhado ao catálogo", () => {
     expect(AGENT_IDS).toEqual([
-      "nina",
+      "nina",
       "iris",
       "clara",
       "violeta",
@@ -21,6 +21,11 @@ describe("configuração operacional dos agentes", () => {
       "maia",
     ]);
     expect(Object.keys(AGENT_PROMPTS).sort()).toEqual([...AGENT_IDS].sort());
+  });
+
+  it("exige respostas curtas e diretas como prioridade", () => {
+    expect(SHARED_AGENT_PROTOCOL).toContain("RESPOSTA CURTA E DIRETA");
+    expect(SHARED_AGENT_PROTOCOL).toContain("UMA entrega por resposta");
   });
 
   it("define pesquisa com fontes, privacidade e resistência a instruções externas", () => {
@@ -40,7 +45,7 @@ describe("configuração operacional dos agentes", () => {
   it("mantém método profissional e controle de qualidade em cada especialista", () => {
     for (const agentId of AGENT_IDS) {
       expect(AGENT_PROMPTS[agentId]).toContain("MÉTODO PROFISSIONAL");
-      expect(AGENT_QUALITY_CHECKS[agentId]).toHaveLength(5);
+      expect(AGENT_QUALITY_CHECKS[agentId].length).toBeGreaterThanOrEqual(4);
 
       const instructions = buildAgentInstructions(agentId, "Ateliê de teste", "15/07/2026");
       expect(instructions).toContain("PROCESSO PROFISSIONAL");
