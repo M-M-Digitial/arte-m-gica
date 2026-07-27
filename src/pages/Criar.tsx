@@ -327,6 +327,8 @@ export default function Criar() {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [qualidade, setQualidade] = useState<"low" | "medium">("medium");
   const [fraseBusy, setFraseBusy] = useState(false);
+  // Personalização em formato de quiz: uma pergunta por tela
+  const [quizPergunta, setQuizPergunta] = useState(0);
 
   // Gera uma frase fofa via chat-agente (streaming SSE no formato chat/completions)
   const gerarFrase = async () => {
@@ -411,6 +413,7 @@ export default function Criar() {
 
   const handleSelectMolde = (mold: any) => {
     setSelectedMolde(mold);
+    setQuizPergunta(0);
     setStep(3);
   };
 
@@ -945,32 +948,33 @@ export default function Criar() {
           </section>
         )}
 
-        {/* ─── STEP 3: PERSONALIZAR ─── */}
+        {/* ─── STEP 3: PERSONALIZAR (quiz de seleção) ─── */}
         {step === 3 && (
-          <section className="max-w-lg mx-auto animate-fade-in space-y-8">
-            <div className="flex items-start gap-4">
-              <button
-                onClick={() => setStep(2)}
-                className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors mt-1"
-              >
-                <ArrowLeft className="h-4 w-4 text-foreground" />
-              </button>
-              <div className="space-y-1">
+          <section key={quizPergunta} className="max-w-lg mx-auto animate-fade-in space-y-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => (quizPergunta === 0 ? setStep(2) : setQuizPergunta(quizPergunta - 1))}
+                  className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4 text-foreground" />
+                </button>
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                  Passo 3
+                  Personalizar · {quizPergunta + 1} de 7
                 </p>
-                <h1 className="font-display text-3xl font-semibold text-foreground">
-                  Personalizar
-                </h1>
+              </div>
+              <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                <div
+                  className="h-full rounded-full gradient-hero transition-all duration-300"
+                  style={{ width: `${((quizPergunta + 1) / 7) * 100}%` }}
+                />
               </div>
             </div>
 
-            {/* Dados */}
-            <div className="space-y-5">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Dados do homenageado
-              </h3>
-              <div className="space-y-3">
+            {/* 1 · Nome e idade */}
+            {quizPergunta === 0 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Pra quem é essa arte?</h1>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2 space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">Nome *</label>
@@ -978,7 +982,8 @@ export default function Criar() {
                       placeholder="Ex: Maria Clara"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      className="h-11 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
+                      onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizPergunta(1); }}
+                      className="h-12 bg-secondary border-0 rounded-xl text-base focus-visible:ring-1 focus-visible:ring-foreground"
                       maxLength={50}
                       autoFocus
                     />
@@ -989,14 +994,156 @@ export default function Criar() {
                       placeholder="5"
                       value={idade}
                       onChange={(e) => setIdade(e.target.value)}
-                      className="h-11 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
+                      onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizPergunta(1); }}
+                      className="h-12 bg-secondary border-0 rounded-xl text-base focus-visible:ring-1 focus-visible:ring-foreground"
                       maxLength={3}
                     />
                   </div>
                 </div>
+                <Button
+                  onClick={() => setQuizPergunta(1)}
+                  disabled={!nome.trim()}
+                  className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated transition-all"
+                >
+                  Continuar <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            )}
+
+            {/* 2 · Estilo de desenho */}
+            {quizPergunta === 1 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Qual estilo de desenho?</h1>
+                <p className="text-sm text-muted-foreground -mt-4">Toque em uma opção para continuar.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {DRAW_STYLES.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => { setDesenhoEstilo(d.id); setQuizPergunta(2); }}
+                      className={`p-4 rounded-2xl text-left transition-all duration-200 ${
+                        desenhoEstilo === d.id
+                          ? "gradient-hero text-white shadow-soft"
+                          : "bg-secondary hover:bg-accent text-foreground hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <p className="text-2xl">{d.emoji}</p>
+                      <p className="text-sm font-semibold mt-1.5">{d.label}</p>
+                      <p className={`text-[11px] mt-0.5 ${desenhoEstilo === d.id ? "text-white/70" : "text-muted-foreground"}`}>{d.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3 · Estilo da fonte */}
+            {quizPergunta === 2 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Como escrever "{nome.trim() || "o nome"}"?</h1>
+                <p className="text-sm text-muted-foreground -mt-4">Toque em uma opção para continuar.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {FONT_STYLES.map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => { setFonteEstilo(f.id); setQuizPergunta(3); }}
+                      className={`p-4 rounded-2xl text-left transition-all duration-200 ${
+                        fonteEstilo === f.id
+                          ? "gradient-hero text-white shadow-soft"
+                          : "bg-secondary hover:bg-accent text-foreground hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <p className="text-2xl">{f.emoji}</p>
+                      <p className="text-sm font-semibold mt-1.5">{f.label}</p>
+                      <p className={`text-[11px] mt-0.5 ${fonteEstilo === f.id ? "text-white/70" : "text-muted-foreground"}`}>{f.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 4 · Densidade visual */}
+            {quizPergunta === 3 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Quanto enfeite você quer?</h1>
+                <p className="text-sm text-muted-foreground -mt-4">Toque em uma opção para continuar.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {DENSITY_STYLES.map((d) => (
+                    <button
+                      key={d.id}
+                      onClick={() => { setDensidadeVisual(d.id); setQuizPergunta(4); }}
+                      className={`p-4 rounded-2xl text-left transition-all duration-200 ${
+                        densidadeVisual === d.id
+                          ? "gradient-hero text-white shadow-soft"
+                          : "bg-secondary hover:bg-accent text-foreground hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <p className="text-2xl">{d.emoji}</p>
+                      <p className="text-sm font-semibold mt-1.5">{d.label}</p>
+                      <p className={`text-[11px] mt-0.5 ${densidadeVisual === d.id ? "text-white/70" : "text-muted-foreground"}`}>{d.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5 · Cor de destaque */}
+            {quizPergunta === 4 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Tem uma cor de destaque?</h1>
+                <button
+                  onClick={() => { setCorDominante(""); setQuizPergunta(5); }}
+                  className={`w-full p-4 rounded-2xl text-left transition-all duration-200 ${
+                    !corDominante
+                      ? "gradient-hero text-white shadow-soft"
+                      : "bg-secondary hover:bg-accent text-foreground"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">🎨 Automática</p>
+                  <p className={`text-[11px] mt-0.5 ${!corDominante ? "text-white/70" : "text-muted-foreground"}`}>
+                    uso a paleta do tema {selectedTema?.name}
+                  </p>
+                </button>
+                <div className="grid grid-cols-6 gap-3">
+                  {COR_PRESETS.map((cor) => (
+                    <button
+                      key={cor}
+                      onClick={() => { setCorDominante(cor); setQuizPergunta(5); }}
+                      className={`aspect-square rounded-2xl transition-all duration-200 ${
+                        corDominante === cor ? "ring-2 ring-primary ring-offset-2 scale-105" : "hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: cor }}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-muted-foreground">Outra cor:</label>
+                  <input
+                    type="color"
+                    value={corDominante || "#FF69B4"}
+                    onChange={(e) => setCorDominante(e.target.value)}
+                    className="h-9 w-12 rounded-lg cursor-pointer border-0 bg-transparent"
+                  />
+                  {corDominante && (
+                    <span className="text-[11px] font-mono text-muted-foreground">{corDominante}</span>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="ml-auto h-9 rounded-full text-xs font-semibold"
+                    onClick={() => setQuizPergunta(5)}
+                  >
+                    Continuar <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 6 · Frase especial */}
+            {quizPergunta === 5 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Quer uma frase especial?</h1>
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-muted-foreground">Frase personalizada</label>
+                    <label className="text-xs font-medium text-muted-foreground">Aparece em uma face do molde</label>
                     <button
                       type="button"
                       onClick={gerarFrase}
@@ -1011,226 +1158,108 @@ export default function Criar() {
                     placeholder="Ex: Obrigada por celebrar comigo!"
                     value={frase}
                     onChange={(e) => setFrase(e.target.value)}
-                    className="h-11 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
+                    className="h-12 bg-secondary border-0 rounded-xl text-sm focus-visible:ring-1 focus-visible:ring-foreground"
                     maxLength={80}
                   />
                 </div>
-              </div>
-            </div>
-
-            <div className="border-t border-border/60" />
-
-            {/* Cor dominante */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Cor dominante
-                </h3>
-                <span className="text-[10px] text-muted-foreground/60">opcional</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setCorDominante("")}
-                  className={`h-8 px-3 rounded-full text-xs font-medium transition-all ${
-                    !corDominante
-                      ? "gradient-hero text-white shadow-soft"
-                      : "bg-secondary text-muted-foreground hover:bg-accent"
-                  }`}
-                >
-                  Auto
-                </button>
-                {COR_PRESETS.map((cor) => (
-                  <button
-                    key={cor}
-                    onClick={() => setCorDominante(cor)}
-                    className={`h-8 w-8 rounded-full transition-all duration-200 ${
-                      corDominante === cor
-                        ? "ring-2 ring-primary ring-offset-2 scale-110"
-                        : "hover:scale-110"
-                    }`}
-                    style={{ backgroundColor: cor }}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-xs text-muted-foreground">Personalizada:</label>
-                <input
-                  type="color"
-                  value={corDominante || "#FF69B4"}
-                  onChange={(e) => setCorDominante(e.target.value)}
-                  className="h-7 w-10 rounded-lg cursor-pointer border-0 bg-transparent"
-                />
-                {corDominante && (
-                  <span className="text-[11px] font-mono text-muted-foreground">{corDominante}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="border-t border-border/60" />
-
-            {/* Estilo de fonte */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Estilo da fonte
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {FONT_STYLES.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setFonteEstilo(f.id)}
-                    className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
-                      fonteEstilo === f.id
-                        ? "gradient-hero text-white shadow-soft"
-                        : "bg-secondary hover:bg-accent text-foreground"
-                    }`}
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="secondary"
+                    className="h-12 rounded-full text-sm font-semibold"
+                    onClick={() => { setFrase(""); setQuizPergunta(6); }}
                   >
-                    <p className="text-sm font-medium">{f.emoji} {f.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${fonteEstilo === f.id ? "text-white/70" : "text-muted-foreground"}`}>
-                      {f.desc}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-border/60" />
-
-            {/* Estilo de desenho */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Estilo de desenho
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {DRAW_STYLES.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => setDesenhoEstilo(d.id)}
-                    className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
-                      desenhoEstilo === d.id
-                        ? "gradient-hero text-white shadow-soft"
-                        : "bg-secondary hover:bg-accent text-foreground"
-                    }`}
+                    Sem frase
+                  </Button>
+                  <Button
+                    className="h-12 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
+                    onClick={() => setQuizPergunta(6)}
                   >
-                    <p className="text-sm font-medium">{d.emoji} {d.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${desenhoEstilo === d.id ? "text-white/70" : "text-muted-foreground"}`}>
-                      {d.desc}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-t border-border/60" />
-
-            {/* Densidade visual */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Densidade visual
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {DENSITY_STYLES.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => setDensidadeVisual(d.id)}
-                    className={`relative p-3 rounded-xl text-left transition-all duration-200 ${
-                      densidadeVisual === d.id
-                        ? "gradient-hero text-white shadow-soft"
-                        : "bg-secondary hover:bg-accent text-foreground"
-                    }`}
-                  >
-                    <p className="text-sm font-medium">{d.emoji} {d.label}</p>
-                    <p className={`text-[10px] mt-0.5 ${densidadeVisual === d.id ? "text-white/70" : "text-muted-foreground"}`}>
-                      {d.desc}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Preview */}
-            {nome.trim() && (
-              <>
-                <div className="border-t border-border/60" />
-                <div className="rounded-2xl bg-secondary p-4 space-y-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Resumo
-                  </p>
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground">
-                    <span className="bg-background px-2.5 py-1 rounded-lg font-medium">{selectedTema?.name}</span>
-                    <span className="text-border">·</span>
-                    <span className="bg-background px-2.5 py-1 rounded-lg">{selectedMolde?.name}</span>
-                    <span className="text-border">·</span>
-                    <span className="bg-background px-2.5 py-1 rounded-lg font-semibold" style={corDominante ? { color: corDominante } : undefined}>
-                      {nome}{idade && ` (${idade})`}
-                    </span>
-                    <span className="text-border">·</span>
-                    <span className="bg-background px-2.5 py-1 rounded-lg">{FONT_STYLES.find(f => f.id === fonteEstilo)?.label}</span>
-                    <span className="text-border">·</span>
-                    <span className="bg-background px-2.5 py-1 rounded-lg">{DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}</span>
-                    <span className="text-border">·</span>
-                    <span className="bg-background px-2.5 py-1 rounded-lg">{DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}</span>
-                  </div>
+                    Continuar <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </div>
-              </>
+              </div>
             )}
 
-            <div className="border-t border-border/60" />
+            {/* 7 · Revisão e qualidade */}
+            {quizPergunta === 6 && (
+              <div className="space-y-6">
+                <h1 className="font-display text-3xl font-semibold text-foreground">Tudo pronto?</h1>
+                <p className="text-sm text-muted-foreground -mt-4">Toque em um item para ajustar.</p>
+                <div className="rounded-2xl bg-secondary p-4">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-foreground">
+                    <button className="bg-background px-2.5 py-1 rounded-lg font-medium hover:ring-1 hover:ring-primary/50" onClick={() => setStep(1)}>{selectedTema?.name}</button>
+                    <span className="text-border">·</span>
+                    <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setStep(2)}>{selectedMolde?.name}</button>
+                    <span className="text-border">·</span>
+                    <button className="bg-background px-2.5 py-1 rounded-lg font-semibold hover:ring-1 hover:ring-primary/50" style={corDominante ? { color: corDominante } : undefined} onClick={() => setQuizPergunta(0)}>
+                      {nome}{idade && ` (${idade})`}
+                    </button>
+                    <span className="text-border">·</span>
+                    <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(1)}>{DRAW_STYLES.find(d => d.id === desenhoEstilo)?.label}</button>
+                    <span className="text-border">·</span>
+                    <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(2)}>{FONT_STYLES.find(f => f.id === fonteEstilo)?.label}</button>
+                    <span className="text-border">·</span>
+                    <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(3)}>{DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}</button>
+                    {frase.trim() && (
+                      <>
+                        <span className="text-border">·</span>
+                        <button className="bg-background px-2.5 py-1 rounded-lg italic hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(5)}>“{frase.trim()}”</button>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            {/* Qualidade */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Qualidade da geração
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setQualidade("low")}
-                  className={`p-3 rounded-xl text-left transition-all duration-200 ${
-                    qualidade === "low"
-                      ? "gradient-hero text-white shadow-soft"
-                      : "bg-secondary hover:bg-accent text-foreground"
-                  }`}
-                >
-                  <p className="text-sm font-medium flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5" /> Rascunho rápido
-                  </p>
-                  <p className={`text-[10px] mt-0.5 ${qualidade === "low" ? "text-white/70" : "text-muted-foreground"}`}>
-                    ~10–60s · ideal para testar
-                  </p>
-                </button>
-                <button
-                  onClick={() => setQualidade("medium")}
-                  className={`p-3 rounded-xl text-left transition-all duration-200 ${
-                    qualidade === "medium"
-                      ? "gradient-hero text-white shadow-soft"
-                      : "bg-secondary hover:bg-accent text-foreground"
-                  }`}
-                >
-                  <p className="text-sm font-medium flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" /> Final
-                  </p>
-                  <p className={`text-[10px] mt-0.5 ${qualidade === "medium" ? "text-white/70" : "text-muted-foreground"}`}>
-                    ~5m · alta fidelidade
-                  </p>
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setQualidade("low")}
+                    className={`p-3 rounded-xl text-left transition-all duration-200 ${
+                      qualidade === "low"
+                        ? "gradient-hero text-white shadow-soft"
+                        : "bg-secondary hover:bg-accent text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5" /> Rascunho rápido
+                    </p>
+                    <p className={`text-[10px] mt-0.5 ${qualidade === "low" ? "text-white/70" : "text-muted-foreground"}`}>
+                      ~10–60s · ideal para testar
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setQualidade("medium")}
+                    className={`p-3 rounded-xl text-left transition-all duration-200 ${
+                      qualidade === "medium"
+                        ? "gradient-hero text-white shadow-soft"
+                        : "bg-secondary hover:bg-accent text-foreground"
+                    }`}
+                  >
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5" /> Final
+                    </p>
+                    <p className={`text-[10px] mt-0.5 ${qualidade === "medium" ? "text-white/70" : "text-muted-foreground"}`}>
+                      ~5m · alta fidelidade
+                    </p>
+                  </button>
+                </div>
+
+                {/* Spacer for fixed button on mobile */}
+                <div className="h-20 sm:hidden" />
+
+                {/* Generate button — fixed on mobile */}
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 glass border-t border-border/40 z-40 sm:static sm:p-0 sm:bg-transparent sm:border-0 sm:backdrop-blur-none">
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={!nome.trim()}
+                    className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all"
+                    style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Gerar arte com IA
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            {/* Spacer for fixed button on mobile */}
-            <div className="h-20 sm:hidden" />
-
-            {/* Generate button — fixed on mobile */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 glass border-t border-border/40 z-40 sm:static sm:p-0 sm:bg-transparent sm:border-0 sm:backdrop-blur-none">
-              <Button
-                onClick={handleGenerate}
-                disabled={!nome.trim()}
-                className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all"
-                style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Gerar arte com IA
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
+            )}
           </section>
         )}
 
