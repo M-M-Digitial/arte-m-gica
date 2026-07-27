@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
 import { runImageGenerationJob } from "@/lib/image-job";
+import { Thumb } from "@/components/Thumb";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -734,7 +735,7 @@ export default function Criar() {
             className="inline-flex items-center gap-2 bg-secondary hover:bg-accent text-foreground pl-1.5 pr-3 py-1.5 rounded-full text-xs font-medium transition-colors"
           >
             {themeImages[selectedTema.name] && (
-              <img src={themeImages[selectedTema.name]} alt="" className="h-5 w-5 rounded-full object-cover" />
+              <Thumb src={themeImages[selectedTema.name]} size={64} alt="" className="h-5 w-5 rounded-full object-cover" />
             )}
             {selectedTema.name}
           </button>
@@ -747,7 +748,7 @@ export default function Criar() {
               className="inline-flex items-center gap-2 bg-secondary hover:bg-accent text-foreground pl-1.5 pr-3 py-1.5 rounded-full text-xs font-medium transition-colors"
             >
               {moldImages[selectedMolde.name] && (
-                <img src={moldImages[selectedMolde.name]} alt="" className="h-5 w-5 object-contain" />
+                <Thumb src={moldImages[selectedMolde.name]} size={64} alt="" className="h-5 w-5 object-contain" />
               )}
               {selectedMolde.name}
             </button>
@@ -858,8 +859,9 @@ export default function Criar() {
                       className="group relative aspect-square rounded-2xl overflow-hidden bg-secondary focus:outline-none focus:ring-2 focus:ring-foreground focus:ring-offset-2 transition-all duration-300 hover:shadow-elevated"
                     >
                       {image ? (
-                        <img
+                        <Thumb
                           src={image}
+                          size={480}
                           alt={tema.name}
                           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
@@ -920,8 +922,9 @@ export default function Criar() {
                     >
                       <div className="aspect-square flex items-center justify-center p-6">
                         {image ? (
-                          <img
+                          <Thumb
                             src={image}
+                            size={480}
                             alt={mold.name}
                             className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-105"
                           />

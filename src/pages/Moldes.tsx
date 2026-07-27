@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
+import { Thumb } from "@/components/Thumb";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,7 @@ export default function Moldes() {
                 <CardContent className="p-0">
                   <div className="h-40 bg-card flex items-center justify-center relative overflow-hidden p-3">
                     {image ? (
-                      <img src={image} alt={mold.name} loading="lazy" width={512} height={512}
+                      <Thumb src={image} size={512} alt={mold.name} width={512} height={512}
                         className="h-full w-auto object-contain group-hover:scale-110 transition-transform duration-300" />
                     ) : (
                       <span className="text-5xl group-hover:scale-110 transition-transform">{mold.emoji || '📦'}</span>

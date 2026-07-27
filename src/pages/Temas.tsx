@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Sparkles } from "lucide-react";
+import { Thumb } from "@/components/Thumb";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,7 +132,7 @@ export default function Temas() {
                 <CardContent className="p-0">
                   <div className="h-40 bg-card flex items-center justify-center relative overflow-hidden">
                     {image ? (
-                      <img src={image} alt={theme.name} loading="lazy" width={512} height={384}
+                      <Thumb src={image} size={512} alt={theme.name} width={512} height={384}
                         className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                     ) : (
                       <span className="text-5xl group-hover:scale-110 transition-transform">{theme.emoji || '🎉'}</span>

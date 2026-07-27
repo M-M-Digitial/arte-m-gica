@@ -15,6 +15,7 @@ import {
   downloadDataUrl,
   type TemaAsset,
 } from "@/lib/compose-kit";
+import { Thumb } from "@/components/Thumb";
 
 interface TemaCard {
   slug: string;
@@ -230,11 +231,11 @@ export default function Editor() {
                 >
                   <div className="aspect-square bg-secondary relative">
                     {t.papel && (
-                      <img src={t.papel} alt="" loading="lazy"
+                      <Thumb src={t.papel} size={320} alt=""
                         className="absolute inset-0 w-full h-full object-cover opacity-60" />
                     )}
                     {t.capa && (
-                      <img src={t.capa} alt={t.name} loading="lazy"
+                      <Thumb src={t.capa} size={320} alt={t.name}
                         className="absolute inset-0 w-full h-full object-contain p-2 drop-shadow-md group-hover:scale-105 transition-transform" />
                     )}
                     {themeSlug === t.slug && (
@@ -279,7 +280,7 @@ export default function Editor() {
                   >
                     <div className="aspect-[4/3] bg-white flex items-center justify-center">
                       {m.image_url ? (
-                        <img src={m.image_url} alt={m.name} loading="lazy" className="w-full h-full object-contain p-1" />
+                        <Thumb src={m.image_url} size={320} alt={m.name} className="w-full h-full object-contain p-1" />
                       ) : (
                         <span className="text-3xl">📦</span>
                       )}
@@ -328,7 +329,7 @@ export default function Editor() {
                           : "border-border/40 hover:border-primary/40"
                       }`}
                     >
-                      <img src={c.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                      <Thumb src={c.url} size={160} alt="" className="w-full h-full object-contain" />
                     </button>
                   ))}
                 </div>
