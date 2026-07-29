@@ -2,8 +2,8 @@
 
 Base compartilhada de dois produtos para artesãs:
 
-- **Meu Ateliê Digital**: oito assistentes de IA para atendimento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda.
-- **MoldePronto**: gerador de moldes personalizados para exportação em PDF, PNG e SVG.
+- **Meu Ateliê Digital**: oito assistentes de IA para atendimento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda. As respostas seguem a regra de ouro de brevidade: uma entrega por resposta.
+- **MoldePronto**: gerador de moldes personalizados para exportação em PDF, PNG e SVG. Inclui o Compositor de Kits (composição local com a biblioteca de temas), o Criar com IA (personalização em quiz de 7 perguntas; geração via job em background da OpenAI Responses API com gpt-image-2), o histórico "Minhas Artes" e a "Galeria" universal (tabela `minhas_artes`), com refazer trocando só o nome. Miniaturas das galerias saem do transformador de imagens do Storage (`src/lib/thumb.ts`).
 
 O modo **Meu Ateliê Digital** é publicado em `https://www.appateliedigital.com.br/agentes-artesaos/`, sem substituir o aplicativo existente na raiz do domínio. A mesma rota também aceita o host sem `www` quando ele chega ao servidor principal.
 
@@ -35,8 +35,8 @@ O webhook `supabase/functions/hotmart-webhook/` ativa compras aprovadas e revoga
 ## Infraestrutura
 
 - Supabase: projeto `qdwhwxboocplmnmczkfj`.
-- OpenAI: `gpt-5.4-mini` para chat e memória; `gpt-4o-mini-transcribe` para áudio.
-- Deploy: push na `main` aciona o GitHub Actions e publica o build da escola na VPS.
+- OpenAI: `gpt-5.4-mini` para chat e memória; `gpt-4o-mini-transcribe` para áudio; `gpt-image-2` para artes e mockups (jobs em background — o front consulta o status, nada fica preso esperando).
+- Deploy: push na `main` publica o MoldePronto (raiz, VPS autobox) via `deploy-gerador.yml`; a escola publica por `deploy.yml` (dispatch manual) na VPS crmcreator com esquema de releases. O nginx serve `index.html` com `no-cache` e `assets/` imutável.
 - Segredos das Edge Functions: `OPENAI_API_KEY` e `HOTMART_HOTTOK`.
 
 ## Verificação

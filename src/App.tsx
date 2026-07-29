@@ -14,6 +14,7 @@ import AgenteChat from "./pages/AgenteChat";
 import Dashboard from "./pages/Dashboard";
 import Moldes from "./pages/Moldes";
 import MinhasArtes from "./pages/MinhasArtes";
+import Galeria from "./pages/Galeria";
 import ModelosProntos from "./pages/ModelosProntos";
 import Temas from "./pages/Temas";
 import Editor from "./pages/Editor";
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/criar" element={<ProductRoute feature="generator"><RequireAssinatura><Criar /></RequireAssinatura></ProductRoute>} />
               <Route path="/moldes" element={<ProductRoute feature="generator"><Moldes /></ProductRoute>} />
               <Route path="/minhas-artes" element={<ProductRoute feature="generator"><RequireAssinatura><MinhasArtes /></RequireAssinatura></ProductRoute>} />
+              <Route path="/galeria" element={<ProductRoute feature="generator"><RequireAssinatura><Galeria /></RequireAssinatura></ProductRoute>} />
               <Route path="/modelos-prontos" element={<ProductRoute feature="generator"><RequireAssinatura><ModelosProntos /></RequireAssinatura></ProductRoute>} />
               <Route path="/temas" element={<ProductRoute feature="generator"><Temas /></ProductRoute>} />
               <Route path="/editor" element={<ProductRoute feature="generator"><RequireAssinatura><Editor /></RequireAssinatura></ProductRoute>} />

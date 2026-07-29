@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Thumb } from "@/components/Thumb";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 export interface ArteSalva {
@@ -31,14 +32,18 @@ export interface ArteSalva {
 export default function MinhasArtes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [excluindo, setExcluindo] = useState<string | null>(null);
 
   const { data: artes, isLoading } = useQuery({
-    queryKey: ["minhas-artes"],
+    queryKey: ["minhas-artes", user?.id],
+    enabled: !!user,
     queryFn: async (): Promise<ArteSalva[]> => {
+      // a tabela é a galeria universal — aqui filtramos só as artes da dona
       const { data, error } = await (supabase as any)
         .from("minhas_artes")
         .select("*")
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
