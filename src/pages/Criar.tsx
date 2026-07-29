@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
+import { useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -329,6 +330,31 @@ export default function Criar() {
   const [fraseBusy, setFraseBusy] = useState(false);
   // Personalização em formato de quiz: uma pergunta por tela
   const [quizPergunta, setQuizPergunta] = useState(0);
+  // Histórico: id da arte salva nesta sessão e modo "refazer com outro nome"
+  const [arteSalvaId, setArteSalvaId] = useState<string | null>(null);
+  const [refazendo, setRefazendo] = useState(false);
+  const location = useLocation();
+
+  // Chegou de "Minhas Artes" com uma receita: pré-preenche tudo e pede só o nome
+  useEffect(() => {
+    const r = (location.state as any)?.refazer;
+    if (!r) return;
+    setSelectedTema({ name: r.tema_nome, colors: r.tema_colors ?? undefined });
+    setSelectedMolde({ name: r.molde_name, template_png_url: r.molde_template_url ?? undefined });
+    setNome("");
+    setIdade(r.idade ?? "");
+    setFrase(r.frase ?? "");
+    setCorDominante(r.cor_dominante ?? "");
+    setFonteEstilo(r.fonte_estilo ?? "divertida");
+    setDesenhoEstilo(r.desenho_estilo ?? "cartoon");
+    setDensidadeVisual(r.densidade_visual ?? "equilibrado");
+    setQualidade(r.qualidade === "low" ? "low" : "medium");
+    setRefazendo(true);
+    setQuizPergunta(0);
+    setStep(3);
+    window.history.replaceState({}, "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Gera uma frase fofa via chat-agente (streaming SSE no formato chat/completions)
   const gerarFrase = async () => {
@@ -428,9 +454,11 @@ export default function Criar() {
     setPreviewIsFinal(false);
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
+    setArteSalvaId(null);
     try {
       let gotMeta = false;
       let lastFrameDataUrl: string | null = null;
+      let metaFinal: any = null;
       await runImageGenerationJob(
         "gerar-arte",
         {
@@ -458,6 +486,7 @@ export default function Criar() {
           },
           onMeta: (meta) => {
             gotMeta = true;
+            metaFinal = meta;
             if (meta.imageBase64) setGeneratedImageBase64(meta.imageBase64);
             if (meta.imageUrl || meta.imageBase64) {
               setGeneratedImage(meta.imageUrl ?? meta.imageBase64);
@@ -469,6 +498,37 @@ export default function Criar() {
         if (!lastFrameDataUrl) throw new Error("A IA não terminou de gerar a imagem. Tente novamente.");
         setGeneratedImage(lastFrameDataUrl);
         setGeneratedImageBase64(lastFrameDataUrl);
+      }
+      // Salva no histórico "Minhas Artes" (best-effort; não atrapalha a entrega)
+      if (metaFinal?.imageUrl) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: salva } = await (supabase as any)
+              .from("minhas_artes")
+              .insert({
+                user_id: user.id,
+                tema_nome: selectedTema.name,
+                tema_colors: selectedTema.colors ?? null,
+                molde_name: selectedMolde.name,
+                molde_template_url: (selectedMolde as any).template_png_url || (selectedMolde as any).image_url || null,
+                nome: nome.trim(),
+                idade: idade.trim() || null,
+                frase: frase.trim() || null,
+                cor_dominante: corDominante || null,
+                fonte_estilo: fonteEstilo,
+                desenho_estilo: desenhoEstilo,
+                densidade_visual: densidadeVisual,
+                qualidade,
+                image_url: metaFinal.imageUrl,
+              })
+              .select("id")
+              .single();
+            if (salva?.id) setArteSalvaId(salva.id);
+          }
+        } catch (e) {
+          console.warn("não consegui salvar no histórico:", e);
+        }
       }
       toast.success("Arte gerada com sucesso!");
     } catch (err: any) {
@@ -514,6 +574,15 @@ export default function Criar() {
             if (meta.mockupBase64) setMockupImageBase64(meta.mockupBase64);
             if (meta.mockupUrl || meta.mockupBase64) {
               setMockupImage(meta.mockupUrl ?? meta.mockupBase64);
+            }
+            if (arteSalvaId && meta.mockupUrl) {
+              (supabase as any)
+                .from("minhas_artes")
+                .update({ mockup_url: meta.mockupUrl })
+                .eq("id", arteSalvaId)
+                .then(({ error }: { error: unknown }) => {
+                  if (error) console.warn("não consegui salvar o mockup no histórico:", error);
+                });
             }
           },
         }
@@ -975,6 +1044,11 @@ export default function Criar() {
             {quizPergunta === 0 && (
               <div className="space-y-6">
                 <h1 className="font-display text-3xl font-semibold text-foreground">Pra quem é essa arte?</h1>
+                {refazendo && (
+                  <p className="text-sm text-muted-foreground -mt-4">
+                    Refazendo <strong>{selectedTema?.name} · {selectedMolde?.name}</strong> — só digite o novo nome. 💛
+                  </p>
+                )}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-2 space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">Nome *</label>
@@ -982,7 +1056,7 @@ export default function Criar() {
                       placeholder="Ex: Maria Clara"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizPergunta(1); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizPergunta(refazendo ? 6 : 1); }}
                       className="h-12 bg-secondary border-0 rounded-xl text-base focus-visible:ring-1 focus-visible:ring-foreground"
                       maxLength={50}
                       autoFocus
@@ -994,19 +1068,29 @@ export default function Criar() {
                       placeholder="5"
                       value={idade}
                       onChange={(e) => setIdade(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizPergunta(1); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizPergunta(refazendo ? 6 : 1); }}
                       className="h-12 bg-secondary border-0 rounded-xl text-base focus-visible:ring-1 focus-visible:ring-foreground"
                       maxLength={3}
                     />
                   </div>
                 </div>
                 <Button
-                  onClick={() => setQuizPergunta(1)}
+                  onClick={() => setQuizPergunta(refazendo ? 6 : 1)}
                   disabled={!nome.trim()}
                   className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated transition-all"
                 >
-                  Continuar <ArrowRight className="h-4 w-4 ml-2" />
+                  {refazendo ? "Revisar e gerar" : "Continuar"} <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
+                {refazendo && (
+                  <button
+                    type="button"
+                    onClick={() => { if (nome.trim()) setQuizPergunta(1); }}
+                    disabled={!nome.trim()}
+                    className="w-full text-center text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
+                  >
+                    Quero ajustar os estilos também
+                  </button>
+                )}
               </div>
             )}
 
