@@ -461,7 +461,8 @@ export default function Editor() {
                           themeSlug === t.slug ? "border-primary shadow-soft" : "border-transparent hover:border-primary/40"
                         }`}
                       >
-                        <div className="aspect-square bg-secondary relative">
+                        {/* altura fixa: aspect-ratio dentro de <button> não gera altura aqui e o overflow-hidden cortava o desenho */}
+                        <div className="h-24 bg-secondary relative">
                           {t.papel && (
                             <Thumb src={t.papel} size={160} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
                           )}
@@ -484,6 +485,9 @@ export default function Editor() {
           )}
 
           {quizEtapa === 1 && (
+            // wrapper simples: como filho direto do grid do DialogContent, o grid
+            // interno com max-h tinha as linhas esmagadas (cards de 44px cortados)
+            <div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1">
               {(moldes ?? []).map((m: any) => (
                 <button
@@ -493,7 +497,8 @@ export default function Editor() {
                     moldeId === m.id ? "border-primary shadow-soft" : "border-border/40 hover:border-primary/40"
                   }`}
                 >
-                  <div className="aspect-[4/3] bg-white flex items-center justify-center">
+                  {/* altura fixa: aspect-ratio dentro de <button> não gera altura aqui e o overflow-hidden cortava o desenho */}
+                  <div className="h-32 bg-white flex items-center justify-center">
                     {m.image_url ? (
                       <Thumb src={m.image_url} size={320} alt={m.name} className="w-full h-full object-contain p-1" />
                     ) : (
@@ -506,6 +511,7 @@ export default function Editor() {
                   </div>
                 </button>
               ))}
+            </div>
             </div>
           )}
 
