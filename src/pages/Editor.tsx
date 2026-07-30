@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,9 @@ export default function Editor() {
   const [busy, setBusy] = useState(false);
   const [cliparts, setCliparts] = useState<{ url: string; role: string }[]>([]);
   const [principalUrl, setPrincipalUrl] = useState<string>("");
+  // Quiz guiado em pop-up: tema → molde → nome → toque final
+  const [quizAberto, setQuizAberto] = useState(true);
+  const [quizEtapa, setQuizEtapa] = useState(0);
 
   // ao trocar de tema, carrega os cliparts p/ escolha do personagem em destaque
   useEffect(() => {
@@ -188,10 +192,17 @@ export default function Editor() {
             no capricho de estúdio, editável e sem gastar nada por arte.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
           <Badge variant="secondary" className="text-xs">💯 {temas?.length ?? "…"} temas</Badge>
           <Badge variant="secondary" className="text-xs">📦 {moldes?.length ?? "…"} moldes</Badge>
           <Badge variant="secondary" className="text-xs">⚡ na hora</Badge>
+          <Button
+            size="sm"
+            onClick={() => { setQuizEtapa(0); setQuizAberto(true); }}
+            className="h-8 rounded-full text-xs gradient-hero border-0 text-white shadow-soft"
+          >
+            <Wand2 className="h-3.5 w-3.5 mr-1.5" /> Modo guiado
+          </Button>
         </div>
       </div>
 
@@ -395,6 +406,178 @@ export default function Editor() {
           )}
         </CardContent>
       </Card>
+
+      {/* QUIZ GUIADO EM POP-UP */}
+      <Dialog open={quizAberto} onOpenChange={setQuizAberto}>
+        <DialogContent className="max-w-2xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">
+              {quizEtapa === 0 && "Qual o tema da festa? 🎉"}
+              {quizEtapa === 1 && "Qual molde você quer?"}
+              {quizEtapa === 2 && "Pra quem é o kit?"}
+              {quizEtapa === 3 && "Último toque ✨"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center gap-3">
+            {quizEtapa > 0 && (
+              <button
+                onClick={() => setQuizEtapa(quizEtapa - 1)}
+                className="h-8 w-8 shrink-0 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 text-foreground" />
+              </button>
+            )}
+            <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+              <div
+                className="h-full rounded-full gradient-hero transition-all duration-300"
+                style={{ width: `${((quizEtapa + 1) / 4) * 100}%` }}
+              />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground shrink-0">{quizEtapa + 1} de 4</span>
+          </div>
+
+          {quizEtapa === 0 && (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar tema… (ex: safari)"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  autoFocus
+                  className="pl-9 h-10 bg-secondary border-0 rounded-xl"
+                />
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[46vh] overflow-y-auto pr-1">
+                {loadingTemas
+                  ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-xl" />)
+                  : temasFiltrados.map((t) => (
+                      <button
+                        key={t.slug}
+                        onClick={() => { setThemeSlug(t.slug); setQuizEtapa(1); }}
+                        title={t.name}
+                        className={`group relative rounded-xl overflow-hidden border-2 transition-all text-left ${
+                          themeSlug === t.slug ? "border-primary shadow-soft" : "border-transparent hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="aspect-square bg-secondary relative">
+                          {t.papel && (
+                            <Thumb src={t.papel} size={160} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                          )}
+                          {t.capa && (
+                            <Thumb src={t.capa} size={160} alt={t.name} className="absolute inset-0 w-full h-full object-contain p-1.5" />
+                          )}
+                        </div>
+                        <div className="px-1.5 py-1 bg-card">
+                          <p className="text-[10px] font-semibold leading-tight truncate">{t.name}</p>
+                        </div>
+                      </button>
+                    ))}
+                {!loadingTemas && temasFiltrados.length === 0 && (
+                  <p className="col-span-full text-sm text-muted-foreground py-6 text-center">
+                    Nenhum tema pra "{busca}" 🥺
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {quizEtapa === 1 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              {(moldes ?? []).map((m: any) => (
+                <button
+                  key={m.id}
+                  onClick={() => { setMoldeId(m.id); setQuizEtapa(2); }}
+                  className={`rounded-xl border-2 overflow-hidden text-left transition-all ${
+                    moldeId === m.id ? "border-primary shadow-soft" : "border-border/40 hover:border-primary/40"
+                  }`}
+                >
+                  <div className="aspect-[4/3] bg-white flex items-center justify-center">
+                    {m.image_url ? (
+                      <Thumb src={m.image_url} size={320} alt={m.name} className="w-full h-full object-contain p-1" />
+                    ) : (
+                      <span className="text-3xl">📦</span>
+                    )}
+                  </div>
+                  <div className="px-2.5 py-1.5 bg-card flex items-center justify-between gap-1">
+                    <p className="text-xs font-semibold truncate">{m.name}</p>
+                    {m.popular && <span className="text-[10px]">🔥</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {quizEtapa === 2 && (
+            <div className="space-y-4">
+              <Input
+                placeholder="Nome da criança (ex: Sofia)"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizEtapa(3); }}
+                maxLength={30}
+                autoFocus
+                className="h-12 bg-secondary border-0 rounded-xl text-base"
+              />
+              <Input
+                placeholder="Idade (opcional)"
+                value={idade}
+                onChange={(e) => setIdade(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && nome.trim()) setQuizEtapa(3); }}
+                maxLength={3}
+                className="h-12 bg-secondary border-0 rounded-xl text-base"
+              />
+              <Button
+                onClick={() => setQuizEtapa(3)}
+                disabled={!nome.trim()}
+                className="w-full h-12 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft disabled:opacity-30"
+              >
+                Continuar <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          )}
+
+          {quizEtapa === 3 && (
+            <div className="space-y-4">
+              {cliparts.length > 1 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground">Personagem em destaque</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {cliparts.map((c) => (
+                      <button
+                        key={c.url}
+                        onClick={() => setPrincipalUrl(c.url)}
+                        className={`h-16 w-16 rounded-xl border-2 bg-white p-1 transition-all ${
+                          principalUrl === c.url ? "border-primary shadow-soft" : "border-border/40 hover:border-primary/40"
+                        }`}
+                      >
+                        <Thumb src={c.url} size={160} alt="" className="w-full h-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {temaSel && molde && nome.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  <Heart className="h-3 w-3 inline mr-1 text-primary" />
+                  {molde.name} · {temaSel.name} · pra <strong>{nome.trim()}</strong>
+                  {idade.trim() ? ` (${idade.trim()} anos)` : ""}
+                </p>
+              )}
+              <Button
+                // fecha primeiro e só então compõe: a composição pesada no mesmo tick
+                // atropela a animação de saída e o diálogo fica preso na tela
+                onClick={() => { setQuizAberto(false); setTimeout(gerar, 350); }}
+                disabled={busy || !themeSlug || !moldeId || !nome.trim()}
+                className="w-full h-12 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft disabled:opacity-30"
+              >
+                <Wand2 className="h-4 w-4 mr-2" /> Compor kit agora
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
