@@ -50,7 +50,8 @@ export default function Editor() {
         .select("url,role")
         .eq("theme_slug", themeSlug)
         .eq("kind", "clipart");
-      const list = (data ?? []) as { url: string; role: string }[];
+      // a placa é elemento decorativo (medalhão/plaquinha), não personagem — fora do seletor
+      const list = ((data ?? []) as { url: string; role: string }[]).filter((c) => c.role !== "placa");
       setCliparts(list);
       setPrincipalUrl(list.find((c) => c.role === "principal")?.url ?? list[0]?.url ?? "");
     })();
@@ -347,27 +348,38 @@ export default function Editor() {
 
       {/* 4 · TOQUE FINAL */}
       {etapa === 4 && (
-        <section key="etapa-final" className="max-w-md mx-auto space-y-6 animate-fade-in py-4">
-          <h2 className="font-display text-2xl font-semibold text-foreground">Último toque ✨</h2>
-          {cliparts.length > 1 && (
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium text-muted-foreground">Personagem em destaque</p>
-              <div className="flex gap-2 flex-wrap">
+        <section key="etapa-final" className="max-w-lg mx-auto space-y-6 animate-fade-in py-4">
+          {cliparts.length > 1 ? (
+            <>
+              <div>
+                <h2 className="font-display text-2xl font-semibold text-foreground">Quem brilha na frente? ✨</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Toque no personagem que vai aparecer em destaque — os outros continuam na decoração.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {cliparts.map((c) => (
                   <button
                     key={c.url}
                     onClick={() => setPrincipalUrl(c.url)}
-                    className={`h-16 w-16 rounded-xl border-2 bg-white p-1 transition-all ${
+                    className={`relative rounded-2xl border-2 bg-white p-4 transition-all duration-200 ${
                       principalUrl === c.url
-                        ? "border-primary shadow-soft"
-                        : "border-border/40 hover:border-primary/40"
+                        ? "border-primary shadow-soft scale-[1.03]"
+                        : "border-border/40 hover:border-primary/40 hover:-translate-y-0.5"
                     }`}
                   >
-                    <Thumb src={c.url} size={160} alt="" className="w-full h-full object-contain" />
+                    <div className="h-28 flex items-center justify-center">
+                      <Thumb src={c.url} size={320} alt="" className="max-h-full max-w-full object-contain drop-shadow-sm" />
+                    </div>
+                    {principalUrl === c.url && (
+                      <span className="absolute top-2 right-2 h-6 w-6 rounded-full gradient-hero text-white text-xs flex items-center justify-center shadow">✓</span>
+                    )}
                   </button>
                 ))}
               </div>
-            </div>
+            </>
+          ) : (
+            <h2 className="font-display text-2xl font-semibold text-foreground">Último toque ✨</h2>
           )}
           {temaSel && molde && nome.trim() && (
             <p className="text-xs text-muted-foreground">
