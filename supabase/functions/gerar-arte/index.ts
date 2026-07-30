@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { PNG } from "https://esm.sh/pngjs@7.0.0?target=deno";
+// imagescript é nativa de Deno — o pngjs via esm.sh falhava em runtime no
+// edge (PNG.sync.read), e máscara + carimbo eram pulados em silêncio.
+import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,11 +70,11 @@ const getSafeThemeDescription = (temaNome: string) => {
 // no downscale e o traço sai pontilhado (~44% de cobertura). O limiar 200 pega
 // também o anti-aliasing do traço, e "escurecer sem clarear" preserva a arte.
 // Validado: 100% dos pixels de linha do gabarito presentes na arte final.
-function compositeMoldLines(templateBytes: Uint8Array, generatedBytes: Uint8Array): Uint8Array {
-  const tpl = PNG.sync.read(templateBytes);
-  const gen = PNG.sync.read(generatedBytes);
-  const { width: tW, height: tH, data: tData } = tpl;
-  const { width: gW, height: gH, data: gData } = gen;
+async function compositeMoldLines(templateBytes: Uint8Array, generatedBytes: Uint8Array): Promise<Uint8Array> {
+  const tpl = await Image.decode(templateBytes);
+  const gen = await Image.decode(generatedBytes);
+  const tW = tpl.width, tH = tpl.height, tData = tpl.bitmap;
+  const gW = gen.width, gH = gen.height, gData = gen.bitmap;
 
   for (let y = 0; y < tH; y++) {
     const gy = Math.min(gH - 1, Math.round((y * gH) / tH));
@@ -95,7 +97,7 @@ function compositeMoldLines(templateBytes: Uint8Array, generatedBytes: Uint8Arra
       }
     }
   }
-  return PNG.sync.write(gen);
+  return await gen.encode();
 }
 
 // A4 — Máscara de edição: gera uma máscara onde SÓ as faces internas do molde
@@ -103,9 +105,9 @@ function compositeMoldLines(templateBytes: Uint8Array, generatedBytes: Uint8Arra
 // ficam preservados (alpha 255), então a IA não desloca nem redesenha a estrutura.
 // Retorna null quando a máscara sai degenerada (nada/tudo editável) — nesse caso
 // o chamador cai no fluxo sem máscara.
-function buildEditMask(templateBytes: Uint8Array): Uint8Array | null {
-  const tpl = PNG.sync.read(templateBytes);
-  const { width: W, height: H, data } = tpl;
+async function buildEditMask(templateBytes: Uint8Array): Promise<Uint8Array | null> {
+  const tpl = await Image.decode(templateBytes);
+  const W = tpl.width, H = tpl.height, data = tpl.bitmap;
   const N = W * H;
   if (N === 0) return null;
 
@@ -150,15 +152,15 @@ function buildEditMask(templateBytes: Uint8Array): Uint8Array | null {
   }
 
   // 3) Editável = não é linha E não é fundo externo (faces internas fechadas).
-  const mask = new PNG({ width: W, height: H });
+  const mask = new Image(W, H);
   let editableCount = 0;
   for (let i = 0; i < N; i++) {
     const editable = !isLine[i] && !outside[i];
     if (editable) editableCount++;
-    mask.data[i * 4] = 0;
-    mask.data[i * 4 + 1] = 0;
-    mask.data[i * 4 + 2] = 0;
-    mask.data[i * 4 + 3] = editable ? 0 : 255; // alpha 0 = editar; 255 = preservar
+    mask.bitmap[i * 4] = 0;
+    mask.bitmap[i * 4 + 1] = 0;
+    mask.bitmap[i * 4 + 2] = 0;
+    mask.bitmap[i * 4 + 3] = editable ? 0 : 255; // alpha 0 = editar; 255 = preservar
   }
 
   const frac = editableCount / N;
@@ -167,7 +169,7 @@ function buildEditMask(templateBytes: Uint8Array): Uint8Array | null {
     return null;
   }
   console.log(`buildEditMask: fração editável ${frac.toFixed(3)}.`);
-  return PNG.sync.write(mask);
+  return await mask.encode();
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -313,7 +315,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
   let maskDataUrl: string | null = null;
   if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
     try {
-      const maskBytes = buildEditMask(templateBytes);
+      const maskBytes = await buildEditMask(templateBytes);
       if (maskBytes) {
         maskDataUrl = `data:image/png;base64,${bytesToBase64(new Uint8Array(maskBytes))}`;
         console.log("Máscara de edição construída.");
@@ -499,18 +501,21 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   let bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
   // Compõe as linhas do molde por cima da arte final (garantia determinística).
+  // O resultado vai na resposta (composited/compositeError) — falha aqui não
+  // pode mais ser silenciosa.
+  let composited = false;
+  let compositeError: string | null = null;
   const moldeTemplateUrl = typeof body.moldeTemplateUrl === "string" ? body.moldeTemplateUrl : "";
   if (moldeTemplateUrl) {
     try {
       const tmplRes = await fetch(moldeTemplateUrl);
-      if (tmplRes.ok) {
-        const templateBytes = new Uint8Array(await tmplRes.arrayBuffer());
-        if (templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
-          bytes = new Uint8Array(compositeMoldLines(templateBytes, bytes));
-          console.log("Mold lines composited successfully.");
-        }
-      }
+      if (!tmplRes.ok) throw new Error(`template ${tmplRes.status}`);
+      const templateBytes = new Uint8Array(await tmplRes.arrayBuffer());
+      bytes = new Uint8Array(await compositeMoldLines(templateBytes, bytes));
+      composited = true;
+      console.log("Mold lines composited successfully.");
     } catch (e) {
+      compositeError = e instanceof Error ? e.message : String(e);
       console.warn("Composite step skipped:", e);
     }
   }
@@ -529,6 +534,8 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
       status: "done",
       imageUrl: null,
       imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+      composited,
+      compositeError,
     });
   }
   const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
@@ -536,6 +543,8 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     status: "done",
     imageUrl: pub.publicUrl,
     imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+    composited,
+    compositeError,
   });
 }
 
