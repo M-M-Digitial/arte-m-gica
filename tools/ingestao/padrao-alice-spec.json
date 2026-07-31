@@ -1,7 +1,6 @@
 {
-  "fonte": "pesquisa web (2 agentes) + análise direta das fotos da Alice — 2026-07-31",
-  "observacao": "estudo profundo dos PDFs do Drive pendente (limite de sessão); script do workflow salvo para reexecução",
-  "material": [
+  "fonte": "estudo completo: 6 agentes Drive (30 temas, fotos+PDFs finais da Alice) + 2 pesquisas web + síntese — 2026-07-31",
+  "estudos": [
     {
       "temas": [
         {
@@ -264,6 +263,907 @@
           }
         }
       ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "Safari",
+          "papel": "Ditsy de folhinhas tropicais e patinhas (motivo ~1-1,5cm impresso) em verde-claro e mostarda sobre creme; baixo contraste para nao competir com o personagem",
+          "personagens": "1 leaozinho heroi centralizado, apoiado na faixa de chao (mais personagens = cada um menor)",
+          "cenario": "Faixa de grama na base com arbustos baixos e um sol pequeno ao fundo, atras do personagem",
+          "nome": "Plaquinha estilo madeira clara/branca com texto marrom-escuro em fonte decorativa, contorno branco fino para descolar do padrao",
+          "topoAbas": "Listras finas verde e creme, sem personagem e sem nome (abas dobram/cortam a arte)",
+          "densidade": "media - ditsy com respiro, motivos ocupando ~1/3 da area do fundo",
+          "numeros": {
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 8,
+            "coberturaPct": 60,
+            "alturaPersonagemPctFace": 50,
+            "alturaFaixaChaoPctFace": 14,
+            "larguraPlacaPctFace": 78
+          }
+        },
+        {
+          "tema": "Princesa",
+          "papel": "Mini coroinhas e coracoes (motivo <2cm) rosa e dourado sobre rosa-bebe; repeticao nao-direcional esparsa",
+          "personagens": "1 princesa heroi em pe na faixa de jardim, vestido como maior bloco de cor secundaria",
+          "cenario": "Silhueta de castelo ao fundo em tom pastel + faixa de jardim florido na base",
+          "nome": "Placa branca com filete dourado, texto rosa-escuro; placa e o unico bloco 100% neutro da face (regra 60-30-10: nome e o acento)",
+          "topoAbas": "Rosa solido com poas dourados micro, continuo em todas as abas",
+          "densidade": "esparsa-media - fundo quase liso perto da placa do nome",
+          "numeros": {
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 7,
+            "coberturaPct": 55,
+            "alturaPersonagemPctFace": 52,
+            "alturaFaixaChaoPctFace": 12,
+            "larguraPlacaPctFace": 80
+          }
+        },
+        {
+          "tema": "Dinossauro",
+          "papel": "Folhinhas e pegadas mini (~1cm) verde e laranja sobre verde-agua claro",
+          "personagens": "2 dinos filhotes lado a lado, ambos com os pes na linha de chao (ground line ancora e da profundidade)",
+          "cenario": "Faixa de grama com pedrinhas + vulcao pequeno no fundo, escala menor que os personagens",
+          "nome": "Placa branca formato pedra arredondada, texto verde-escuro bold com contorno branco",
+          "topoAbas": "Verde solido do tema, sem motivos grandes",
+          "densidade": "media - 8-10 repeticoes visiveis na largura para ler como textura, nao como objetos",
+          "numeros": {
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 9,
+            "coberturaPct": 60,
+            "alturaPersonagemPctFace": 45,
+            "alturaFaixaChaoPctFace": 15,
+            "larguraPlacaPctFace": 75
+          }
+        },
+        {
+          "tema": "Fundo do Mar",
+          "papel": "Bolhas e estrelinhas micro (<1cm) em azul-medio sobre azul-claro; padrao denso funciona porque o motivo e minusculo",
+          "personagens": "1 sereia (ou baleinha) heroi apoiada na faixa de areia",
+          "cenario": "Faixa de areia com corais e algas baixas nas laterais, emoldurando sem cobrir o personagem",
+          "nome": "Placa branca formato concha/onda, texto azul-marinho; contraste maximo texto-placa (mais legivel em impressao caseira)",
+          "topoAbas": "Azul solido com bolhas micro continuas",
+          "densidade": "densa - motivo muito pequeno compensa a densidade alta",
+          "numeros": {
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 12,
+            "coberturaPct": 65,
+            "alturaPersonagemPctFace": 48,
+            "alturaFaixaChaoPctFace": 16,
+            "larguraPlacaPctFace": 78
+          }
+        },
+        {
+          "tema": "Espaco",
+          "papel": "Estrelinhas e planetas mini esparsos sobre azul-escuro; fundo escuro exige placa clara e personagem com contorno claro",
+          "personagens": "1 astronauta crianca em pe no solo lunar, traje branco destacando do fundo escuro",
+          "cenario": "Faixa de solo lunar cinza-claro com crateras na base + foguete pequeno ao fundo",
+          "nome": "Placa branca retangular arredondada, texto azul-escuro; sobre fundo escuro a placa clara vira o ponto de maior contraste da face",
+          "topoAbas": "Azul-escuro solido com estrelas micro",
+          "densidade": "esparsa - poucos motivos grandes o suficiente para ler, muito ceu liso",
+          "numeros": {
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 6,
+            "coberturaPct": 55,
+            "alturaPersonagemPctFace": 50,
+            "alturaFaixaChaoPctFace": 12,
+            "larguraPlacaPctFace": 82
+          }
+        },
+        {
+          "tema": "Fazendinha",
+          "papel": "Xadrez vichy vermelho micro (quadrados ~0,5-0,8cm) sobre branco; xadrez pequeno le como textura em face de 8cm",
+          "personagens": "3 bichinhos pequenos (vaca, porquinho, galinha) enfileirados na grama - trio pede altura individual menor",
+          "cenario": "Faixa de grama com celeiro pequeno ao fundo e cerquinha branca na base",
+          "nome": "Placa branca estilo cerquinha, texto vermelho-escuro bold, contorno fino branco contra o xadrez",
+          "topoAbas": "Xadrez micro continuo (padrao all-over aguenta dobra e corte das abas)",
+          "densidade": "densa - xadrez continuo, por isso personagens e placa precisam de halo/borda branca",
+          "numeros": {
+            "personagensPorFace": 3,
+            "repeticoesMotivoPorFace": 14,
+            "coberturaPct": 65,
+            "alturaPersonagemPctFace": 38,
+            "alturaFaixaChaoPctFace": 15,
+            "larguraPlacaPctFace": 72
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "Safari",
+          "papel": "Fundo em folhagem tropical tom-sobre-tom (verde-claro sobre verde-menta) ou poá verde; contraste baixo para o personagem dominar. Padrão miúdo: motivo de 0.8-1.2cm numa face de 7cm.",
+          "personagens": "1-2 bichinhos estilo baby (leão, girafa, zebra, macaco) na metade inferior da face, pés apoiados na faixa de grama, com contorno branco tipo sticker de 2-3mm para descolar do fundo estampado.",
+          "cenario": "Faixa de grama irregular na base costurando as 4 faces, 2-3 folhas de bananeira saindo das laterais, 1 sol ou nuvem pequena no terço superior. Nada encostando na plaquinha.",
+          "nome": "Plaquinha estilo banner/madeira em amarelo ou branco, borda dupla (offset branco + filete marrom), posicionada entre o meio e o terço superior da face; nome em fonte display grossa, idade em medalhinha redonda separada.",
+          "topoAbas": "Abas em listras finas verde/amarelo ou kraft liso, sem personagens (área de dobra e furo da fita de cetim); o laço fecha o topo.",
+          "densidade": "Média: 1 personagem grande + 3-4 elementos de apoio pequenos; 30-40% do fundo respirando sem elementos.",
+          "numeros": {
+            "coberturaPct": 65,
+            "personagensPorFace": 2,
+            "alturaPersonagemPctFace": 45,
+            "larguraPlacaPctFace": 75,
+            "alturaFaixaChaoPctFace": 15,
+            "repeticoesMotivoPorFace": 10
+          }
+        },
+        {
+          "tema": "Fazendinha",
+          "papel": "Xadrez vichy vermelho/branco (ou verde/branco) miúdo, quadradinho de ~0.6cm; alternativa: poá branco sobre vermelho. Sempre 2 tons só, para não brigar com os bichos.",
+          "personagens": "1 bicho principal (vaquinha, galinha, porquinho) grande na base + 1 secundário menor (pintinho) ao lado; contorno branco grosso; versões premium usam aplique 3D colado com fita dupla-face para dar volume.",
+          "cenario": "Faixa de grama com cerquinha branca na base (a cerca é a assinatura do tema), silhueta de celeiro pequena atrás do personagem, sol no canto superior.",
+          "nome": "Placa de celeiro/madeira em vermelho ou branco com pregos desenhados, borda offset branca; largura quase total da face para leitura à distância na mesa.",
+          "topoAbas": "Abas em vermelho liso ou xadrez menor, limpas; fita de cetim vermelha ou palha.",
+          "densidade": "Alta-média: tema tolera mais elementos (cerca + celeiro + bichos), mas mantendo hierarquia — bicho principal 2x maior que qualquer outro elemento.",
+          "numeros": {
+            "coberturaPct": 70,
+            "personagensPorFace": 2,
+            "alturaPersonagemPctFace": 42,
+            "larguraPlacaPctFace": 78,
+            "alturaFaixaChaoPctFace": 18,
+            "repeticoesMotivoPorFace": 12
+          }
+        },
+        {
+          "tema": "Princesa",
+          "papel": "Poá tom-sobre-tom rosa (rosa-bebê sobre rosa-claro) ou arabesco/damasco delicado; dourado só em detalhes, nunca no fundo inteiro.",
+          "personagens": "1 princesa única e grande, centralizada, ocupando metade da altura da face; sem personagens secundários — o tema pede delicadeza, não quantidade.",
+          "cenario": "Silhueta de castelo esmaecida (20-30% de opacidade) atrás da princesa, coroinhas e corações pequenos espalhados no terço superior; faixa de base discreta (renda ou glitter).",
+          "nome": "Brasão/moldura ornamental com filete dourado e fundo branco ou rosa-claro; nome em fonte caligráfica grossa o suficiente para ler (evitar script fina); idade em coroa pequena.",
+          "topoAbas": "Abas em rosa liso ou com leve textura glitter; laço de cetim rosa ou dourado é obrigatório no acabamento.",
+          "densidade": "Baixa: é o tema mais limpo; muito espaço respirando valoriza o ar premium/delicado.",
+          "numeros": {
+            "coberturaPct": 55,
+            "personagensPorFace": 1,
+            "alturaPersonagemPctFace": 50,
+            "larguraPlacaPctFace": 70,
+            "alturaFaixaChaoPctFace": 10,
+            "repeticoesMotivoPorFace": 12
+          }
+        },
+        {
+          "tema": "Dinossauro",
+          "papel": "Verde com folhas ou pegadas tom-sobre-tom; alternativa: listras verde/marrom horizontais. Motivo médio (1-1.5cm) porque o tema aceita mais peso visual.",
+          "personagens": "1 dino baby grande na base + opcional 1 filhote/ovo pequeno; contorno branco de sticker; dino sempre virado para o centro da face.",
+          "cenario": "Faixa de grama alta com samambaias na base, vulcão pequeno ao fundo num canto, 2-3 folhas pré-históricas nas bordas laterais.",
+          "nome": "Plaquinha estilo pedra ou banner verde/laranja com borda branca dupla; idade dentro de um ovo de dino rachado é convenção forte do nicho.",
+          "topoAbas": "Abas em listras verdes ou laranja liso; fita verde ou kraft.",
+          "densidade": "Média-alta: vegetação preenche a base, mas o terço superior fica quase livre para a plaquinha dominar.",
+          "numeros": {
+            "coberturaPct": 65,
+            "personagensPorFace": 2,
+            "alturaPersonagemPctFace": 48,
+            "larguraPlacaPctFace": 75,
+            "alturaFaixaChaoPctFace": 16,
+            "repeticoesMotivoPorFace": 8
+          }
+        },
+        {
+          "tema": "Unicórnio",
+          "papel": "Céu lilás/rosa pastel degradê com estrelinhas e mini-nuvens tom-sobre-tom; paleta candy (nunca cores saturadas duras).",
+          "personagens": "1 unicórnio único sentado/em pé sobre nuvem na base; crina em arco-íris pastel é o ponto de cor mais forte da arte.",
+          "cenario": "Nuvens fofas na base como 'chão', 1 arco-íris saindo de trás do personagem ou emoldurando a plaquinha, estrelinhas douradas espalhadas.",
+          "nome": "Plaquinha em formato de nuvem branca com borda pastel dupla (lilás + rosa); alto contraste: nome escuro (roxo) sobre branco.",
+          "topoAbas": "Abas em listras arco-íris pastel ou lilás liso; laço de cetim lilás.",
+          "densidade": "Média-baixa: pastel exige respiro; excesso de elementos derruba o ar 'fofo'.",
+          "numeros": {
+            "coberturaPct": 55,
+            "personagensPorFace": 1,
+            "alturaPersonagemPctFace": 48,
+            "larguraPlacaPctFace": 72,
+            "alturaFaixaChaoPctFace": 14,
+            "repeticoesMotivoPorFace": 10
+          }
+        },
+        {
+          "tema": "Fundo do Mar",
+          "papel": "Azul em degradê vertical (claro no topo, escuro na base) com bolhas tom-sobre-tom subindo; o degradê substitui o padrão repetido.",
+          "personagens": "2-3 bichinhos pequenos (peixe, polvo, tartaruga, cavalo-marinho) distribuídos em alturas diferentes, como se nadassem; nenhum domina sozinho — o conjunto é o herói.",
+          "cenario": "Faixa de areia com algas e corais na base (a faixa mais alta entre os temas), conchas e estrela-do-mar na areia; raios de luz sutis descendo do topo.",
+          "nome": "Bandeirola/flâmula branca ou placa em concha no terço superior (onde o azul é claro, garantindo contraste); borda azul-marinho.",
+          "topoAbas": "Abas azul liso claro; fita azul ou branca.",
+          "densidade": "Média-alta na base (recife), limpa no meio (água aberta) — a assimetria vertical é a regra do tema.",
+          "numeros": {
+            "coberturaPct": 65,
+            "personagensPorFace": 3,
+            "alturaPersonagemPctFace": 35,
+            "larguraPlacaPctFace": 72,
+            "alturaFaixaChaoPctFace": 18,
+            "repeticoesMotivoPorFace": 9
+          }
+        },
+        {
+          "tema": "Espaco Astronauta",
+          "papel": "Azul-marinho/roxo profundo com estrelas pequenas tom-sobre-tom; único tema onde fundo escuro é regra — todos os elementos precisam de contorno claro.",
+          "personagens": "1 astronauta baby flutuando ou em pé na superfície lunar + 1 foguete pequeno em diagonal; contorno branco reforçado (3mm) por causa do fundo escuro.",
+          "cenario": "Faixa de superfície lunar cinza com crateras na base, 2-3 planetas pequenos com anéis nos cantos superiores, estrelas de 4 pontas espalhadas.",
+          "nome": "Placa branca retangular arredondada com borda colorida (amarelo/laranja) — contraste máximo contra o céu escuro; idade dentro de estrela ou planeta.",
+          "topoAbas": "Abas em azul-marinho liso ou listras finas; fita prata ou amarela.",
+          "densidade": "Média-baixa: o preto/marinho do espaço é o respiro; encher de estrelas mata a profundidade.",
+          "numeros": {
+            "coberturaPct": 55,
+            "personagensPorFace": 2,
+            "alturaPersonagemPctFace": 45,
+            "larguraPlacaPctFace": 70,
+            "alturaFaixaChaoPctFace": 12,
+            "repeticoesMotivoPorFace": 8
+          }
+        },
+        {
+          "tema": "Futebol",
+          "papel": "Listras verticais largas nas 2 cores do time (7-8 listras por face) ou textura de gramado; sem personagens de clube licenciados — usar bola, chuteira e troféu genéricos.",
+          "personagens": "1 bola grande como elemento central (ou mascote genérico), na metade inferior; troféu ou chuteira pequenos como apoio.",
+          "cenario": "Faixa de gramado com marcação de linha branca na base, gol esmaecido ao fundo, confetes nas cores do time no topo.",
+          "nome": "Escudo/brasão de time como plaquinha (a convenção mais forte do tema) com borda dupla nas cores do time; idade em bola pequena.",
+          "topoAbas": "Abas em cor lisa do time; fita na cor secundária.",
+          "densidade": "Média: listras já dão peso visual, então poucos elementos soltos.",
+          "numeros": {
+            "coberturaPct": 60,
+            "personagensPorFace": 1,
+            "alturaPersonagemPctFace": 40,
+            "larguraPlacaPctFace": 75,
+            "alturaFaixaChaoPctFace": 15,
+            "repeticoesMotivoPorFace": 7
+          }
+        },
+        {
+          "tema": "Jardim Encantado",
+          "papel": "Floral miúdo sobre fundo creme/rosa-claro ou poá delicado; flores do fundo com no máximo 1cm para não competir com as borboletas.",
+          "personagens": "3-4 borboletas/joaninhas/abelhinhas pequenas espalhadas em voo (trajetória pontilhada opcional); é tema de conjunto, sem herói único gigante.",
+          "cenario": "Faixa de grama florida na base com flores maiores que as do fundo, 1-2 cogumelos ou regador como âncora num canto inferior.",
+          "nome": "Plaquinha oval ou em arco com moldura de florzinhas, fundo branco, filete verde ou dourado; nome em fonte serifada/caligráfica legível.",
+          "topoAbas": "Abas em poá miúdo ou verde-claro liso; laço de cetim rosa ou juta.",
+          "densidade": "Média-baixa: delicadeza pede espaço; elementos pequenos e muitos respiros.",
+          "numeros": {
+            "coberturaPct": 55,
+            "personagensPorFace": 3,
+            "alturaPersonagemPctFace": 25,
+            "larguraPlacaPctFace": 78,
+            "alturaFaixaChaoPctFace": 15,
+            "repeticoesMotivoPorFace": 11
+          }
+        },
+        {
+          "tema": "Circo",
+          "papel": "Listras verticais vermelho/branco largas (5-6 por face) imitando a lona; alternativa: poá amarelo sobre vermelho. Tema de maior saturação permitida.",
+          "personagens": "1 palhaço ou leãozinho de circo grande na base + 1 elemento de apoio (bola de equilíbrio, bandeirinha); contorno branco grosso contra as listras.",
+          "cenario": "Bico de lona (scallop) descendo do topo da face como moldura superior — assinatura do tema; varal de bandeirinhas triangulares atravessando o terço superior; base em tablado/areia.",
+          "nome": "Letreiro estilo marquee (placa amarela com pontinhos de luz na borda) — o nome vira atração do circo; contraste vermelho sobre amarelo.",
+          "topoAbas": "Abas seguem as listras da lona (única exceção onde a aba é estampada) ou vermelho liso; fita amarela.",
+          "densidade": "Alta: é o tema mais cheio aceito pelo mercado, mas o bico de lona e o letreiro organizam a leitura em 3 camadas (topo/meio/base).",
+          "numeros": {
+            "coberturaPct": 70,
+            "personagensPorFace": 2,
+            "alturaPersonagemPctFace": 45,
+            "larguraPlacaPctFace": 76,
+            "alturaFaixaChaoPctFace": 12,
+            "repeticoesMotivoPorFace": 6
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "A Pequena Sereia",
+          "papel": "Corpo das faces = CENA full-bleed contínua (não é padrão repetido): água azul com bolhas/raios sutis em cima e faixa de areia amarela embaixo; a cena atravessa as 4 faces do molde sem emenda visível. Papel digital ESTAMPADO (escamas de sereia iridescentes rosa/lilás/verde pastel) fica reservado para abas superiores, telhado da milk e tampa da maleta — nunca no corpo. ~10 escamas cabem na largura de uma face (motivo ~3 cm impresso). Ou seja: 2 papéis por caixa, cena no corpo + estampa coordenada no topo.",
+          "personagens": "Ariel ~64% da altura da face (295px numa face de 460px no PDF da milk), ancorada na BASE da face, deslocada para a esquerda (~1/3 esquerdo), cauda tocando/invadindo a areia. Companheiro (Linguado) pequeno, ~15% da altura da face, flutuando junto à cabeça dela. Alternância de faces: faces 1 e 3 = Ariel + peixe; face 2 = só cenário (concha, corais, pedra); face 4 = coadjuvantes grandes (Linguado ~30% + Sebastião ~25%). O molde inclui um recorte (aplique 3D) da Ariel com contorno branco, aplicado sobre a caixa montada nas fotos — o personagem principal em relevo, podendo vazar a borda da caixa (no sushi ele sai ~15% para fora da face).",
+          "cenario": "Faixa de areia amarela na base ocupando 25–35% da altura da face, com transição ondulada; corais/algas coloridos ancorados nas laterais das faces (~40% da altura), conchas e estrelas pequenas espalhadas na areia. Água com gradiente azul claro→médio e bolhas. Sem arco-íris/sol; a 'luz' vem de brilhos na água. Cenário central simétrico na face sem personagem (pedra + corais espelhados).",
+          "nome": "NÃO está no PDF planificado — a plaquinha é elemento separado aplicado em 3D. Formato: oval/escalope (medalhão) com fundo creme-perolado, nome em script rosa, borda glitter roxa. Largura ~50–60% da face onde é aplicada (cone e sushi), posicionada no terço superior ou centro-baixo dependendo da caixa. Idade aparece como linha minúscula sob o nome (~30% da altura do nome) — nas fotos mal se lê, é subordinada. Contraste: texto rosa médio sobre creme = médio; quem garante leitura é o tamanho do script.",
+          "topoAbas": "Abas superiores e telhado da milk: papel de escamas iridescente (estampa coordenada). Travas/abas de cola: brancas sem impressão. Tampa e alça da maleta: escamas. Base/pés do molde: sem impressão. Regra clara: topo = estampa, corpo = cena.",
+          "densidade": "Faces com personagem: ~50–60% da área coberta por elementos (personagem + corais + fauna). Faces só de cenário: ~35–45%. O fundo full-bleed faz a caixa parecer 100% impressa mesmo com densidade média de elementos. Respiro fica no meio da água (terço central superior).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 30,
+            "alturaPersonagemPctFace": 64,
+            "coberturaPct": 55,
+            "larguraPlacaPctFace": 55,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 10
+          }
+        },
+        {
+          "tema": "Dinossauro Baby",
+          "papel": "Estilo oposto ao da Sereia: corpo das faces em papel LISO pêssego/creme com textura sutil, sem estampa. Cada face de destaque ganha uma MOLDURA tracejada de cantos arredondados (efeito costura) com margem de ~5% da face. Papel digital estampado só nas abas/tampa: madeira clara (woodgrain) no topo da milk e tampa da maleta. Banda inferior estampada: faixa amarela com mini-triângulos (motivo minúsculo, ~50 repetições na largura da face) + acabamento de escalope vermelho. 3 papéis coordenados: liso no corpo, madeira no topo, estampinha miúda na base.",
+          "personagens": "Personagens da CENA são pequenos: estegossauro verde ~30–32% da altura da face, andando sobre a faixa de folhagem na base; pterodáctilo voando ~12% no topo. O personagem GRANDE é o aplique 3D: triceratops recortado com contorno branco, ~60–65% da altura da face, colado no CENTRO da face que vem VAZIA no PDF (só a moldura tracejada) — a Alice planeja uma face inteira como palco para o relevo. Vulcão ocupa face própria (~55% da altura + fumaça). 1 personagem por face, sempre.",
+          "cenario": "Base em camadas: folhagem/samambaia verde (~8%), palmeira alta na lateral esquerda (~60% da altura), depois trim escalope vermelho + banda amarela de triângulos = faixa de chão total ~25–30% da altura da face. Vulcão com lava e respingos como cena de uma face. Céu = o próprio papel pêssego liso (sem nuvens). Nada de arco-íris; paleta terrosa (pêssego, verde, laranja, marrom).",
+          "nome": "Duas formas: (1) na caixa bombom, nome impresso DIRETO na face creme dentro da moldura tracejada — 'Davi' em fonte display marrom (~18% da altura da face) + '2 aninhos' embaixo a ~40% do tamanho do nome, legível; contraste marrom sobre creme = médio-alto. (2) nas demais caixas, plaquinha estilo tabuleta de madeira na banda inferior, ~50–55% da largura da face, texto marrom sobre creme/madeira. Idade sempre presente e legível ('2 aninhos').",
+          "topoAbas": "Topo da milk e tampa da maleta: papel madeira clara. Triângulos do telhado: no PDF ficam no próprio pêssego liso. Abas de trava: madeira. Face vazia com moldura = reservada para o aplique 3D. Pés/fundo sem impressão.",
+          "densidade": "Baixa — é o kit mais 'clean' dos cinco: ~35–45% da face coberta; grandes áreas de creme liso respiram. A sofisticação vem do relevo 3D e dos acabamentos (laço, moldura costurada), não da lotação de elementos.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 27,
+            "alturaPersonagemPctFace": 62,
+            "coberturaPct": 40,
+            "larguraPlacaPctFace": 55,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 50
+          }
+        },
+        {
+          "tema": "Bita no Safari",
+          "papel": "Corpo das faces: papel verde-sálvia com textura de cardstock (quase liso, tom scrapbook). Faixa inferior: papel ESTAMPA DE PELE DE GIRAFA marrom (~25–30% da altura), separada do verde por trim de sianinha (rickrack) ziguezague laranja+verde com botão e cordão desenhados (detalhes escrapbook esqueumórficos). Topo: papel madeira clara nas abas/tampa + papel de LISTRAS finas horizontais (laranja/azul/marrom/creme, ~20 listras na altura da aba) atrás do telhado. Telhado triangular: verde-oliva liso. 4 papéis coordenados por caixa.",
+          "personagens": "Girafa amarela ~67% da altura da face (310px em 460px), em pé SOBRE a linha da faixa de chão, árvore atrás dela (~70% altura, cor chapada verde-oliva); zebra ~35% na face da maleta; face do jipe com 2 personagens (~45%). Bita explorador: no PDF vem como recorte 3D separado (contorno branco) e nas fotos é aplicado no centro da face vazia com moldura tracejada da milk (aplique ~60–70% da altura da face) e no cone (~50% da altura do cone). Padrão Alice de novo: cena com bichos nas faces laterais + 1 face vazia emoldurada para o aplique do protagonista. 1 personagem (ou dupla) por face.",
+          "cenario": "Chão = faixa de pele de girafa (25–30%) com trim sianinha na emenda + botão com cordão amarrado; gramínea/capim só na face do jipe. Árvores chapadas estilo flat atrás dos bichos. Céu = o próprio verde-sálvia (não há azul); vinhas com folhas sobem ~60% na face do jipe. Sem sol/nuvem/arco-íris. Paleta: sálvia, creme, laranja, marrom.",
+          "nome": "Impresso DIRETO na face creme da bombom (sem placa): 'Paulo' em display bold laranja com contorno marrom, largura ~60% da face, + '2 aninhos' embaixo a ~45% do tamanho do nome, mesmo estilo — ambos legíveis. Contraste laranja sobre creme = alto. Sem plaquinha de forma nas outras caixas deste kit (o espaço central é do aplique).",
+          "topoAbas": "Abas superiores da milk e tampa/alça da maleta: madeira clara. Faixa atrás do telhado: listras finas. Telhado: verde-oliva sólido. Face frontal da milk: moldura tracejada em face verde vazia esperando o aplique 3D do Bita.",
+          "densidade": "Média: ~45–55%. As faces têm cena completa (bicho + árvore + chão estampado + trims), mas o verde-sálvia liso dá bastante respiro no terço superior. Kit equilibra o clean do Dino Baby com cenas de bicho.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 28,
+            "alturaPersonagemPctFace": 65,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 60,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 20
+          }
+        },
+        {
+          "tema": "Baby Shark Azul",
+          "papel": "Corpo: gradiente azul de fundo do mar full-bleed com RAIOS DE LUZ em leque descendo do topo da face + bolhas — cobre 100% das 4 faces, sem faixa de areia grossa (só silhueta azul-escura do leito ~8–10% na base). Papel digital estampado: POÁ azul claro com bolinhas brancas miúdas (~30 bolinhas na largura da aba) nas abas superiores e tampa da maleta. Telhado triangular: amarelo sólido (cor de contraste chapada). Regra: cena luminosa no corpo, poá no topo, 1 cor sólida de pontuação.",
+          "personagens": "Trabalha por AGRUPAMENTO, não personagem solitário: face 4 da milk tem a família nadando (pai azul + baby amarelo + mamãe rosa), cada tubarão ~26–30% da altura da face, cluster ocupando ~55% da altura e ~90% da largura, com notas musicais preenchendo vazios. Faces 1/3: cena de aniversário na BASE (família em volta do bolo), cluster ~40% da altura, sangrando na borda inferior; peixinho verde invade a dobra do topo. Face 2: só raios de luz (palco do aplique). Aplique 3D: trio empilhado em diagonal (pai→baby→mamãe) com borda xadrez gingham azul, ~55% da altura visível do cone, VAZANDO as bordas laterais do cone nas fotos.",
+          "cenario": "Sem chão tradicional: leito do mar como silhueta escura ~8–10% na base + corais pequenos. Raios de sol na água a partir do topo (o 'céu' do tema). Bolhas espalhadas. Elementos flutuantes (notas musicais, caranguejo ~12%) preenchem o meio. É o único dos 5 sem faixa de chão estruturante — o gradiente + raios organizam a face.",
+          "nome": "Plaquinha dourada oval com borda escalope/ornamentada, ~45–50% da largura da face, aplicada no CENTRO da face da bombom: 'Davi' em script verde + '3 anos' amarelo embaixo (~35–40% da altura do nome, legível). Contraste: script verde-escuro sobre dourado claro = alto. É colada em relevo (não impressa no molde) — mesma lógica da Sereia: nome é um elemento 3D separado.",
+          "topoAbas": "Abas superiores + tampa/alça da maleta: poá azul. Telhado da milk: amarelo chapado. Abas de trava: poá. O amarelo do telhado repete o amarelo do baby shark (eco de cor proposital).",
+          "densidade": "Alta nas faces de personagem: ~60% coberto (cluster + notas + bolhas); face de aplique fica ~20% (só raios). Média geral ~55–60%. As cores saturadas (azul forte, amarelo, pink) fazem parecer mais cheio que os kits pastel.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 10,
+            "alturaPersonagemPctFace": 28,
+            "coberturaPct": 60,
+            "larguraPlacaPctFace": 48,
+            "personagensPorFace": 3,
+            "repeticoesMotivoPorFace": 30
+          }
+        },
+        {
+          "tema": "Bolofofos",
+          "papel": "Corpo: paisagem full-bleed contínua nas 4 faces — céu azul vivo (~30% do topo) com nuvens, linha de árvores flat verde-claro com bolinhas (~45% do meio), colinas de grama em 2 tons de verde na base. Papéis estampados coordenados no topo: LISTRAS DIAGONAIS arco-íris finas (vermelho/amarelo/verde/azul, ~35–40 listras na largura da aba) nas abas/tampa + POÁ branco de bolas GRANDES (~8 bolas na largura) nos triângulos do telhado + ciano sólido na travinha. 3 estampas + cena = kit mais colorido dos cinco.",
+          "personagens": "Estilo cabeçudo: personagens são quase só cabeça. Distribuição 1 por face: leão ~45% da altura da face (mid-esquerda), coruja ~44% (centrada), polvo ~40%, gato ~45% — todos com a base tocando a linha da grama (~25% da base), flutuando NA FRENTE das árvores. Uma face carrega o CLUSTER dos 5 personagens (~55% da altura, ~75% da largura). Aplique 3D: os 5 personagens dentro de um badge/nuvem azul-claro com borda roxa dupla, ~65% da altura da face, aplicado centrado em todas as caixas nas fotos — aqui o aplique tem MOLDURA própria (nuvem), diferente dos recortes soltos dos outros kits.",
+          "cenario": "Grama em colinas sobrepostas 2 tons de verde ocupando ~25% da base; árvores redondas flat com textura de bolinhas claras + troncos finos marrons; nuvens brancas gordinhas no céu (~3 por face); tufos de capim pequenos. Galhos secos decorativos entre árvores. Sem sol/arco-íris no cenário — o arco-íris aparece como ESTAMPA nas abas.",
+          "nome": "Impresso DIRETO no cenário (área do céu/nuvem da face da bombom), sem placa: 'Fernando' em letras display multicoloridas (cada letra uma cor: laranja/azul/rosa/verde) com contorno claro, largura ~80% da face, + '1 aninho' em azul embaixo (~45% da altura do nome). Legível — as letras coloridas têm stroke branco separando do fundo azul do céu. Idade sempre presente.",
+          "topoAbas": "Abas superiores + tampa/alça da maleta: listras diagonais arco-íris. Triângulos do telhado: poá de bolas grandes azul-claro sobre branco. Travinha superior: ciano sólido. Combinação de 2 estampas diferentes no mesmo topo (listra + poá) sem conflito porque dividem a paleta.",
+          "densidade": "A mais alta dos cinco: ~60–70% da face coberta (paisagem em camadas + personagem + nuvens). Quase não há área 'vazia' — o respiro é o azul do céu no topo. Compensa com formas flat simples e poucas cores por elemento.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 25,
+            "alturaPersonagemPctFace": 45,
+            "coberturaPct": 65,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 38
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "Natal",
+          "papel": "Papel digital cobre 100% da face: creme com mini-estrelas (motivo ~2-3% da largura da face, ~25-30 repeticoes por linha — poa muito fino, quase textura). Papeis diferentes por regiao: corpo da caixa em estrelinhas creme, empena/telhado em xadrez vermelho, triangulo do gable em creme liso com pesponto, faixa de base em verde-oliva com trelica de losangos. 3-4 papeis coordenados por molde.",
+          "personagens": "Papai Noel ~40% da altura da face, ancorado na LINHA DO CHAO (faixa de neve na base), nunca flutuando. 1 cena por face frontal (Noel + Mamae Noel + casinha = 1 grupo). Face lateral com cena secundaria: arvore ~70% da altura + rena ~40% + gengibre ~17%. Personagens podem encostar/sangrar na borda lateral da face (arvore cortada pela dobra). Aplique die-cut separado no PDF: Noel ~50% da altura da face, montado 3D por cima (nas fotos cobre 50-60% da altura da caixa).",
+          "cenario": "Sim: faixa de chao na base em TODAS as faces decoradas = banda verde-oliva (~15% da altura da face) + neve branca sob os pes + renda/lace branca de scallop como transicao (~3%). Total faixa de base ~18-20%. Casinha com neve como cenario central atras dos personagens (~55% da largura da face). Estrelinhas douradas soltas preenchem o ceu vazio (~8% cada).",
+          "nome": "Sem plaquinha de nome (tema sazonal, nao personalizado): lettering 'FELIZ Natal' no topo da face, ~48% da largura, vermelho+dourado, ocupa os 17% superiores. Na caixa mala o mesmo lettering aparece ROTACIONADO 90 graus nas faces laterais, ~45% da altura, centralizado sobre papel de estrelas.",
+          "topoAbas": "Abas superiores (com furos): mesmo papel de estrelinhas creme, sem personagens. Telhado/gable: xadrez vermelho com triangulo creme liso. Tampa da mala: papel de estrelas liso com recorte de alca. Abas de cola e pes: brancos sem impressao.",
+          "densidade": "Face frontal principal ~55-60% coberta (cena+lettering+faixa); face lateral de cena ~45%; sempre ha 1 face 'respiro' so com papel de estrelas (~5% de cobertura). Media do molde ~40%.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 18,
+            "alturaPersonagemPctFace": 40,
+            "coberturaPct": 55,
+            "larguraPlacaPctFace": 48,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 27
+          }
+        },
+        {
+          "tema": "Chá de Bebê (Ursinho)",
+          "papel": "Face inteira em verde-sage com mini-coracoes brancos espacados (motivo ~4% da largura, ~6 coracoes por linha, ~15-18 visiveis por face — padrao esparso e delicado). Faixa de base em bege claro com poa de pontinhos. Paleta de 2 papeis por molde apenas, tudo dessaturado (sage + bege + dourado).",
+          "personagens": "Urso sentado ~45% da altura da face, SENTADO SOBRE a linha da faixa de base (bunda na borda da faixa — ancora perfeita). Exatamente 1 urso por face + 1 estrelinha rosa sorridente ~11% no canto superior oposto. Na mala: urso sobre nuvenzinha branca ~40%. Blocos 'B-A-B-Y' empilhados na vertical ~85% da altura da face, encostados na borda lateral, sobrepondo a faixa de base. Aplique die-cut: urso+blocos+estrela ~55% da altura da caixa montada.",
+          "cenario": "Faixa de base bege com poa ocupa ~30% da altura da face (a maior das 5 amostras), transicao com renda scallop bege (~3%). Sem arco-iris/sol; nuvem branca aparece como 'assento' do urso na mala. Muito espaco negativo proposital.",
+          "nome": "SEM plaquinha no PDF — nome aplicado nas fotos como nuvem branca recortada (~55-60% da largura da face) com script fino 'Cha do Miguel' em dourado/marrom sobre branco (contraste BAIXO, estilo delicado; legivel so de perto). Sem idade (e cha de bebe). Na caixa milk o nome tambem aparece em script na vertical no canto inferior da face lateral.",
+          "topoAbas": "Abas superiores e triangulo do gable: verde-sage LISO (sem coracoes) — o padrao para na dobra. Tampa da mala: sage liso com alca. Nada de personagem em aba/tampa.",
+          "densidade": "Face frontal ~35-40% coberta (tema minimalista); faces de respiro so com papel+faixa ~15%. E o kit mais 'limpo' dos 5.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 30,
+            "alturaPersonagemPctFace": 45,
+            "coberturaPct": 38,
+            "larguraPlacaPctFace": 58,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 17
+          }
+        },
+        {
+          "tema": "Arco Íris Boho",
+          "papel": "Face inteira em rosa-claro com TEXTURA de linho (estrias horizontais sutis, sem motivo repetido) + mancha aquarelada pastel (amarelo/azul) no rodape ~25% da altura. Tema sem personagens: o papel e quase liso e o arco-iris e o unico protagonista. Gable em verde-menta liso; abas em rosa texturizado.",
+          "personagens": "ZERO personagens (tema abstrato). O 'personagem' e o arco-iris boho: 1 arco GIGANTE por face — face 1: arco cortado pela borda esquerda ocupando ~85% da largura (sangra pra fora do molde, centro fora da face); face 3: arco completo ~95% da largura x ~53% da altura, ancorado direto na dobra da base, com 5 coracoes verdes flutuando acima (~10% cada). Escala do motivo: 1 repeticao por face.",
+          "cenario": "Sem faixa de chao solida: em vez disso, franja boho (tassels rosa) atravessa a face a ~60% da altura (~4% de altura) e a mancha aquarelada faz o 'chao' suave. O arco-iris ancora na base da face — a propria dobra e o chao.",
+          "nome": "SEM plaquinha no PDF do molde; o PDF traz medalhao redondo escalopado separado (~70% da largura da face quando montado, fotos) com arco-iris dentro — e o aplique 3D. Nome nas fotos: script rose-gold 'Amanda' escrito DIRETO no papel liso da caixa bala, ~60% da largura, centralizado, sem plaquinha (contraste medio-baixo, funciona porque o fundo e liso). Sem idade visivel.",
+          "topoAbas": "Triangulo do gable: verde-menta liso (unico ponto de cor fria). Abas superiores: rosa texturizado sem decoracao. Tampa da mala: rosa liso com alca. Regra clara: abas/topo NUNCA levam o motivo principal.",
+          "densidade": "Face com arco completo ~45%; face com arco cortado ~40%; faces de respiro (so textura+franja) ~10%. Media ~30% — segundo tema mais limpo.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 4,
+            "alturaPersonagemPctFace": 53,
+            "coberturaPct": 35,
+            "larguraPlacaPctFace": 70,
+            "personagensPorFace": 0,
+            "repeticoesMotivoPorFace": 1
+          }
+        },
+        {
+          "tema": "O Rei Leão",
+          "papel": "Face inteira = CENARIO CONTINUO (nao ha padrao repetido): gradiente de por-do-sol laranja-amarelo com sol semicircular, silhuetas pretas de acacias (~50% da altura) e capim na base. O cenario ATRAVESSA as dobras — as arvores continuam de uma face para a outra. Papeis de apoio: empena em padrao tribal geometrico vermelho/laranja, abas em pergaminho bege, listra de 'couro costurado' na dobra da base (~3%).",
+          "personagens": "Os mais altos dos 5 kits: grupo Timao+Pumba+Simba ~65% da altura da face, Mufasa ~58% + 2 filhotes ~26%, Scar deitado ~30% x 65% de largura. 1 grupo por face (2-4 personagens fundidos num grupo so). Ancoragem: todos com os pes na linha de capim/silhueta da base. Personagens SANGRAM na borda lateral da face (grupo do Simba cortado pela dobra direita). Aplique die-cut: pilha Timao+Pumba+Simba ~60% da altura da caixa montada.",
+          "cenario": "Cenario e o proprio papel (100% da face). Faixa de chao: silhueta preta de capim ~4% + banda de couro costurado ~3% na dobra. Sol semicircular amarelo por tras dos personagens ~40% da largura. Arvores pretas preenchem o meio vazio das faces sem personagem.",
+          "nome": "UNICO tema com plaquinha impressa no PDF: placa estilo 'tabua de madeira' vermelho-escuro com borda dourada, TOPO-CENTRO da face, ~65% da largura x ~17% da altura, com area central clara para o nome. Nas fotos: 'Guilherme' em creme sobre vermelho-escuro (contraste ALTO, muito legivel) + '6 anos' em faixa menor abaixo (~40% da largura da placa) — idade presente e legivel. Regra: fundo movimentado exige placa solida escura + texto claro.",
+          "topoAbas": "Empena/telhado: padrao tribal vermelho (papel proprio). Abas superiores com furos e tampa da mala: pergaminho bege liso, sem personagens. Contraste deliberado entre topo neutro e corpo saturado.",
+          "densidade": "O mais denso dos 5: faces frontais ~75-85% cobertas (cenario conta como cobertura), nenhuma face de respiro real — ate as faces 'vazias' tem sol+arvores (~50%). Media ~70%.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 7,
+            "alturaPersonagemPctFace": 65,
+            "coberturaPct": 75,
+            "larguraPlacaPctFace": 65,
+            "personagensPorFace": 3,
+            "repeticoesMotivoPorFace": 1
+          }
+        },
+        {
+          "tema": "Moranguinho",
+          "papel": "Face em rosa-chiclete LISO (sem padrao) — o padrao fica confinado na faixa de base: chintz de morangos miudos (motivo ~6% da largura, ~14-16 repeticoes por linha). Borda de renda floral verde-claro no TOPO da face (sob a dobra, ~3%) e renda scallop verde na transicao da faixa — moldura verde emoldurando o rosa. Gable verde-claro solido.",
+          "personagens": "Moranguinho GRANDE: ~65-70% da altura da face (a maior personagem única dos 5 kits), 1 por face, em pose dinamica. Ancoragem: pes/pernas SOBREPOEM a faixa de morangos (ela fica na frente da faixa, nao atras). Faces secundarias: gatinha ~35% sentada exatamente na linha da faixa, centralizada. Na mala: Moranguinho + pe de morango gigante (~60%) como cena. Aplique die-cut: Moranguinho de corpo inteiro ~60% da altura da caixa; segundo aplique em MEDALHAO CORACAO (moldura branca, interior rosa-escuro) com a personagem dentro, ~55% da largura da face.",
+          "cenario": "Faixa de chao = chintz de morangos ~24% da altura da face + renda scallop verde ~4% como transicao. Sem ceu/sol/nuvens — o rosa liso e o fundo. Planta de morango funciona como cenario na mala (~60% da altura).",
+          "nome": "SEM plaquinha nos PDFs milk/mala. Nas fotos: plaquinha quadrada rosa-lilas na caixa bala com script branco 'Danielle' + '5 anos' menor abaixo — IDADE presente, contraste medio (branco sobre rosa-medio, legivel de perto). Medalhao de coracao usado como plaquinha-aplique em outras caixas. Regra: nome em script branco sobre rosa, ~55% da largura da face.",
+          "topoAbas": "Triangulo do gable: verde-claro LISO. Abas superiores: rosa liso com renda verde na borda. Tampa da mala: rosa liso com alca. Abas nunca levam personagem nem morangos.",
+          "densidade": "Face com personagem ~50-55%; face so com gatinha+faixa ~35%; a moldura de rendas mantem tudo 'vestido' mesmo com fundo liso. Media ~45%.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 24,
+            "alturaPersonagemPctFace": 68,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 55,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 15
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "Frozen",
+          "papel": "Papel digital azul-claro com flocos de neve brancos cobre 100% da area util das 4 faces em FULL BLEED e e CONTINUO atraves das faces (panorama, o padrao flui pela dobra). Flocos grandes: ~2-3 motivos na largura de uma face (floco maior ocupa ~40-50% da largura). Abaixo da linha de renda o papel muda para azul liso mais claro (regiao de chao sem estampa). Papeis diferentes por regiao: estampado em cima, liso embaixo, rosa-lilas liso nas abas.",
+          "personagens": "Dupla Elsa+Anna nas faces principais (1 e 3 da milk): altura ~60-65% da face, pes ancorados NA LINHA DA RENDA (nao na base absoluta), deslocadas para a esquerda (~1/3 esquerdo). Olaf sozinho na face lateral: ~45-50% da altura, ancorado na mesma linha, sobrepondo a renda para baixo. Face 2 fica so com papel (respiro). 1 grupo por face; na foto o personagem e reaplicado como aplique 3D recortado com borda glitter prata ~3mm, sobrepondo a borda lateral da caixa. A folha do PDF inclui die-cut extra (Elsa+Anna com contorno branco) para essa camada 3D.",
+          "cenario": "Nao ha ceu/arco-iris/sol. O 'chao' e uma faixa horizontal na base: renda scalloped branco-rosa (~4-5% da altura) + faixa azul lisa (~22-25%) correndo por TODAS as faces na mesma altura (linha a ~70-72% de cima para baixo). A renda funciona como linha de horizonte onde os pes ancoram.",
+          "nome": "Plaquinha NAO vem impressa na planificacao — e camada 3D separada (Tag.pdf proprio na pasta). Formato oval-pontudo ornamentado (rotulo vintage), fundo magenta/pink glitter, texto 'Alice' em script prata/branco (contraste alto), borda prata. Largura ~50-60% da largura da face, posicionada no terco inferior, sobrepondo o personagem/renda. Idade nao vista nas fotos deste tema.",
+          "topoAbas": "Contraste deliberado: abas superiores, triangulos do telhado e tampa sao rosa-lilas LISO (sem estampa, sem personagem). Regra: tampa/abas nunca levam personagem, sempre papel liso ou secundario + laco de fita de cetim por cima.",
+          "densidade": "Media-baixa: papel estampado e suave, elementos de primeiro plano (personagens + renda + placa) cobrem ~35-45% da face principal. Faces alternam cheia (personagem) e vazia (so papel), padrao A-B-A-C na milk.",
+          "numeros": {
+            "alturaPersonagemPctFace": 62,
+            "alturaFaixaChaoPctFace": 27,
+            "coberturaPct": 40,
+            "larguraPlacaPctFace": 55,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 2.5
+          }
+        },
+        {
+          "tema": "Carros",
+          "papel": "NAO usa padrao repetido no corpo: color-block chapado. Face = campo vermelho (~60% da altura) + listra amarela (~5%) + faixa preta na base (~20%) + faixa preta no topo atras do triangulo vermelho do telhado. Xadrez quadriculado preto-branco SO nas abas/tampa (~10 quadrados na largura da aba). Nas faces principais entra um PAINEL DE CENA fotografico (pista + arquibancada emoldurada por swoosh de bandeira quadriculada em arco) cobrindo ~85-90% da face. Face lateral 2 fica vermelho liso apenas com a listra amarela (respiro total).",
+          "personagens": "McQueen nas faces 1 e 3 dentro do painel de cena: altura ~45-50% da face, largura ~90% (carro e horizontal), ancorado na metade inferior com rodas na altura da listra amarela, nariz do carro SANGRANDO alem da borda da face. Face 4: grupo de 4 personagens (Mate, Filmore, Luigi, Guido) ~40% de altura, ~90% de largura, ancorado sobre a listra amarela. Die-cuts extras na folha: semaforo e Mate com contorno branco para aplique 3D. Nas fotos ha camadas 3D de McQueen e semaforo sobre a impressao.",
+          "cenario": "Chao = listra amarela (linha do horizonte grafica, ~5%) + faixa preta (~20%) na base de todas as faces, sempre na mesma altura (~62-65% de cima). O 'ceu' e o proprio painel de cena (arquibancada azul) apenas nas faces principais; faces de respiro ficam chapadas.",
+          "nome": "Nao impresso na planificacao; aplique 3D separado. Formato = logo do filme (banner vermelho com asas cromadas estilo Piston Cup + rodinha embaixo), texto 'Matheus' branco/creme sobre vermelho com contorno dourado. Largura ~70-75% da face (cone e sushi), centrado no topo do cone e no centro-alto da face do sushi. Idade nao vista neste tema.",
+          "topoAbas": "Abas superiores e tampa da mala: xadrez quadriculado preto-branco integral (~10 quadrados por largura). Triangulos do telhado: vermelho chapado sobre faixa preta. Sem personagem em abas. Laco vermelho de cetim por cima.",
+          "densidade": "Alta nas faces principais (~70-80% coberto por cena+carro), quase zero na face de respiro (vermelho liso + listra). Contraste forte entre faces cheias e vazias e o mecanismo central do tema.",
+          "numeros": {
+            "alturaPersonagemPctFace": 47,
+            "alturaFaixaChaoPctFace": 25,
+            "coberturaPct": 75,
+            "larguraPlacaPctFace": 72,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 10
+          }
+        },
+        {
+          "tema": "Astronauta",
+          "papel": "Sistema de 3 papeis por regiao (aquarela): (1) grid/plaid azul-claro nas abas, tampa e na face de respiro inteira; (2) branco com micro-estrelas azuis (~20+ repeticoes na largura) como moldura/fundo dos paineis e triangulos do telhado; (3) grid laranja como faixa de chao. Composicao unica entre os 5 temas: cada face principal tem um PAINEL de cantos arredondados inset (margem ~8-10% da largura da face) com fundo azul-acinzentado aquarelado, emoldurado pelo papel de estrelinhas.",
+          "personagens": "Face 1: foguete com astronauta ~65-70% da altura da face, chama sobrepondo PARA DENTRO da faixa laranja de chao. Faces 2-3: astronauta em pe sobre a lua ~45% da altura + alienigena verde PENDURADO de cabeca para baixo no canto superior (~20% de altura) + bandeirinha — 2 personagens por face em diagonal (um em cima, um embaixo). Ancora: pes/lua na linha do chao. Die-cuts na folha: foguete e astronauta-na-lua com contorno branco para 3D.",
+          "cenario": "Chao = faixa laranja grid ~15-18% da altura na base de todas as faces + fio teal (~2%) marcando o horizonte. Estrelinhas espalhadas dentro do painel fazem o 'ceu'. Sem arco-iris/sol/nuvens.",
+          "nome": "Aplique 3D separado (nao impresso no molde): retangulo arredondado laranja com texto branco bold 'Davi' + '3 anos' menor embaixo — IDADE APARECE e e legivel. Largura ~40-45% da face, aplicado no topo da caixa bala e no cone, empilhado em camadas 3D. Contraste: branco sobre laranja.",
+          "topoAbas": "Abas e tampa: grid azul-claro (papel 1). Triangulos do telhado: estrelinhas + cantos em aquarela pessego e azul-ardosia. Sem personagens. Laco azul-bebe de cetim.",
+          "densidade": "Baixa-media (~30-40% da face coberta por elementos): estetica aquarela leve com muito respiro branco. E o tema mais 'arejado' dos 5.",
+          "numeros": {
+            "alturaPersonagemPctFace": 50,
+            "alturaFaixaChaoPctFace": 17,
+            "coberturaPct": 35,
+            "larguraPlacaPctFace": 42,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 20
+          }
+        },
+        {
+          "tema": "Futebol",
+          "papel": "Papel principal = campo de futebol visto de cima (verde com marcacoes brancas de gol/meio-campo + textura halftone de bolinhas) CONTINUO pelas 4 faces como panorama unico (1 'repeticao' — o campo inteiro atravessa a caixa; marcacao de gol aparece no topo de cada face). Papel secundario = hexagonos de bola preto-branco (~12 hexagonos na largura da face) na faixa de chao, abas e tampa. Papel terciario = rede de gol branca (losangos) na aba superior e faces laterais da mala. Na mala o verde vira halftone de bolinhas sem marcacoes.",
+          "personagens": "Menino jogador nas faces 1 e 3: ~55-60% da altura da face, pes ancorados na borda scalloped preta SOBREPONDO para dentro da faixa de hexagonos, posicao centro-esquerda. Face 4: par de chuteiras ~25-30% da altura flutuando no centro (objeto, nao personagem). Face 2: so campo (respiro). Die-cut na folha: menino com bola, contorno branco, para aplique 3D (visivel na foto como camada dupla).",
+          "cenario": "Chao = borda scalloped preta (~4%) + faixa de hexagonos de bola (~20-22%) na base de todas as faces, mesma altura. Na mala ha scallop preto tambem no TOPO da face. O campo funciona como fundo-cenario completo.",
+          "nome": "Duas solucoes: (1) escudo/brasao verde com bola + BANNER BRANCO EM BRANCO atravessado, impresso na face da mala (~60% da largura, ~75% da altura, centrado) e tambem como die-cut 3D — o nome e aplicado depois sobre o banner branco; (2) na foto, topo da caixa bala traz 'Antonio 4 anos' impresso em verde sobre branco — IDADE APARECE legivel. Contraste: texto verde sobre branco.",
+          "topoAbas": "Abas superiores e tampa da mala: hexagonos de bola preto-branco integral. Aba de encaixe da milk: rede de gol branca. Topo da milk (telhado): branco com grid fino. Sem personagens nas abas. Laco preto de gorgurao.",
+          "densidade": "Media (~45-50%): campo e textura ativa mas de baixo contraste; personagem + faixa de hexagonos concentram o peso visual na metade inferior.",
+          "numeros": {
+            "alturaPersonagemPctFace": 57,
+            "alturaFaixaChaoPctFace": 25,
+            "coberturaPct": 47,
+            "larguraPlacaPctFace": 60,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 12
+          }
+        },
+        {
+          "tema": "Minecraft",
+          "papel": "Texturas do jogo como papel: (1) blocos de grama verde-claro grandes (~8 blocos na largura da face) nas abas, tampa, cone e faces secundarias; (2) blocos de terra marrom (~10-12 pixels na largura) como faixa de chao, telhado e faces laterais da mala; (3) faces principais da milk/mala usam CENA COMPLETA estilo screenshot do jogo (ceu azul, arvores, grama) em full bleed — cobertura 100% da face. Logo MINECRAFT impresso na faixa de terra da face 2.",
+          "personagens": "Faces principais: Steve correndo com picareta + lobo, ~65% da altura da face, pes na faixa de grama da propria cena (base ~15%). Face 4: grupo Alex+Steve+porco ~70% da altura ancorado na base com terra atras. Laterais da mala: Steve sozinho ~45% centrado sobre a terra. 2-3 figuras por face principal (grupo). Die-cut: medalhao redondo scalloped (borda marrom terra, miolo verde pixel) com personagem dentro, contorno branco — usado como aplique 3D central em TODAS as caixas nas fotos (~75-80% da largura da face, centrado).",
+          "cenario": "Chao = faixa de blocos de terra ~25% da altura na base (faces sem cena) ou grama da propria cena (~15%). Ceu so existe dentro das faces-cena. Telhado da milk = terra (inverte: terra em cima tambem funciona no universo do jogo).",
+          "nome": "Na foto do sushi: 'FERNANDO 7 ANOS' em letras estilo logo Minecraft (fonte pixel cinza-branca) sobre placa retangular vertical escura no alto da face lateral — IDADE APARECE legivel. Nao vem impresso no PDF do molde (aplicado como camada). O medalhao scalloped e a 'moldura' de personagem, nao de nome. Contraste: texto claro sobre fundo escuro.",
+          "topoAbas": "Abas superiores e tampa: blocos de grama verde integral. Triangulos do telhado da milk: blocos de terra. Sem personagens nas abas. Laco marrom+laranja de cetim.",
+          "densidade": "Alta (~80-90% nas faces-cena, pois a textura E o conteudo; ~50% nas faces de textura + personagem). Tema mais denso dos 5; equilibrio vem da alternancia cena cheia vs. textura pura.",
+          "numeros": {
+            "alturaPersonagemPctFace": 65,
+            "alturaFaixaChaoPctFace": 25,
+            "coberturaPct": 85,
+            "larguraPlacaPctFace": 77,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 8
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "3 Palavrinhas",
+          "papel": "Nao usa padrao repetido nas faces: e um MURAL continuo full-bleed (ceu azul chapado + morros roxos + arvores laranja/teal + grama) que atravessa as 4 faces sem emenda — elementos como arvore e passaro sao CORTADOS na dobra e continuam na face vizinha. Papel 'digital' liso ciano so nas abas superiores. Saturacao alta, cores chapadas com contorno grosso (estilo do desenho).",
+          "personagens": "1 personagem por face (3 das 4 faces do milk tem personagem; a mala concentra um grupo de 3 criancas na face frontal, ~60% de altura). Altura: 55-75% da altura da face (menino no patinete medido: 71%). Ancoragem: pes na grama, a 1-5% da borda inferior. Bracos/adereco podem sobrepor a linha de dobra. Sempre ha um personagem extra recortado (aplique 3D) impresso solto na folha, com contorno branco + sombra vermelha, colado por cima do personagem plano na caixa montada.",
+          "cenario": "Faixa de grama verde na base ocupando 40-42% da altura da face; acima, ceu com nuvens brancas de contorno (2-3 nuvens grandes por face), morro roxo no terco medio, arvores nas bordas, passaro pequeno (~10% da face) no topo. Gable do milk: triangulo vermelho solido. Logo do tema (~10% de altura) apoiado na grama de uma face.",
+          "nome": "Sem plaquinha fixa no molde. Nas fotos o nome e escrito DIRETO na area de ceu: 'Davi 3 anos' em bold amarelo com contorno azul-escuro (contraste alto), canto superior da face, ~40% da largura, nome em cima e idade menor embaixo (~60% do corpo do nome), ambos legiveis. Na caixa bala aparece variante: plaquinha redonda branca recortada com o mesmo texto amarelo, ~80% da largura da face pequena.",
+          "topoAbas": "Abas de fechamento e tampa: ciano liso (cor exata do ceu, sem estampa). Gable triangular: vermelho solido. Abas laterais de cola: brancas.",
+          "densidade": "Alta. A face inteira e impressa (100% full-bleed); elementos distintos (personagem, arvores, nuvens, morro, passaro) cobrem ~55-60% da area. Nao sobra branco.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 40,
+            "alturaPersonagemPctFace": 70,
+            "coberturaPct": 60,
+            "larguraPlacaPctFace": 40,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 1
+          }
+        },
+        {
+          "tema": "Safari",
+          "papel": "Faces = aquarela vinheta sobre FUNDO BRANCO (nao full-bleed saturado): ceu branco/creme, cena concentrada na base e bordas. Papel digital de verdade so fora das faces: madeira clara (textura sutil) nas abas/tampa e listras horizontais multicolor (~14 listras terrosas/teal no triangulo) no gable. Mural continua entre faces (rio da savana atravessa a face 3).",
+          "personagens": "1 animal por face, e uma das 4 faces do milk e SO cenario (respiro). Leao sentado medido: 62% da altura da face, centralizado, patas apoiadas EM CIMA da plaquinha de nome (sobreposicao personagem+placa e a assinatura do tema). Macaco: ~50%, ancorado na vegetacao a ~10% da base, deslocado para um lado com arvore pendendo da borda oposta. Girafas recortadas (apliques 3D) impressas soltas na folha, contorno branco.",
+          "cenario": "Faixa de capim seco aquarelado na base: ~30-35% da altura; montanha cinza-clara no horizonte a meia altura; arvores/folhagens entram pelas bordas laterais externas; sem sol/nuvens desenhados (ceu branco vazio).",
+          "nome": "Plaquinha retangular de cantos arredondados, creme/rosa-palido, SEM borda forte (so sombra sutil), flanqueada por folhas verdes nos 4 cantos: 63% da largura da face, ~14% da altura, base a ~14% da borda inferior, sob o leao. Nas fotos: 'Davi' marrom-escuro em corpo maior + '1 aninho' menor embaixo — marrom sobre creme, contraste bom e legivel. Idade sempre presente.",
+          "topoAbas": "Tampa e abas superiores: papel madeira bege claro. Gable triangular: papel de listras multicolor. Abas de cola: brancas.",
+          "densidade": "Media-baixa: ~45% da face coberta; muito branco proposital no ceu (estilo aquarela clean).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 32,
+            "alturaPersonagemPctFace": 62,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 63,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 1
+          }
+        },
+        {
+          "tema": "Fundo do Mar",
+          "papel": "Mural aquarela continuo full-bleed nas 4 faces: agua azul-clara em degrade vertical + faixa de areia amarela na base. Papeis digitais diferentes por regiao: ondinhas azuis (listras onduladas horizontais) nas abas/tampa, lilas com filetes pontilhados verticais nas abas laterais/gable, triangulo do gable em amarelo-areia solido. 3 papeis + mural = 4 regioes distintas.",
+          "personagens": "Sem personagem grande unico: 1 animal medio por face + clusters de suporte. Tartaruga na areia ~28% da altura; baleia nadando a meia-agua ~30% com peixinhos ~8% ao redor; bau do tesouro ~30%. Uma face fica quase vazia no centro (so algas nas bordas) — respiro. Aplique 3D: baleia recortada com contorno branco.",
+          "cenario": "Areia: 18-22% da altura da face. Algas/corais sobem pelas BORDAS de cada face (junto as dobras) ate ~45% da altura, emoldurando. Bolhas (2-4% cada) sobem em colunas. Sem sol/arco-iris — a luz vem do degrade da agua.",
+          "nome": "SEM plaquinha: nome escrito direto sobre a aquarela azul. 'Alice' em script lilas com halo/contorno branco grosso (o halo garante a leitura sobre fundo claro), centralizado, ~70% da largura da face; '2 anos' embaixo em letra menor (~40% da altura do nome), mesma cor. Legivel nas fotos.",
+          "topoAbas": "Tampa/abas superiores: papel de ondinhas azul. Gable: triangulo amarelo-areia sobre painel lilas pontilhado. Abas laterais: lilas.",
+          "densidade": "Media-baixa: ~40%; grandes areas de agua aberta no meio das faces, peso visual na base e bordas.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 20,
+            "alturaPersonagemPctFace": 30,
+            "coberturaPct": 40,
+            "larguraPlacaPctFace": 0,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 1
+          }
+        },
+        {
+          "tema": "Abelhinha",
+          "papel": "Fundo branco com aguada aquarela amarelo-verde desfocada (prado fora de foco) — nao e padrao repetido. Assinatura do tema: barra de MEL ESCORRENDO pendurada na borda superior de TODAS as faces (~11% da altura, gotas irregulares). Papel digital de colmeia (micro-hexagonos, ~33 repeticoes na largura da face — le como textura) nas abas/gable do milk; tampa da mala em creme liso.",
+          "personagens": "1 abelha por face: corpo ~38%, com antenas ~50% da altura da face; ancorada no terco inferior, centro-esquerda, flores do prado sobrepoem a base dela. Nas faces laterais da mala a abelha e menor (~28%). Elementos secundarios: colmeia pendurada no canto superior (~22%) com abelhinha mini e trilha de voo pontilhada; borboletas ~5%. Aplique 3D: abelha recortada com contorno branco.",
+          "cenario": "Faixa de prado florido na base: 18-20% da altura (florzinhas rosa/branca/amarela detalhadas + capim); vinheta verde aquarela sobe pelas bordas laterais; NADA no centro da face — miolo branco/claro de respiro. Teto = mel escorrendo (faz o papel de 'faixa de topo').",
+          "nome": "Nao vi nome nas faces em nenhuma das 2 fotos (os lacos pretos dominam a frente). Sem plaquinha no planificado. Provavelmente vai em tag separada — nao da para afirmar formato pelo que foi visto.",
+          "topoAbas": "Milk: abas e entorno do gable em micro-colmeia amarela; triangulo do gable em mostarda solido. Mala: tampa creme-amarelada lisa. O mel escorrido faz a transicao tampa->face.",
+          "densidade": "Baixa: ~35%; tema mais 'clean' dos cinco, branco dominante no miolo.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 18,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 35,
+            "larguraPlacaPctFace": 0,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 1
+          }
+        },
+        {
+          "tema": "Arraial",
+          "papel": "Unico dos 5 que usa PADRAO REPETIDO cobrindo faces inteiras: xadrez diagonal multicolor (bege/vermelho/mostarda/teal) com ~4 repeticoes do motivo na largura da face (escala grande), em faces alternadas, abas e tampa. Segundo papel: gingham vermelho fino (~33 quadradinhos na largura) no telhado/gable, com renda e pesponto x-x na beirada. Terceiro: textura de papel crepom rosa/vermelho como fundo das faces de cena. Regra clara: faces alternam CENA / SO XADREZ.",
+          "personagens": "Faces de cena = 'barraquinha': crianca de MEIO CORPO atras de balcao de madeira, ~41% da altura visivel (com chapeu), rodeada de props (pipoca ~18%, girassois ~15-20%, milho). Na mala: casal de criancas ~35% + igreja azul/branca ~65% + fogueira ~18% compondo cena completa. Faces de xadrez puro: 0 personagens (ou so pipa ~60% + logo). Aplique 3D: caipirinha dancando recortada.",
+          "cenario": "Nao ha faixa de grama: o 'chao' e o balcao de madeira (~43% da altura da face, com toalha xadrez caida e props em cima). Topo da face de cena: toldo listrado ~17% OU varal de bandeirinhas ~8% a ~10% do topo. Fundo da cena: crepom vermelho texturizado.",
+          "nome": "Nome da crianca NAO aparece nas fotos. No lugar, plaquinha-logo 'ARRAIA': letras cartoon multicoloridas com contorno branco de sticker + mini bandeirinhas penduradas embaixo, ~55-70% da largura da face, as vezes rotacionada ~30 graus. Contraste alto (letras coloridas chapadas sobre halo branco). E o unico texto do kit visto.",
+          "topoAbas": "Tampa e abas: xadrez diagonal grande full-bleed (sem area lisa). Gable/telhado: gingham vermelho + acabamento de renda/pesponto na beirada — o topo do milk vira 'telhadinho de barraca'.",
+          "densidade": "Alta nas faces de cena: ~75% (toldo + crianca + balcao + props sobre textura). Faces de xadrez: 100% padrao, 0 elementos. Media do kit ~70%.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 43,
+            "alturaPersonagemPctFace": 41,
+            "coberturaPct": 75,
+            "larguraPlacaPctFace": 60,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 4
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "Princesas Disney (As Princesas)",
+          "papel": "Textura aquarela rosa-claro manchada cobre 100% de todas as faces (nao e motivo repetido, e textura continua — 0 repeticoes). Cada face leva borda floral tipo renda de rosinhas (~3% da altura da face) na dobra superior e na base das faces lisas. Abas do teto do milk usam papel diferente: damasco arabesco dourado glitter. Regra: 1 face-heroi totalmente ilustrada com cena + faces laterais quietas so com textura e bordas.",
+          "personagens": "Princesas chibi. No PDF milk: 2 princesas lado a lado (Cinderela + Bela) com leve sobreposicao entre si, ~59% da altura da face, pes ancorados na base da face, cobrindo ~75% da largura. Aplique 3D recortado separado no PDF (Rapunzel) aplicado sobre a face frontal na montagem: ~60-65% da altura da face, ancorado no terco inferior, sobrepondo o castelo. Caixas menores (foto): 1 personagem por face. Personagem nunca sangra para fora da face.",
+          "cenario": "Sim, cena completa na face-heroi: castelo rosa ocupa ~80% da altura, arvores floridas rosa preenchem o topo, faixa de grama com flores na base ~8-10% da altura. Nas faces laterais nao ha cenario. Sem arco-iris/sol.",
+          "nome": "Sem plaquinha. Nome aplicado na personalizacao direto sobre a face lateral lisa (aquarela), em script rosa rotacionado 90 graus (le-se de baixo para cima), ocupando ~70% da altura da face; idade ('3 anos' na foto) junto ao nome em corpo menor, legivel de perto. Logo do tema 'As Princesas' em script rosa ~65% da largura, no topo da face traseira. Contraste medio (rosa sobre rosa-claro).",
+          "topoAbas": "Milk: 2 abas com damasco dourado glitter + abas de fecho em aquarela rosa; renda floral na linha de dobra de todas as faces. Gables (triangulos) em rosa liso. Mala: topo/alca em aquarela rosa lisa; laterais (fole) aquarela com borda floral fina. Laco de fita rosa por cima.",
+          "densidade": "Face-heroi ~85-90% coberta (cena inteira). Faces laterais ~10% (textura + 2 bordas). Media do kit ~45%. O contraste cheio-vs-vazio e intencional: uma face conta a historia, as outras respiram.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 9,
+            "alturaPersonagemPctFace": 60,
+            "coberturaPct": 85,
+            "larguraPlacaPctFace": 0,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 0
+          }
+        },
+        {
+          "tema": "Barbie",
+          "papel": "Papel digital 'paete/mosaico disco' rosa cobre 100% de todas as faces e do fole da mala: mini-losangos glitter com ~25-30 repeticoes na largura de uma face (le como textura brilhante, nao como estampa). Sobre ele, brilhos de estrela pontuais. Nas faces com personagem entra um painel rosa-claro emoldurado (janela) com renda branca no topo e na base (~4% da altura cada), ocupando ~65-70% da altura da face; sobra faixa de mosaico ~25-28% embaixo.",
+          "personagens": "Nao ha personagem figurativo — o 'personagem' e a silhueta-logo da Barbie (cabeca com rabo de cavalo) pink sobre o painel claro: 1 por face, em 3 das 4 faces do milk, ~50% da altura da face, centralizada (sem tocar bordas), com versoes espelhadas (olhando p/ esquerda e p/ direita) alternadas entre faces. Na mala a silhueta vai direto sobre o mosaico com contorno branco, no terco esquerdo do painel. Aplique 3D: medalhao flor escalopado em camadas (pink + glitter + branco + silhueta), diametro ~60% da largura da face no milk e ~80% no sushi, centrado na face.",
+          "cenario": "Nenhum. Sem chao, sem faixa, sem elementos de cena. So padrao + painel + renda. Tema resolvido por logo/monograma, nao por ilustracao.",
+          "nome": "Sem plaquinha. Nome em script branco escrito direto sobre o mosaico, centrado, no terco inferior da face lateral do sushi, ~60% da largura da face; idade '5 anos' logo abaixo em corpo ~50% menor, legivel. Contraste medio-baixo (branco sobre rosa medio) — funciona porque a fonte e cheia.",
+          "topoAbas": "Milk: abas de fecho em rosa liso, triangulos do teto em mosaico. Sushi: topo em lilas/roxo liso (unica quebra de cor do kit). Bala: pontas brancas escalopadas lisas. Mala: topo/alca rosa liso. Lacos rosa com miolo preto brilhante remetem ao preto da marca.",
+          "densidade": "Elementos discretos (painel + silhueta) ~30-35% da face; o restante e padrao continuo. Kit mais 'grafico' e vazio de todos: forca vem da repeticao do papel + medalhao central.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 0,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 32,
+            "larguraPlacaPctFace": 0,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 27
+          }
+        },
+        {
+          "tema": "Unicornio Aquarelado",
+          "papel": "Composicao em 2 papeis por face, igual em TODAS as faces: ceu aquarela gradiente rosa com sparkles e bolinhas brancas nos ~75% superiores + faixa chevron zigzag menta nos ~20-25% inferiores, separados por renda/bico branco fino (~3%). O gradiente e continuo (0 repeticoes); o chevron tem ~30 zigzags na largura de uma face. O mesmo par de papeis atravessa milk, mala, abas e fole — coerencia total.",
+          "personagens": "Unicornio bebe sentado: 1 por face, em 3 das 4 faces do milk (1 face fica so com papel). Altura ~52-59% da face; ancora sentado numa nuvem branca que flutua logo acima da faixa menta, ou (na variante maior) direto sobre a linha da faixa. Posicao centro-esquerda. Estrela cadente ~15% da altura no canto superior esquerdo de 2 faces; na face maior, nuvem aquarela grande + arco-iris ocupam ~40% do topo. Aplique 3D: unicornio dentro de medalhao redondo escalopado rosa com miolo chevron menta, diametro ~80-85% da largura da face do milk (quase toca as 2 bordas laterais).",
+          "cenario": "Faixa 'chao' = chevron menta 20-25% da altura em toda face. Elementos de ceu: nuvens aquarela, arco-iris pastel, estrelas cadentes amarelas, bolinhas/sparkles. Sem grama figurativa — o chao e abstrato (padrao).",
+          "nome": "Nos PDFs nao ha nome nem plaquinha. Na foto do milk aparece escrita em script na face lateral esquerda (rotacionada), mas pequena e fora de foco — nao da para afirmar cor/formato com certeza. O medalhao escalopado e o elemento identidade; nome provavelmente entra na lateral via arquivo Studio.",
+          "topoAbas": "Topo do milk: continuacao do ceu aquarela (rosa passando por arco-iris pastel ate azulado), com renda escalopada branca na linha de dobra; gables rosa-claro liso. Mala: topo/alca em ceu aquarela; triangulos internos rosa liso. Nada de personagem nas abas — abas sao sempre 'ceu'.",
+          "densidade": "Elementos discretos ~40% da face (unicornio + nuvem + estrela); papel cobre 100%. Leitura geral leve, muito espaco de ceu vazio proposital acima do personagem.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 22,
+            "alturaPersonagemPctFace": 55,
+            "coberturaPct": 40,
+            "larguraPlacaPctFace": 0,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 30
+          }
+        },
+        {
+          "tema": "Moana",
+          "papel": "Nao usa papel de padrao nas faces: as 4 faces do milk formam UMA unica cena panoramica de praia continua que atravessa as dobras (ceu com nuvens ~30-35% + mar turquesa ~35% + areia ~25-30%), com montanhas verdes fechando as bordas externas do panorama. Papel estampado (tribal/etnico chevron colorido) aparece SO no topo/abas. Regra oposta aos outros kits: cena vira o proprio papel.",
+          "personagens": "Elenco distribuido 1 grupo por face: Maui ~55% da altura (pes na areia, sobrepondo a montanha); Moana bebe ~40% + Pua e Heihei ~20% na mesma face; torre de 5 Kakamoras ~50%. Uma face fica so com cenario vazio — e ela que recebe o aplique 3D da Moana adulta na montagem: ~85-90% da altura da face (o maior personagem de todos os kits estudados), pes na base, quase encostando na dobra superior. Sol ~10% no topo de 2 faces. Personagens sempre ancorados na areia, nunca flutuando.",
+          "cenario": "Cenario e tudo: areia (chao) ~25-28% da altura, mar ~35%, ceu ~30%, sol amarelo, nuvens em faixa branca, redemoinhos de agua azuis, montanhas verdes laterais. Grama/folhagem nos cantos da mala.",
+          "nome": "Sem plaquinha nas faces — nome escrito direto no ceu: caixa alta azul com contorno branco ('MANU'), com hibisco vermelho e sol desenhados ao lado, no topo da face lateral, ~55% da largura; idade '14 ANOS' logo abaixo no mesmo estilo ~40% menor, bem legivel (azul sobre ceu claro = bom contraste). Na bala: painel vertical claro central (~30% da largura do envoltorio) com nome azul + hibisco em cima — unico caso proximo de 'plaquinha'.",
+          "topoAbas": "Milk: 2 abas com papel tribal chevron rosa/laranja/menta + gables e abas de fecho em laranja solido. Mala: papel tribal listrado cobre todo o topo/alca; triangulos vermelho-listrado. Contraste proposital: cena natural embaixo, grafismo etnico em cima. Laco marrom/laranja.",
+          "densidade": "Cena de fundo cobre 100%; personagens/elementos discretos ~40-45% por face (na face frontal com aplique chega a ~75%). Kit de maior imersao: nenhuma area 'lisa'.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 26,
+            "alturaPersonagemPctFace": 88,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 30,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 0
+          }
+        },
+        {
+          "tema": "Hot Wheels",
+          "papel": "Halftone pop-art (bolinhas grandes estilo comic) alternando por face: azul com bolinhas claras / laranja-amarelo gradiente com bolinhas — ~13 bolinhas na largura de uma face (motivo grande e visivel, diferente da textura fina da Barbie). Toda face e emoldurada por fita zebrada amarelo/preto (hazard) no topo E na base, ~6% da altura cada. Outros papeis do kit: quadriculado bandeira preto/branco e listras diagonais vermelho/branco (usados no teto/topo).",
+          "personagens": "Carros Hot Wheels renderizados: 1 por face em 3 das 4 faces do milk, ~35-40% da altura da face, sempre no terco inferior, envoltos em explosao de fogo que sobe da base ~40-50% da altura; carros em diagonal (movimento). Face 4: trofeu dourado + 2 bandeiras quadriculadas cruzadas no topo (~30% da altura) + carro azul (~35%) embaixo. Aplique 3D: menino piloto de macacao azul segurando capacete, ~80-85% da altura da face, pes na base, aplicado sobre a face frontal cobrindo o padrao. Na bala, o medalhao central e trofeu + bandeiras (sem personagem).",
+          "cenario": "Sem chao figurativo — a 'base' visual e a fita hazard preta/amarela; chamas realistas sobem da base ~40-50% da altura em quase toda face. Sem ceu/paisagem: fundo e 100% grafico (halftone).",
+          "nome": "Sem plaquinha. Nome em fonte display bold amarela com contorno/sombra vermelha ('Davi'), direto no topo da face lateral azul, ~70% da largura da face; idade '8 anos' abaixo em corpo menor no mesmo estilo, legivel. Otimo contraste (amarelo sobre azul). Na bala ha mini-placa dourada com o nome no topo do cubo central.",
+          "topoAbas": "Milk: gables em listras diagonais vermelho/branco + abas de fecho em quadriculado preto/branco. Mala: quadriculado bandeira cobre TODO o topo/alca; triangulos em listra vermelha. Sushi: faixa listrada vermelha no topo. Fita hazard sempre fazendo a transicao topo-face. Laco vermelho.",
+          "densidade": "~50-55% da face coberta por elementos (carro + fogo + trofeu/bandeiras + 2 fitas hazard); halftone cobre o resto. Kit mais denso e contrastado (primarias puras: azul/vermelho/amarelo + preto).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 6,
+            "alturaPersonagemPctFace": 82,
+            "coberturaPct": 52,
+            "larguraPlacaPctFace": 0,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 13
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "Jardim das Fadas",
+          "papel": "Fundo NAO e estampa repetida: e um wash aquarelado continuo (rosa-lilas-azul, tipo ceu com nuvens) cobrindo a face inteira, sem emenda entre faces. A zona de aba/telhado usa um segundo wash rosa mais forte com ~4-6 florzinhas esparsas nos cantos (nao e padrao repetido). Na caixa bala, corpo em wash azul-claro e pontas em wash rosa com borda ondulada; cantos com mini-cluster de 3-4 flores.",
+          "personagens": "Fada ~40% da altura da face, ancorada no terco inferior (pes a ~82% da altura), levemente a esquerda do centro. Arvore rosa grande ocupa ~85% da altura e SANGRA para fora da borda esquerda. Face 4 (variacao) troca a fada por um poco dos desejos (~65% da altura) com guaxinim na base (~25%). 2-3 borboletas pequenas (~10-12% da altura cada) na metade superior. Coelhinho + cogumelo na base ~15%. 2 personagens 'vivos' por face + arvore/poco como ancora lateral. PDF traz a fada como recorte avulso para aplique 3D.",
+          "cenario": "Sim: faixa de flores/grama na base ocupando ~7% da altura + borda de renda/scallop ~3% no corte inferior. Nuvens brancas + brilho de sol no canto superior (~15% da largura cada). Sem arco-iris neste tema. A 'cena' e leve: ceu aquarelado + chao de flores, personagens flutuam sobre o wash.",
+          "nome": "NAO ha placa de nome nos PDFs nem nas fotos deste kit. A identificacao vem no topper do cone: numero da idade ('1') em rosa 3D sobre plaquinha lilas arredondada montada numa borboleta grande (~30% da largura da face do cone). Nao vi nome escrito em nenhuma peca.",
+          "topoAbas": "Aba superior e triangulos do 'telhado' da milk: wash rosa mais saturado com flores esparsas nos cantos (sem personagem). Abas da bala: rosa com borda scallop + fio de renda azul. Abas laterais de colagem: brancas/sem impressao.",
+          "densidade": "Faces hero ~65% cobertas (arvore + fada + faixa de flores + nuvens); face 2 e quase vazia (~5%, so o wash). O charme do produto montado vem de apliques 3D (fada, casa-cogumelo, borboletas) e lacos de fita colados por cima.",
+          "numeros": {
+            "alturaPersonagemPctFace": 40,
+            "personagensPorFace": 2,
+            "alturaFaixaChaoPctFace": 10,
+            "coberturaPct": 65,
+            "larguraPlacaPctFace": 0,
+            "repeticoesMotivoPorFace": 0
+          }
+        },
+        {
+          "tema": "Fazendinha Rosa",
+          "papel": "Tres papeis por regiao: (1) abas/topo em grade diagonal rosa (lattice com linhas brancas, celula pequena ~12-14 repeticoes na largura da face); (2) face principal e uma CENA ilustrada completa (ceu azul aquarelado); (3) faixa inferior em ESTAMPA DE VACA (manchas pretas sobre branco, ~8-10 manchas na largura). Um dos gabletes do telhado usa textura de madeira clara. Face 3 e papel aquarela azul liso com moldura pontilhada costurada (recebe o aplique 3D).",
+          "personagens": "Muitos personagens pequenos por face (~6): cavalo ~22% da altura (maior), vaca ~18%, gato, mini-vaca, pintinho, minhoca na arvore, revoada de passaros. Todos ancorados na LINHA DA CERCA/chao a ~62% da altura da face. Arvore verde sangra pela borda superior-esquerda (~55% da altura); moinho a direita ~45%; trator ~20% no meio. PDF traz gato grande recortado avulso (aplique); bala traz porquinho + flor scallop + disco de madeira como pecas avulsas.",
+          "cenario": "Cenario completo estilo paisagem: ceu com passaros no topo, campo amarelo ao fundo, cerca marrom na linha de base, faixa de terra ~5% e depois faixa de estampa de vaca ~25-27% fechando a base. Total de 'chao' ~30% da altura da face.",
+          "nome": "NAO ha placa de nome nos PDFs nem nas fotos deste kit. Identidade do tema vem so dos personagens e estampas.",
+          "topoAbas": "Abas superiores e triangulos: grade rosa (lattice). Um gablete com madeira. Bala: pontas em lattice rosa com bico de renda branca e borda scallop. Sem personagens nas abas.",
+          "densidade": "Faces com cena ~85% cobertas (a face inteira e ilustracao, so o ceu respira). Face do aplique ~10%. E o tema mais denso dos 5.",
+          "numeros": {
+            "alturaPersonagemPctFace": 22,
+            "personagensPorFace": 6,
+            "alturaFaixaChaoPctFace": 30,
+            "coberturaPct": 85,
+            "larguraPlacaPctFace": 0,
+            "repeticoesMotivoPorFace": 13
+          }
+        },
+        {
+          "tema": "Minnie Aquarelada",
+          "papel": "Papel digital de coracoes aquarelados (rosa/amarelo/ciano sobre rosa-claro), ~6-7 coracoes na largura da face, aplicado em face inteira na face 2 e como FAIXA INFERIOR (~30%) nas faces hero. Faces hero tem painel superior rosa LISO (~55-60% da altura) onde o personagem senta. Versao mais clara do mesmo papel atras da Minnie de corpo inteiro na face 4.",
+          "personagens": "Faces 1 e 3 (identicas): busto/meio-corpo da Minnie ~55% da altura da face, ancorado a esquerda com os bracos APOIADOS na barra de renda que divide painel e faixa de coracoes (a ~62% da altura) - efeito 'debrucada na janela'. Face 4: Minnie de corpo inteiro ~85% da altura, centralizada. 1 personagem por face. PDF traz Minnie sentada recortada avulsa para aplique 3D.",
+          "cenario": "Sem cenario ilustrado (sem chao/grama/sol). A estrutura e grafica: painel liso + barra de renda branca ~3% + faixa de papel de coracoes ~30% na base. O 'chao' e a faixa de estampa.",
+          "nome": "No PDF nao ha nome. Na FOTO do produto: nome 'Flora' em lettering script rosa sobre o painel rosa-claro da face lateral da milk (~40% da largura da face, terco inferior) - contraste baixo (rosa sobre rosa), resolvido com contorno claro. Na bala aparece no topo da ponta ('Flora e ovos' ilegivel na foto - nao consegui confirmar o texto secundario). Nao vi idade neste kit.",
+          "topoAbas": "Abas superiores: papel de coracoes; triangulos do gablete: rosa liso; zonas do telhado: amarelo-claro liso. Bala: pontas rosa liso + scallop amarelo-claro, faixa central de coracoes com renda nas bordas. Sem personagens nas abas.",
+          "densidade": "Faces hero ~70% (painel + personagem + faixa); face 2 e 100% papel mas sem elementos figurativos. Kit de densidade media, muito dependente do painel liso para dar respiro.",
+          "numeros": {
+            "alturaPersonagemPctFace": 55,
+            "personagensPorFace": 1,
+            "alturaFaixaChaoPctFace": 30,
+            "coberturaPct": 70,
+            "larguraPlacaPctFace": 40,
+            "repeticoesMotivoPorFace": 6
+          }
+        },
+        {
+          "tema": "Elefantinho Azul",
+          "papel": "Base em degrade aquarelado rosa-para-azul cobrindo a face inteira (sem motivo repetido). Papeis de apoio por regiao: xadrez vichy azul (check fino, ~14-16 quadrados na largura) como faixa inferior das faces hero e nas pontas da bala; papel de ondinhas azuis nas zonas de telhado/gablete. Faces hero tem MOLDURA fina branca/azul inset ~3% da borda, como um quadro.",
+          "personagens": "Faces 1 e 3: elefantinho sentado ~42% da altura, centralizado, sentado sobre 'prateleira' de renda branca a ~72% da altura; cantoneiras de renda decoram os 2 cantos superiores do quadro (~18% da altura cada). Face 4: elefante sobre caixa de presente segurando balao-coracao, conjunto ~55% da altura, centralizado, com renda no topo e na base da face. 1 personagem por face. PDF traz elefante no balao de ar quente recortado avulso (aplique 3D usado em quase todas as caixas nas fotos).",
+          "cenario": "Sem cenario ilustrado. Estrutura grafica: degrade + faixa vichy ~22% na base + trims de renda ~4% separando. Cantoneiras de renda fazem papel de 'moldura de cena'.",
+          "nome": "No PDF nao ha nome. Na FOTO: 'Marcelo' em lettering script BRANCO com contorno prata, na face central da bala, ~65-70% da largura da face, posicionado ABAIXO do aplique do elefante (~75% da altura). Contraste suave mas legivel gracas ao contorno. Nao vi idade neste kit.",
+          "topoAbas": "Abas superiores e tab de fechamento: degrade aquarelado; gabletes/telhado: papel de ondinhas azul; renda branca no vinco onde telhado encontra a face. Bala: pontas em vichy azul com scallop, faixa central degrade com renda nas duas bordas. Sem personagens nas abas.",
+          "densidade": "Faces hero ~60% (o degrade conta como fundo); face 2 ~10% (so degrade + renda). Kit mais 'clean' dos 5 - a sofisticacao vem da moldura, das rendas e do aplique 3D.",
+          "numeros": {
+            "alturaPersonagemPctFace": 42,
+            "personagensPorFace": 1,
+            "alturaFaixaChaoPctFace": 22,
+            "coberturaPct": 60,
+            "larguraPlacaPctFace": 65,
+            "repeticoesMotivoPorFace": 15
+          }
+        },
+        {
+          "tema": "Boneca Metoo Dool",
+          "papel": "Tres papeis por regiao: (1) floral chintz de rosinhas com folhas verdes sobre branco (~5-6 clusters na largura da face) - papel assinatura do tema, usado em face inteira (face 2 e 4) e no interior dos medalhoes; (2) chevron/zigzag rosa fino nas abas, telhado e zona media da bala; (3) vichy rosa como faixa inferior das faces hero (~28%). Trim de coracoes em renda amarela/rosa (~4-5% da altura) separa painel e faixa.",
+          "personagens": "Faces 1 e 3: SO A CABECA da boneca (capuz de coelhinho azul poa) ~48% da altura da face, espiando por cima do trim de coracoes com as maozinhas apoiadas - efeito 'espiando o muro' a ~58% da altura, sobre painel rosa liso. Face 4: boneca de corpo inteiro (capuz de ursinha verde) ~78% da altura, centralizada sobre o floral. 1 personagem por face, poses/roupas DIFERENTES por face. PDF traz MEDALHAO circular avulso: anel de renda rosa + interior floral + boneca de corpo inteiro (~80% do diametro); nas fotos esse medalhao cobre ~60-70% da largura da face das caixas.",
+          "cenario": "Sem cenario ilustrado. Estrutura em bandas: painel rosa liso (topo, ~58%) + trim de coracoes ~4% + faixa vichy rosa ~28%. O floral funciona como 'ambiente' nas faces inteiras.",
+          "nome": "No PDF nao ha nome. Na FOTO: plaquinha organica branca (formato nuvem/recorte irregular com contorno rosa) na face central da bala, ~60% da largura da face, centralizada: 'Flora' em script rosa GRANDE + '3 anos' em script menor logo abaixo - idade presente e legivel. Bom contraste (rosa medio sobre branco).",
+          "topoAbas": "Abas superiores, tab e triangulos do gablete: chevron rosa fino. Face de tras do topo: floral. Bala: zona media chevron, pontas rosa liso com scallop, trims de coracoes nas bordas da faixa central floral. Sem personagens nas abas.",
+          "densidade": "Faces hero ~85% cobertas (todas as bandas sao estampadas ou ocupadas); faces florais 100% papel + personagem. Junto com Fazendinha, o mais denso - mas a densidade vem de ESTAMPA, nao de cena.",
+          "numeros": {
+            "alturaPersonagemPctFace": 48,
+            "personagensPorFace": 1,
+            "alturaFaixaChaoPctFace": 28,
+            "coberturaPct": 85,
+            "larguraPlacaPctFace": 60,
+            "repeticoesMotivoPorFace": 5
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "sintese": {
+    "spec": {
+      "papel": {
+        "cobertura": "Corpo das faces: 100% full-bleed SEMPRE (nenhum branco acidental). Moda dos kits (19 de 30): corpo NAO e padrao repetido — e cena/mural/wash CONTINUO que atravessa as 4 faces sem emenda (elementos podem ser cortados na dobra e continuar na face vizinha). Quando o corpo usar estampa repetida (minoria: Arraial, Barbie, Hot Wheels, Natal), motivo grande-legivel: 4-13 repeticoes na largura da face. Densidade de elementos sobre o fundo: alvo 50-55% (mediana 52%, faixa aceitavel 40-65%); sempre 1 face de respiro com <=20% de cobertura (so cenario/papel).",
+        "escalaMotivoPctLarguraFace": 8,
+        "observacoes": "Duas escalas distintas de motivo, nunca a mesma: CORPO estampado = motivo a 8% da largura da face (~12 repeticoes, mediana das estampas de corpo); ABAS/TOPO = motivo fino a 4-6% da largura da face (~16-25 repeticoes, le como textura). O motor hoje usa motivo a 55% da largura da face (~2 repeticoes) para ambos — 7x grande demais. Regra de regioes: 2-4 papeis coordenados por caixa (corpo + abas + gable + opcional faixa de chao), mesma paleta."
+      },
+      "personagens": {
+        "alturaPctFace": 60,
+        "porFace": 1,
+        "ancoragem": "Pes ancorados na LINHA DO CHAO (borda superior da faixa de chao) ou pisando dentro dela, a 2-5% da borda inferior da face. NUNCA flutuando e NUNCA centrado verticalmente. Posicao horizontal: centro ou deslocado ~1/3 para um lado (mediana: centro-esquerda), podendo sangrar bracos/adereco na linha de dobra.",
+        "observacoes": "Mediana da altura do personagem-heroi = 60% da face (faixa 55-70%; clusters de bichos pequenos = excecao, nao o padrao). Exatamente 1 personagem OU 1 grupo por face; amigo secundario opcional a ~15% da altura, flutuando perto da cabeca. Das faces grandes, 1 fica SEM personagem (respiro, so cenario) — padrao A-B-A-C. Todo personagem leva contorno branco de adesivo/aplique com raio ~1-1.5% da altura da face (o filtro atual de raio fixo 7px deve ficar proporcional)."
+      },
+      "cenario": {
+        "faixaChaoPctFace": 25,
+        "elementos": "Faixa de chao na base de TODAS as faces do corpo, mesma altura em todas (mediana 25% da altura da face; faixa valida 20-30%), em 2 camadas/tons (colina clara + colina/base mais escura) ou papel de apoio (vichy/estampa fina) com transicao de renda/scallop de ~3%. Acima: 2-3 elementos de ceu por face no maximo (nuvens gordinhas, estrelas ou bolhas, 4-10% da face cada), somente no terco superior. Elementos de moldura (arvore/alga/coral/folhagem) entram pelas BORDAS laterais das faces subindo ate ~40-45% da altura, cortados pela dobra. Miolo da face respira — sem salpicos aleatorios no meio."
+      },
+      "placaNome": {
+        "larguraPctFace": 58,
+        "formato": "Retangulo de cantos arredondados ou oval escalopada, fundo BRANCO/creme, borda simples na cor principal + sombra sutil; altura ~14-18% da altura da face (proporcao ~2.8:1 a 3.3:1). Posicao: face central, TERCO INFERIOR — base da placa a ~14% da borda inferior, personagem pode apoiar/sobrepor a placa (assinatura Alice). Nome em cima, idade embaixo dentro da mesma placa.",
+        "contraste": "Texto do nome em cor saturada ESCURA do tema sobre o fundo claro da placa (contraste alto — moda dos kits legiveis). Se o nome for escrito direto no cenario (sem placa), obrigatorio halo/contorno branco grosso de 12-15% do corpo da fonte (paint-order stroke); o atual 9% e fino demais.",
+        "idade": "SEMPRE presente quando fornecida (aparece em 80% dos kits com nome). Corpo da idade = 40-45% do corpo do nome (mediana ~40%), mesma familia tipografica, imediatamente abaixo do nome, legivel — nunca menor que 35%.",
+        "larguraPctFaceObs": null
+      },
+      "topoAbas": {
+        "tratamento": "Abas superiores + tampa: papel estampado coordenado DIFERENTE do corpo, motivo fino (4-6% da largura da face, ~16-25 repeticoes) — poa, listras, xadrez, madeira ou textura do tema. Triangulo do gable: COR SOLIDA chapada de pontuacao que ecoa uma cor do personagem/tema (moda: 24 de 30 kits). Abas laterais de cola e pes: brancas sem impressao. Regra absoluta: abas/tampa NUNCA levam personagem nem nome. Se nao houver papel de topo, preencher com cor solida do tema — nunca deixar branco nem repetir a cena do corpo."
+      },
+      "regrasGerais": [
+        "1. Corpo = mural continuo atravessando as 4 faces (0 emendas); estampa repetida e privilegio das abas/topo.",
+        "2. Faixa de chao a 25% da altura da face (20-30%), mesma linha em todas as faces do corpo — e a espinha estrutural do layout.",
+        "3. Personagem-heroi a 60% da altura da face (55-70%), pes na linha do chao, 1 por face, contorno branco proporcional (~1% da altura da face).",
+        "4. Sempre 1 face de respiro sem personagem (so cenario/papel) — padrao A-B-A-C.",
+        "5. Placa de nome a 58% da largura da face (48-63%), terco inferior da face central, fundo claro, texto escuro saturado, idade a 40-45% do corpo do nome.",
+        "6. Nome direto no cenario exige halo branco de 12-15% do corpo da fonte.",
+        "7. Maximo 2-3 elementos de ceu por face, so no terco superior; moldura lateral pelas bordas ate ~40% da altura; miolo respira.",
+        "8. Gable = cor solida; abas = estampa fina coordenada; abas de cola/pes = branco.",
+        "9. Densidade de elementos alvo 50-55% por face com personagem; cobertura de fundo sempre 100%.",
+        "10. Paleta por caixa: 2-4 papeis coordenados da mesma familia de cor; 1 cor de pontuacao solida repetida no gable e na borda da placa."
+      ]
+    },
+    "mudancasNoCodigo": [
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linha 82 (const chaoAltura = avgFaceH * 0.16)",
+        "oQue": "Subir a faixa de chao de 16% para 25% da altura da face: chaoAltura = avgFaceH * 0.25. Atualizar o comentario da linha 81 (spec diz 12-18%, o real e 20-30% com mediana 25)."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linhas 87-104 (motW e patterns papelTop/papelBody)",
+        "oQue": "Separar as duas escalas de motivo: motCorpo = avgFaceW * 0.08 (~12 repeticoes) para o pattern do corpo e motTopo = avgFaceW * 0.05 (~20 repeticoes) para o pattern das abas — hoje ambos usam avgFaceW * 0.55 (motivo 7x grande demais, ~2 repeticoes). Alem disso: quando o asset de corpo for cena/mural (ex.: meta.tipo === 'cena'), renderizar como UMA unica <image> cobrindo x=0..W do corpo com preserveAspectRatio slice (mural continuo pelas 4 faces) em vez de pattern repetido."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linha 95 (fundoTopo) ",
+        "oQue": "Quando nao houver papelTopUri, preencher a zona do topo com cor solida do tema (fill corIdade ou cor derivada) em vez de deixar branco — abas nunca ficam sem tratamento e nunca herdam a cena do corpo. Adicionar tambem fill solido para os triangulos de gable se o faces.json expuser essas regioes."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linhas 112-114 (faixaChao)",
+        "oQue": "Manter as 2 camadas de colinas mas com 2 TONS distintos (cor base + variante ~12% mais escura via cor derivada), e aceitar asset opcional role 'chao' (papel vichy/estampa fina) como fill da faixa via pattern proprio a 5% da largura da face; adicionar transicao scallop/renda branca de ~3% da altura da face na borda superior da faixa."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linhas 116-134 (salpicos)",
+        "oQue": "Reduzir de 5 salpicos aleatorios por face para no maximo 3 elementos de ceu por face, restritos ao terco superior da face (py limitado a f.y + (chaoY - f.y) * 0.35) e nunca sobre a zona da placa — a moda dos kits e 2-3 nuvens/estrelas discretas com miolo respirando."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linhas 138-146 (personagemBlock) e 192-207 (distribuicao)",
+        "oQue": "Alturas do personagem: face sem nome 0.60 → 0.62 e face do nome 0.46 → 0.50 (mediana heroi = 60%). Base: manter pe na faixa (bodyBot - chaoAltura * 0.12 com a nova chaoAltura de 25% ≈ pe a 3% da borda). Distribuicao: garantir 1 face de respiro — quando big.length >= 3, a face mais distante da nameFace nao recebe personagem (hoje o idx++ poe personagem em todas)."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linhas 223-228 (filtro #adesivo)",
+        "oQue": "Raio do contorno branco de adesivo proporcional em vez de fixo 7: radius = Math.max(4, Math.round(avgFaceH * 0.012)) — interpolar o valor no template do filtro (~1% da altura da face, padrao dos apliques da Alice)."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/src/lib/compose-kit.ts, linhas 149-185 (plateBlock)",
+        "oQue": "Placa: largura f.w * 0.86 → f.w * 0.58 (mediana 58%); altura sem placa-imagem plW * 0.52 → plW * 0.32 (placa ~15% da altura da face); posicao plY = f.y + (chaoY - f.y) * 0.30 (terco superior) → base da placa a 14% da borda inferior: plY = bodyBot - avgFaceH * 0.14 - plH, permitindo o personagem da mesma face sobrepor a placa. Halo do nome: stroke-width fsNome * 0.09 → fsNome * 0.13. Idade: amarrar ao nome — fsIdade = fsNome * 0.42 (hoje deriva de bH desacoplado), mantendo a pilula de contraste com stroke branco."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/tools/ingestao/compose-kit.mjs, linha 38 (sandY = bodyTop + (bodyBot-bodyTop) * 0.72)",
+        "oQue": "Espelhar a faixa de chao de 25%: sandY = bodyTop + (bodyBot - bodyTop) * 0.75."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/tools/ingestao/compose-kit.mjs, linhas 62-83 (plateBlock/arielBlock/amigosBlock)",
+        "oQue": "Espelhar as proporcoes v2: plW = min(availW * 0.58, 520) com plY no terco inferior da face; personagem dimensionado por ALTURA da face (ah = faceH * 0.62, aw = ah * ratio, teto aw <= faceW * 0.92) em vez de por largura (aw = availW * 0.85); acrescentar filtro de contorno branco proporcional identico ao do .ts; texto da idade a 42% do corpo do nome."
+      },
+      {
+        "onde": "C:/Users/marco/Code/arte-m-gica/tools/ingestao/compose-kit.mjs, linhas 104-127 (montagem do SVG) e 52-59 (decor)",
+        "oQue": "Espelhar: papel de escamas do topo em pattern fino (motivo = faceW * 0.05, ~20 repeticoes) em vez de image esticada unica; decor limitado a 3 elementos por face no terco superior + moldura lateral (algas/corais) subindo ate 45% da altura pelas bordas das faces; garantir 1 face de respiro sem bloco de personagem no ramo big.length > 1."
+      }
+    ]
+  }
 }

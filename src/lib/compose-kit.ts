@@ -49,6 +49,23 @@ export interface KitDados {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+// escurece uma cor hex por um fator (0.12 = 12% mais escura) — tons da faixa de chão
+const escurecer = (hex: string, fator: number) => {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return hex;
+  const f = (i: number) => Math.min(255, Math.max(0, Math.round(parseInt(m.slice(i, i + 2), 16) * (1 - fator))))
+    .toString(16).padStart(2, "0");
+  return `#${f(0)}${f(2)}${f(4)}`;
+};
+
+// luminância aproximada (0-1) para garantir contraste do nome na plaquinha
+const luminancia = (hex: string) => {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return 0.5;
+  const c = (i: number) => parseInt(m.slice(i, i + 2), 16) / 255;
+  return 0.299 * c(0) + 0.587 * c(2) + 0.114 * c(4);
+};
+
 // ---------------------------------------------------------------------------
 // LAYOUT PURO — "Padrão Alice": papel na escala certa, personagem grande
 // ancorado no chão, faixa de cenário, plaquinha de nome com contraste.
@@ -78,25 +95,31 @@ export function montarSvgKit(d: KitDados): string {
   const avgFaceH = big.reduce((s, f) => s + f.h, 0) / big.length;
 
   // linha do chão: base das faces do corpo, com folga p/ personagem "pisar"
-  // (spec padrão Alice: faixa de chão 12-18% da altura da face)
-  const chaoAltura = avgFaceH * 0.16;
+  // (estudo dos 30 kits reais da Alice: faixa de chão 20-30%, mediana 25%)
+  const chaoAltura = avgFaceH * 0.25;
   const chaoY = bodyBot - chaoAltura;
 
   // ---- fundo: papel em ESCALA DE MOTIVO (pattern), não imagem esticada ----
-  // motivo ≈ metade da largura de uma face → padrão legível como nos kits da Alice
-  const motW = Math.max(180, avgFaceW * 0.55);
+  // o spec fala do MOTIVO interno (~8% da face); cada arquivo de papel já traz
+  // uma grade de ~6-8 motivos, então o tile certo é ~metade da face no corpo
+  // e mais fino nas abas (lê como textura)
+  const motCorpo = Math.max(180, avgFaceW * 0.5);
+  const motTopo = Math.max(120, avgFaceW * 0.33);
   const defsPapel: string[] = [];
   let fundoTopo = "";
   let fundoCorpo = "";
   if (d.papelTopUri) {
     defsPapel.push(
-      `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motW}" height="${motW}"><image href="${d.papelTopUri}" x="0" y="0" width="${motW}" height="${motW}" preserveAspectRatio="xMidYMid slice"/></pattern>`
+      `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
+  } else {
+    // abas nunca ficam sem tratamento: cor sólida do tema
+    fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corIdade}" opacity="0.30"/>`;
   }
   if (d.papelBodyUri) {
     defsPapel.push(
-      `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motW}" height="${motW}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motW}" height="${motW}" preserveAspectRatio="xMidYMid slice"/></pattern>`
+      `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else {
@@ -109,26 +132,28 @@ export function montarSvgKit(d: KitDados): string {
   for (let x = -passo * 0.5; x < W + passo; x += passo) {
     morros.push(`M ${x} ${bodyBot} L ${x} ${chaoY + chaoAltura * 0.45} Q ${x + passo * 0.5} ${chaoY - chaoAltura * 0.35} ${x + passo} ${chaoY + chaoAltura * 0.45} L ${x + passo} ${bodyBot} Z`);
   }
+  // dois tons (colina clara atrás + base ~12% mais escura), padrão dos kits reais
   const faixaChao = `
-    <path d="${morros.join(" ")}" fill="${corIdade}" opacity="0.9"/>
-    <path d="M 0 ${chaoY + chaoAltura * 0.5} Q ${W * 0.25} ${chaoY + chaoAltura * 0.18} ${W * 0.5} ${chaoY + chaoAltura * 0.46} T ${W} ${chaoY + chaoAltura * 0.42} L ${W} ${bodyBot} L 0 ${bodyBot} Z" fill="${corIdade}"/>`;
+    <path d="${morros.join(" ")}" fill="${corIdade}" opacity="0.95"/>
+    <path d="M 0 ${chaoY + chaoAltura * 0.5} Q ${W * 0.25} ${chaoY + chaoAltura * 0.18} ${W * 0.5} ${chaoY + chaoAltura * 0.46} T ${W} ${chaoY + chaoAltura * 0.42} L ${W} ${bodyBot} L 0 ${bodyBot} Z" fill="${escurecer(corIdade, 0.12)}"/>`;
 
   // confetes/estrelinhas no "céu" das faces (densidade padrão Alice)
   const estrela = (x: number, y: number, s: number, cor: string, op: number) =>
     `<path d="M0,-10 L2.9,-3.1 10,-3.1 4.5,1.8 6.5,9 0,4.9 -6.5,9 -4.5,1.8 -10,-3.1 -2.9,-3.1 Z" transform="translate(${x} ${y}) scale(${s})" fill="${cor}" opacity="${op}"/>`;
   const bolinha = (x: number, y: number, r: number, cor: string, op: number) =>
     `<circle cx="${x}" cy="${y}" r="${r}" fill="${cor}" opacity="${op}"/>`;
+  // máx. 3 elementos de céu por face, só no terço superior (estudo: 2-3 nuvens/estrelas; miolo respira)
+  const nuvem = (x: number, y: number, s: number) =>
+    `<g transform="translate(${x} ${y}) scale(${s})" fill="#FFFFFF" opacity="0.9"><ellipse rx="26" ry="15"/><ellipse cx="-20" cy="5" rx="16" ry="10"/><ellipse cx="20" cy="5" rx="17" ry="11"/></g>`;
   const salpicos = big
     .map((f, i) => {
       const seed = (i + 1) * 7;
-      const px = (k: number) => f.x + f.w * ((((seed * (k + 3)) % 89) + 6) / 100);
-      const py = (k: number) => f.y + (chaoY - f.y) * ((((seed * (k + 7)) % 55) + 8) / 100);
+      const px = (k: number) => f.x + f.w * ((((seed * (k + 3)) % 74) + 13) / 100);
+      const py = (k: number) => f.y + (chaoY - f.y) * ((((seed * (k + 7)) % 27) + 6) / 100);
       return (
-        estrela(px(1), py(1), 1.6, "#FFFFFF", 0.7) +
-        estrela(px(2), py(2), 1.1, corNome, 0.5) +
-        bolinha(px(3), py(3), 7, "#FFFFFF", 0.55) +
-        bolinha(px(4), py(4), 5, corIdade, 0.45) +
-        estrela(px(5), py(5), 1.3, "#FFFFFF", 0.6)
+        nuvem(px(1), py(1), 1.15) +
+        estrela(px(2), py(2), 1.3, "#FFFFFF", 0.75) +
+        bolinha(px(3), py(3), 6, corNome, 0.4)
       );
     })
     .join("");
@@ -141,19 +166,23 @@ export function montarSvgKit(d: KitDados): string {
     let aw = ah * ratio;
     if (aw > f.w * 0.92) { aw = f.w * 0.92; ah = aw / ratio; }
     const cx = f.cx;
-    const base = bodyBot - chaoAltura * 0.18; // pisa na faixa de chão
+    const base = bodyBot - chaoAltura * 0.12; // pé a ~3% da borda inferior (estudo Alice)
     return `<image href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
   };
 
   // ---- plaquinha de nome com contraste forte ----
+  // estudo Alice: largura mediana 58% da face, encostada na linha do chão
+  // (o personagem pode sobrepor a placa — assinatura dos kits reais)
   const plateBlock = (f: Face) => {
-    const plW = Math.min(f.w * 0.86, avgFaceW * 0.95);
+    // texto sempre legível: cores de tema claras são escurecidas na plaquinha
+    const corTexto = luminancia(corNome) > 0.6 ? escurecer(corNome, 0.45) : corNome;
+    const plW = Math.min(f.w * 0.62, avgFaceW * 0.72);
     const temPlaca = !!d.placaUri;
     const plH = temPlaca
       ? plW * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320))
-      : plW * 0.52;
+      : plW * 0.34;
     const cx = f.cx;
-    const plY = f.y + (chaoY - f.y) * 0.30 - plH / 2;
+    const plY = chaoY - plH * 0.45;
     const escalope: string[] = [];
     if (!temPlaca) {
       const nBolas = 12;
@@ -180,11 +209,12 @@ export function montarSvgKit(d: KitDados): string {
         })()
       : "";
     return `${fundoPlaca}
-    <text x="${cx}" y="${plY + plH * 0.5}" text-anchor="middle" dominant-baseline="middle" font-family="${family}" font-size="${fsNome}" fill="${corNome}" stroke="#FFFFFF" stroke-width="${fsNome * 0.09}" paint-order="stroke" font-weight="bold">${esc(nome)}</text>
+    <text x="${cx}" y="${plY + plH * 0.5}" text-anchor="middle" dominant-baseline="middle" font-family="${family}" font-size="${fsNome}" fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.09}" paint-order="stroke" font-weight="bold">${esc(nome)}</text>
     ${idadeTxt}`;
   };
 
-  // ---- distribuição: nome na face central; personagens grandes nas demais ----
+  // ---- distribuição: nome na face central; personagens grandes nas demais;
+  // com 4+ faces grandes, uma fica de RESPIRO só com cenário (padrão A-B-A-C) ----
   let content = "";
   if (big.length === 1) {
     const f = big[0];
@@ -193,18 +223,22 @@ export function montarSvgKit(d: KitDados): string {
       plateBlock({ ...f, cx: f.x + f.w * 0.68 } as Face) +
       (personagens[1] ? personagemBlock(personagens[1], { ...f, cx: f.x + f.w * 0.88, w: f.w * 0.4 } as Face, 0.4) : "");
   } else {
+    const respiro = big.length >= 4
+      ? big.filter((f) => f !== nameFace).sort((a, b) => Math.abs(b.cx - W / 2) - Math.abs(a.cx - W / 2))[0]
+      : null;
     let idx = 0;
     content = big
       .map((f) => {
         if (f === nameFace) {
           const abaixo = personagens[0]
-            ? personagemBlock(personagens[0], f, 0.46)
+            ? personagemBlock(personagens[0], f, 0.5)
             : "";
           return abaixo + plateBlock(f);
         }
-        // spec: herói ~50-60% da face nas referências reais da Alice
+        if (f === respiro) return "";
+        // estudo Alice: herói mediano = 60-62% da altura da face
         const img = personagens.length ? personagens[idx++ % personagens.length] : null;
-        return img ? personagemBlock(img, f, 0.6) : "";
+        return img ? personagemBlock(img, f, 0.62) : "";
       })
       .join("");
   }
@@ -221,7 +255,7 @@ export function montarSvgKit(d: KitDados): string {
       <stop offset="0" stop-color="#CDEFFB"/><stop offset="1" stop-color="#9FD9F2"/>
     </linearGradient>
     <filter id="adesivo" x="-8%" y="-8%" width="116%" height="116%">
-      <feMorphology in="SourceAlpha" operator="dilate" radius="7" result="dila"/>
+      <feMorphology in="SourceAlpha" operator="dilate" radius="${Math.max(4, Math.round(avgFaceH * 0.012))}" result="dila"/>
       <feFlood flood-color="#FFFFFF" result="cor"/>
       <feComposite in="cor" in2="dila" operator="in" result="contorno"/>
       <feMerge><feMergeNode in="contorno"/><feMergeNode in="SourceGraphic"/></feMerge>
