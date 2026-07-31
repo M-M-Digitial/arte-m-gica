@@ -1,0 +1,269 @@
+{
+  "fonte": "pesquisa web (2 agentes) + análise direta das fotos da Alice — 2026-07-31",
+  "observacao": "estudo profundo dos PDFs do Drive pendente (limite de sessão); script do workflow salvo para reexecução",
+  "material": [
+    {
+      "temas": [
+        {
+          "tema": "Preset EQUILIBRADO (herói único) — padrão recomendado para a maioria dos temas",
+          "papel": "Papel digital em escala 'ditsy'/pequena: reduza o motivo do papel 12x12in para 25-40% do tamanho original, de modo que 5-8 repetições completas do motivo caibam na largura da face — o papel deve ler como TEXTURA, não como imagem recortada. Baixa saturação/contraste tom-sobre-tom (2-4 cores) para ficar atrás do personagem e do nome. Regra 'gallon-quart-pint': 1 padrão dominante + 1 secundário (faixa do chão) + 1 acento; nunca 50/50.",
+          "personagens": "1 personagem por face, ancorado na base: pés tocando a faixa do chão ou linha de chão, com sombra elíptica suave sob os pés (groundline + sombra é o hack nº 1 contra 'personagem flutuando'). Contorno/outline claro separando personagem do fundo. Personagem é o 2º nível da hierarquia (nome > personagem > cenário > papel).",
+          "cenario": "Elementos de cenário (nuvens, árvores, balões, estrelas) menores que o personagem, atrás dele e sem sobrepor a plaquinha; figura-fundo: primeiro plano sempre maior e mais saturado que o fundo.",
+          "nome": "Plaquinha SEMPRE com preenchimento sólido (nunca texto direto sobre papel estampado), borda/outline grosso na cor do tema, contraste texto-plaquinha >= 4.5:1 (>= 3:1 se a fonte for grande/bold). Nome é o maior elemento tipográfico da face, posicionado no terço central-inferior, sobre ou logo acima da faixa do chão.",
+          "topoAbas": "Abas e topo recebem só o papel digital contínuo ou um mini-motivo repetido — nunca informação crítica (cantos e dobras distorcem). Padrão deve fechar/continuar nas quinas: teste o molde montado em todas as faces antes de produzir. 300 DPI no tamanho final + 3-5mm de sangria.",
+          "densidade": "Média: ~60% da face 'vende' (nome + personagem), respeitando a regra de 60-70% do painel frontal para o foco; respiro/espaço vazio ao redor da plaquinha para isolar o ponto focal.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 18,
+            "alturaPersonagemPctFace": 55,
+            "coberturaPct": 60,
+            "larguraPlacaPctFace": 70,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 6
+          }
+        },
+        {
+          "tema": "Preset CENA RICA (dupla/grupo) — temas com elenco (Patrulha Canina, safári, princesas)",
+          "papel": "Motivo ainda menor e mais denso (8-10 repetições por largura de face, escala ~25% do 12x12 original) porque a cena já é cheia; papel quase liso na área atrás dos personagens ou degradê suave para não competir. Alta saturação é aceitável em produto infantil, mas o papel deve ser o elemento MENOS contrastado da face.",
+          "personagens": "2 personagens por face (máximo em face de caixinha pequena), ambos ancorados na mesma linha de chão, alturas levemente diferentes para ritmo; sombras individuais sob cada um; o principal 10-15% maior que o secundário.",
+          "cenario": "Cenário de fundo em silhueta/tons dessaturados (skyline, colinas, coqueiros) ocupando só a metade inferior atrás dos personagens; nada de cenário atrás da plaquinha.",
+          "nome": "Plaquinha sólida com contorno duplo (branco + cor do tema) para descolar do fundo cheio; contraste >= 4.5:1; se a cena for muito colorida, plaquinha branca ou creme é a opção mais segura.",
+          "topoAbas": "Papel digital contínuo em escala reduzida; opcionalmente 1 mini-ícone do tema centrado na aba superior; sem texto nas abas.",
+          "densidade": "Alta: cobertura ~75%, mas com faixa de respiro obrigatória ao redor do nome (mínimo ~5% da largura da face de margem interna na plaquinha).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 22,
+            "alturaPersonagemPctFace": 45,
+            "coberturaPct": 75,
+            "larguraPlacaPctFace": 65,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 8
+          }
+        },
+        {
+          "tema": "Preset MINIMAL/CLEAN (foco no nome) — temas elegantes (batizado, jardim encantado, chá)",
+          "papel": "Motivo esparso e delicado: 3-5 repetições por largura de face, muito espaço entre motivos (padrão 'spaced'/aberto), paleta pastel tom-sobre-tom; o papel pode subir de escala aqui porque há menos elementos competindo.",
+          "personagens": "1 personagem menor (ou só um emblema/ícone do tema), ancorado na base com sombra sutil; em temas sem personagem, um arranjo floral/ornamento ancora a base da plaquinha.",
+          "cenario": "Quase nenhum: 1-2 elementos delicados (raminhos, estrelinhas) nos cantos superiores, em opacidade reduzida.",
+          "nome": "O nome É o herói (1º da hierarquia): plaquinha/monograma grande, tipografia script ou serif bold, contraste alto >= 7:1 se a fonte for fina; posição centralizada no terço médio da face.",
+          "topoAbas": "Papel liso ou motivo único centralizado; acabamento fosco (papel offset/opaline 180-230g, nunca fotográfico brilhante — reflete no flash das fotos da festa).",
+          "densidade": "Baixa: ~40% de cobertura; espaço em branco é parte do design e guia o olho direto para o nome.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 12,
+            "alturaPersonagemPctFace": 40,
+            "coberturaPct": 40,
+            "larguraPlacaPctFace": 75,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 4
+          }
+        }
+      ]
+    },
+    {
+      "temas": [
+        {
+          "tema": "BASE — regras gerais (aplicar a todos os temas)",
+          "papel": "Papel digital coordenado cobre 100% da face como camada de fundo. Motivo PEQUENO (poá, listras, chevron, estrelinhas, coração, patinha, folhinha) em 2–3 cores da paleta do tema, tom-sobre-tom ou pastel de baixo contraste para o personagem saltar. Nunca misturar mais de 2 estampas por face. Todos os itens do kit usam os mesmos papéis (coordenação = aparência profissional). Referência de face útil: ~8,0 cm largura × 10,7 cm altura (caixa milk 15,3×8,0×5,4 cm; variante 7×7×13 cm).",
+          "personagens": "1 personagem herói por face frontal, estilo cute/kawaii autoral (cabeça grande ~proporção 1:1 a 1:1,5 com o corpo, olhos grandes, contorno grosso). Centralizado horizontalmente, APOIADO na faixa de chão — nunca flutuando nem cortado pela dobra. Faces laterais: personagem secundário menor (60–70% do herói) ou só estampa + elementos avulsos. Tendência 2026: mascotes autorais/exclusivos em vez de licenças repetidas.",
+          "cenario": "Faixa de chão obrigatória no rodapé (grama, areia, água, nuvem, solo) ancorando o personagem e escondendo a dobra da base; borda superior da faixa em scallop/ondinha. 3–7 elementos avulsos pequenos (confete, estrelinha, coração, folhinha) preenchendo vazios sem tocar o personagem. Barrado fino opcional (2–6% da altura) separando zonas.",
+          "nome": "Plaquinha em forma de retângulo arredondado, oval, banner ou nuvem, SEMPRE em cor clara (branco ou pastel muito claro) mesmo em fundo escuro. Borda dupla ou contorno na cor de destaque do tema (1 traço grosso ou traço + filete). Posição: terço inferior, entre personagem e faixa de chão (alternativa: terço superior). Nome em fonte display arredondada ou script bold, cor escura de alto contraste, maior que qualquer outro texto; idade em círculo/estrela pequena ao lado é opcional.",
+          "topoAbas": "Abas e topo continuam a estampa do papel de fundo OU cor lisa chapada da paleta; nunca personagem nem texto na aba (área de dobra/furo da fita). Furo para fita/laço no fecho. Diferencial premium: aplique 3D colado na aba (orelhas, chapéu, laço) com fita banana.",
+          "densidade": "Cobertura de elementos (tudo que não é papel de fundo) entre 35–55% da face. Respiro ao redor do personagem. Hierarquia de leitura: personagem > nome > estampa > avulsos. Impressão fosca 180–230g (nunca papel brilhoso — reflete mal em foto, e foto é o que vende).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 15,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 12
+          }
+        },
+        {
+          "tema": "Safari / Selva",
+          "papel": "Folhagem tropical miúda ou animal print suave (tom-sobre-tom) em verde-oliva, bege, terroso e mostarda — paleta em alta 2026.",
+          "personagens": "Leão, girafa, zebra ou macaco cute, 1 por face, sentado/de pé sobre a grama; laterais alternam animais menores.",
+          "cenario": "Faixa de grama alta com folhas de costela-de-adão saindo pelas bordas laterais; sol ou nuvenzinha no canto superior.",
+          "nome": "Plaquinha estilo tabuleta de madeira clara ou oval creme com borda verde grossa; nome em marrom escuro.",
+          "topoAbas": "Folhagem contínua ou verde-oliva liso; opcional orelhinhas do animal em aplique 3D na aba.",
+          "densidade": "Média-alta: folhagem preenche cantos mas mantém centro limpo para o animal.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 18,
+            "alturaPersonagemPctFace": 55,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 10
+          }
+        },
+        {
+          "tema": "Unicórnio",
+          "papel": "Poá ou estrelinhas pastel (rosa-bebê, lilás, menta) com toques dourados; alternativa listras candy finas.",
+          "personagens": "Unicórnio cute de crina arco-íris, grande e central; laterais com arco-íris ou estrela cadente.",
+          "cenario": "Faixa de nuvens no rodapé (em vez de grama); arco-íris pequeno atrás do personagem; estrelinhas douradas espalhadas.",
+          "nome": "Plaquinha em formato nuvem ou oval branca com borda dourada dupla; nome em rosa escuro ou roxo, fonte script bold.",
+          "topoAbas": "Listras candy rosa/lilás ou poá contínuo; chifre/orelhinhas em aplique 3D é diferencial vendável.",
+          "densidade": "Média: pastel pede mais respiro; brilho vem do dourado, não da quantidade.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 12,
+            "alturaPersonagemPctFace": 55,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 85,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 14
+          }
+        },
+        {
+          "tema": "Dinossauro",
+          "papel": "Poá verde-claro sobre verde ou tracinhos/folhinhas; paleta verde, laranja e azul-petróleo.",
+          "personagens": "1 dino cute por face (rex, tricerátope, braquiossauro alternando entre faces), de pé sobre a grama.",
+          "cenario": "Faixa de grama com samambaias; vulcãozinho ou ovos de dino pequenos no fundo; pegadas como elemento avulso.",
+          "nome": "Retângulo arredondado branco com borda laranja grossa (contraste quente sobre fundo frio); nome em verde-escuro.",
+          "topoAbas": "Pegadas de dino sobre cor lisa ou estampa contínua; espinhos de dino em aplique 3D na aba central.",
+          "densidade": "Média-alta: cenário conta história (vulcão, ovos) mas cada elemento extra é pequeno (<15% da face).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 16,
+            "alturaPersonagemPctFace": 55,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 12
+          }
+        },
+        {
+          "tema": "Capivara (tendência forte)",
+          "papel": "Poá bege/creme com laranjinha ou folhinhas discretas; paleta terrosa: marrom, creme, laranja, verde-água.",
+          "personagens": "Capivara cute sentada, muitas vezes com laranja na cabeça ou passarinho pousado; 1 por face.",
+          "cenario": "Faixa de grama com beirada de água (azul-claro) no rodapé; laranjas e folhinhas como avulsos.",
+          "nome": "Plaquinha arredondada creme com borda marrom; nome em marrom-escuro, fonte arredondada fofa.",
+          "topoAbas": "Poá contínuo ou creme liso; orelhinhas de capivara em aplique na aba.",
+          "densidade": "Média: o charme é o minimalismo fofo — capivara grande, poucos extras.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 15,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 12
+          }
+        },
+        {
+          "tema": "Fundo do Mar / Sereia",
+          "papel": "Ondinhas, escamas ou bolhas tom-sobre-tom em turquesa/azul; acentos coral e lilás; pérolas como detalhe.",
+          "personagens": "Sereia ou polvo/peixinho herói + 1 companheiro pequeno (peixe, estrela-do-mar) — tema aceita 2 por face.",
+          "cenario": "Faixa de areia com conchas e corais no rodapé (mais alta que a média); bolhas subindo em coluna nas laterais.",
+          "nome": "Plaquinha concha ou oval branca com borda coral; nome em azul-marinho para máximo contraste.",
+          "topoAbas": "Padrão de escamas ou azul liso; barbatana/coroa de sereia em aplique na aba.",
+          "densidade": "Alta tolerância: mar aceita mais elementos, desde que bolhas/conchas fiquem pequenas e nas bordas.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 18,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 75,
+            "personagensPorFace": 2,
+            "repeticoesMotivoPorFace": 14
+          }
+        },
+        {
+          "tema": "Espaço / Astronauta",
+          "papel": "Fundo azul-marinho/roxo escuro com estrelinhas pequenas (exceção à regra do fundo claro) — motivo repete muito.",
+          "personagens": "Astronauta criança ou foguete cute central; 2–3 planetas pequenos como coadjuvantes no fundo.",
+          "cenario": "Faixa de solo lunar cinza-claro com crateras no rodapé; cometa/estrela cadente no canto superior.",
+          "nome": "Em fundo escuro a plaquinha clara é OBRIGATÓRIA: retângulo branco com borda amarela ou prata; nome em azul-escuro.",
+          "topoAbas": "Céu estrelado contínuo; antena/capacete em aplique na aba.",
+          "densidade": "Média: fundo escuro satura rápido — estrelas pequenas em quantidade, mas poucos elementos médios.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 12,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 18
+          }
+        },
+        {
+          "tema": "Fazendinha",
+          "papel": "Xadrez vichy (vermelho/branco ou verde/branco) pequeno — assinatura visual do tema.",
+          "personagens": "1 animal por face (vaquinha, porquinho, galinha, cavalo), alternando entre as faces do kit.",
+          "cenario": "Faixa de grama + cerquinha branca de madeira no rodapé (a cerca é o elemento-chave); sol e nuvem no topo; celeiro pequeno opcional ao fundo.",
+          "nome": "Placa de madeira (tabuleta com pregos desenhados) ou banner branco com borda vermelha; nome em marrom.",
+          "topoAbas": "Xadrez vichy contínuo; orelhas do animal em aplique na aba.",
+          "densidade": "Média-alta: xadrez já é visualmente ativo, então poucos avulsos (2–4).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 18,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 16
+          }
+        },
+        {
+          "tema": "Princesa / Jardim Encantado",
+          "papel": "Poá rosa delicado ou floral miúdo (rosa, lilás, pêssego — tendência floral delicado 2026); arabescos dourados discretos.",
+          "personagens": "Princesa cute central; castelo pequeno e desbotado ao fundo (nunca competindo com ela); borboletas como avulsos.",
+          "cenario": "Faixa de gramado florido no rodapé; cortina de flores caindo dos cantos superiores.",
+          "nome": "Moldura oval ornamentada (estilo espelho/brasão) branca com filete dourado duplo; nome em rosa-escuro, fonte script.",
+          "topoAbas": "Listras finas rosa/dourado ou floral contínuo; coroa em aplique 3D na aba (alto valor percebido).",
+          "densidade": "Média-baixa: delicadeza vende — mais respiro, detalhes dourados finos em vez de volume.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 14,
+            "alturaPersonagemPctFace": 50,
+            "coberturaPct": 40,
+            "larguraPlacaPctFace": 75,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 14
+          }
+        },
+        {
+          "tema": "Futebol",
+          "papel": "Listras verticais largas nas cores do time (genérico: verde/branco) OU fundo liso com poá discreto — estampa mínima.",
+          "personagens": "Mascote/jogador cute OU bola grande como herói; troféu e chuteira como avulsos pequenos.",
+          "cenario": "Faixa de gramado alta (a mais alta dos temas, ~20%) com marcação de campo em linhas brancas; placar ou refletores no topo.",
+          "nome": "Plaquinha estilo placar/escudo branca com borda na cor do time; nome em preto ou na cor escura do time; número da idade como camisa de futebol funciona muito bem.",
+          "topoAbas": "Bolinhas de futebol pequenas sobre cor lisa; sem aplique (tema mais simples).",
+          "densidade": "Média: tema gráfico e limpo; força vem do contraste do gramado com o fundo.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 20,
+            "alturaPersonagemPctFace": 45,
+            "coberturaPct": 45,
+            "larguraPlacaPctFace": 70,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 10
+          }
+        },
+        {
+          "tema": "Gamer / Pixel",
+          "papel": "Fundo escuro (roxo/azul-noite) com grid ou pixels pequenos; acentos neon (verde-limão, ciano, magenta) — tendência crescente 2026 para crianças maiores.",
+          "personagens": "Controle de videogame cute com carinha, ou avatar pixelado; itens de jogo (moeda, cogumelo genérico, raio) como avulsos.",
+          "cenario": "Faixa de rodapé em blocos de pixel estilo plataforma de jogo (baixa, ~10%); barra de vida/progresso como elemento decorativo horizontal.",
+          "nome": "Plaquinha estilo botão/janela de jogo: retângulo branco ou escuro com contorno neon grosso e cantos pixelados; nome em fonte bold (pode ser pixelada) com contraste máximo; 'LEVEL + idade' é gancho vendável.",
+          "topoAbas": "Pixels/grid contínuo; sem aplique.",
+          "densidade": "Média-alta: neon sobre escuro tolera mais elementos, mas cada um precisa de glow/contorno para não sumir.",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 10,
+            "alturaPersonagemPctFace": 45,
+            "coberturaPct": 50,
+            "larguraPlacaPctFace": 80,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 16
+          }
+        },
+        {
+          "tema": "Minimal Chic / Boho (tendência 2026)",
+          "papel": "Fundo LISO em tom pastel ou terroso (bege, verde-sálvia, rosa-queimado) com no máximo um detalhe gráfico sutil — arco boho, filete dourado, raminho.",
+          "personagens": "1 elemento pequeno e delicado (ursinho, raminho, balão) — ou nenhum personagem, só tipografia.",
+          "cenario": "Sem faixa de chão tradicional; arco/semicírculo boho atrás do elemento faz o papel de âncora; raminhos secos nos cantos.",
+          "nome": "O nome É a arte: tipografia serifada ou script elegante direto sobre o fundo, sem plaquinha, ou tag pequena com contorno dourado fino; contraste suave mas legível.",
+          "topoAbas": "Cor lisa idêntica ao fundo; fecho com fita de cetim ou cordão rústico (o acabamento físico substitui a estampa).",
+          "densidade": "Baixa de propósito: 20–30% de cobertura; o luxo percebido vem do vazio e do acabamento (papel texturizado, dourado).",
+          "numeros": {
+            "alturaFaixaChaoPctFace": 10,
+            "alturaPersonagemPctFace": 40,
+            "coberturaPct": 25,
+            "larguraPlacaPctFace": 60,
+            "personagensPorFace": 1,
+            "repeticoesMotivoPorFace": 3
+          }
+        }
+      ]
+    }
+  ]
+}

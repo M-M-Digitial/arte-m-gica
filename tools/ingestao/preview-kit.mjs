@@ -1,0 +1,116 @@
+// Prévia do Compositor fora do navegador: busca os assets reais de um tema,
+// injeta o mesmo montarSvgKit do app (bundle via esbuild) e renderiza PNG
+// com resvg. Uso:
+//   node tools/ingestao/preview-kit.mjs <theme_slug> <molde_name> <saida.png> [nome] [idade]
+import fs from "node:fs";
+import path from "node:path";
+import { execSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { Resvg } from "@resvg/resvg-js";
+
+const [slug, moldeName, outPath, nome = "Valentina", idade = "4"] = process.argv.slice(2);
+if (!slug || !moldeName || !outPath) {
+  console.error("uso: node preview-kit.mjs <theme_slug> <molde_name> <saida.png> [nome] [idade]");
+  process.exit(1);
+}
+
+const URL_ = "https://qdwhwxboocplmnmczkfj.supabase.co";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkd2h3eGJvb2NwbG1ubWN6a2ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzODI4ODAsImV4cCI6MjA5ODk1ODg4MH0.zqv3lE9-Bq7gW7RAK41EjdOt8YfUtSODpF-Iuey_o4o";
+const rest = async (q) => {
+  const r = await fetch(`${URL_}/rest/v1/${q}`, { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } });
+  if (!r.ok) throw new Error(`${q}: ${r.status}`);
+  return r.json();
+};
+
+// bundle do módulo puro do app (montarSvgKit) — mesma fonte da verdade do navegador
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repo = path.resolve(here, "..", "..");
+const bundle = path.join(here, ".compose-kit-bundle.mjs");
+execSync(`npx esbuild "${path.join(repo, "src/lib/compose-kit.ts")}" --bundle --format=esm --outfile="${bundle}" --platform=neutral`, { stdio: "pipe" });
+const mod = await import(pathToFileURL(bundle).href + `?v=${Math.random()}`);
+if (!mod.montarSvgKit) throw new Error("montarSvgKit não exportado — o compose-kit.ts precisa expor o layout puro");
+
+const fetchBuf = async (u) => {
+  const r = await fetch(u);
+  if (!r.ok) throw new Error(`${u}: ${r.status}`);
+  return Buffer.from(await r.arrayBuffer());
+};
+const toDataUri = (buf, mime = "image/png") => `data:${mime};base64,${buf.toString("base64")}`;
+
+// recorte de transparência idêntico ao do navegador
+async function trim(buf) {
+  const img = await loadImage(buf);
+  const cv = createCanvas(img.width, img.height);
+  const cx = cv.getContext("2d");
+  cx.drawImage(img, 0, 0);
+  const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+  let minX = cv.width, minY = cv.height, maxX = 0, maxY = 0;
+  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+    if (d[(y * cv.width + x) * 4 + 3] > 12) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX <= minX) return { uri: toDataUri(buf), w: img.width, h: img.height };
+  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+  minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+  maxX = Math.min(cv.width - 1, maxX + pad); maxY = Math.min(cv.height - 1, maxY + pad);
+  const w = maxX - minX + 1, h = maxY - minY + 1;
+  const out = createCanvas(w, h);
+  out.getContext("2d").drawImage(cv, minX, minY, w, h, 0, 0, w, h);
+  return { uri: toDataUri(out.toBuffer("image/png")), w, h };
+}
+
+const [molde] = await rest(`moldes?select=*&name=eq.${encodeURIComponent(moldeName)}`);
+if (!molde?.svg_url) throw new Error(`molde "${moldeName}" não encontrado/sem svg`);
+const assets = await rest(`tema_assets?select=kind,name,url,role,meta&theme_slug=eq.${encodeURIComponent(slug)}`);
+if (!assets.length) throw new Error(`tema "${slug}" sem assets`);
+
+const byRole = (role) => assets.find((a) => a.role === role);
+const fonte = assets.find((a) => a.kind === "fonte");
+const placa = assets.find((a) => a.kind === "placa");
+
+const [moldSvg, facesJson, maskBuf] = await Promise.all([
+  fetch(molde.svg_url).then((r) => r.text()),
+  fetch(molde.faces_url).then((r) => r.text()),
+  fetchBuf(molde.mask_url),
+]);
+const get = async (a, doTrim = false) => {
+  if (!a) return null;
+  const buf = await fetchBuf(a.url);
+  if (doTrim) return trim(buf);
+  return { uri: toDataUri(buf), w: 0, h: 0 };
+};
+const [top, body, principal, amigo, amigo2, placaImg, fonteBin] = await Promise.all([
+  get(byRole("top")), get(byRole("body")),
+  get(byRole("principal"), true), get(byRole("amigo"), true), get(byRole("amigo2"), true),
+  get(placa), fonte ? fetchBuf(fonte.url) : null,
+]);
+
+const svg = mod.montarSvgKit({
+  moldSvg, facesJson,
+  maskUri: toDataUri(maskBuf),
+  papelTopUri: top?.uri ?? null,
+  papelBodyUri: body?.uri ?? null,
+  principal: principal ? { uri: principal.uri, w: principal.w, h: principal.h } : null,
+  amigo: amigo ? { uri: amigo.uri, w: amigo.w, h: amigo.h } : null,
+  amigo2: amigo2 ? { uri: amigo2.uri, w: amigo2.w, h: amigo2.h } : null,
+  placaUri: placaImg?.uri ?? null,
+  placaMeta: placa?.meta ?? null,
+  fonteFamily: fonte?.meta?.family || "sans-serif",
+  fonteUri: null, // resvg usa fontFiles; o data-uri fica só no navegador
+  corNome: fonte?.meta?.cor || "#7A2FB0",
+  corIdade: fonte?.meta?.cor2 || "#1BA67C",
+  nome, idade,
+});
+
+const fontFiles = [];
+if (fonteBin) {
+  const fp = path.join(here, `.fonte-${slug}.ttf`);
+  fs.writeFileSync(fp, fonteBin);
+  fontFiles.push(fp);
+}
+const resvg = new Resvg(svg, { fitTo: { mode: "width", value: 1600 }, font: { fontFiles, loadSystemFonts: true, defaultFontFamily: fonte?.meta?.family || "sans-serif" } });
+fs.writeFileSync(outPath, resvg.render().asPng());
+console.log(`OK ${slug} + ${moldeName} -> ${outPath} (svg ${(svg.length / 1048576).toFixed(1)}MB)`);
