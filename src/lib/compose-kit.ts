@@ -314,6 +314,74 @@ export function montarSvgKit(d: KitDados): string {
 }
 
 // ---------------------------------------------------------------------------
+// Arte ORIGINAL da Alice: o PDF final dela rasterizado vira o fundo e o app
+// só escreve o nome (halo branco + cor do tema com contraste garantido).
+// O texto fica vetorial no SVG — a artesã move/edita no Canva se quiser.
+// ---------------------------------------------------------------------------
+export interface ArteAliceDados {
+  imagemUri: string;
+  largura: number;
+  altura: number;
+  nome: string;
+  idade?: string;
+  fonteFamily: string;
+  fonteUri: string | null;
+  corNome: string;
+}
+
+export function montarSvgAlice(d: ArteAliceDados): string {
+  const { largura: W, altura: H, nome, idade } = d;
+  const family = d.fonteFamily || "sans-serif";
+  const corTexto = luminancia(d.corNome) > 0.6 ? escurecer(d.corNome, 0.45) : d.corNome;
+  const fsNome = Math.min(W * 0.045, (W * 0.26) / Math.max(4, nome.length) * 1.9);
+  const cx = W * 0.5;
+  const cy = H * 0.24;
+  const fontFace = d.fonteUri
+    ? `<style>@font-face{font-family:'${family}';src:url('${d.fonteUri}');}</style>`
+    : "";
+  const texto = (txt: string, y: number, tam: number) =>
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${family}" font-weight="bold" font-size="${tam}" fill="${corTexto}" stroke="#FFFFFF" stroke-width="${tam * 0.22}" stroke-linejoin="round" paint-order="stroke">${esc(txt)}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>${fontFace}</defs>
+  <image href="${d.imagemUri}" x="0" y="0" width="${W}" height="${H}"/>
+  ${texto(nome, cy, fsNome)}
+  ${idade?.trim() ? texto(/^\d+$/.test(idade) ? `${idade} anos` : idade, cy + fsNome * 0.95, fsNome * 0.6) : ""}
+</svg>`;
+}
+
+export async function composeAlice(opts: {
+  imageUrl: string;
+  largura: number | null;
+  altura: number | null;
+  assets: TemaAsset[];
+  nome: string;
+  idade?: string;
+}): Promise<string> {
+  const fonte = opts.assets.find((a) => a.kind === "fonte");
+  const [imagemUri, fonteUri] = await Promise.all([
+    fetchDataUri(opts.imageUrl),
+    fonte ? fetchDataUri(fonte.url) : Promise.resolve(null),
+  ]);
+  // medidas reais caso o banco não tenha
+  let W = opts.largura ?? 0, H = opts.altura ?? 0;
+  if (!W || !H) {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = imagemUri; });
+    W = img.naturalWidth; H = img.naturalHeight;
+  }
+  return montarSvgAlice({
+    imagemUri,
+    largura: W,
+    altura: H,
+    nome: opts.nome,
+    idade: opts.idade,
+    fonteFamily: fonte?.meta?.family || "sans-serif",
+    fonteUri,
+    corNome: fonte?.meta?.cor || "#7A2FB0",
+  });
+}
+
+// ---------------------------------------------------------------------------
 // IO do navegador
 // ---------------------------------------------------------------------------
 const fetchText = async (url: string) => {

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   composeKit,
+  composeAlice,
   svgToPngDataUrl,
   downloadText,
   downloadDataUrl,
@@ -34,6 +35,7 @@ export default function Editor() {
   const [busca, setBusca] = useState("");
   const [svg, setSvg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [arteOriginal, setArteOriginal] = useState(false);
   const [cliparts, setCliparts] = useState<{ url: string; role: string }[]>([]);
   const [principalUrl, setPrincipalUrl] = useState<string>("");
   // Quiz em página inteira: 1 tema → 2 molde → 3 nome → 4 toque final → 5 resultado
@@ -123,6 +125,29 @@ export default function Editor() {
         .select("kind,name,url,role,meta")
         .eq("theme_slug", themeSlug);
       if (error) throw error;
+
+      // arte ORIGINAL da Alice para este tema × molde? Ela tem prioridade.
+      const { data: original } = await (supabase as any)
+        .from("alice_artes")
+        .select("image_url,largura,altura")
+        .eq("tema_slug", themeSlug)
+        .eq("molde_name", (molde as any).name)
+        .maybeSingle();
+      if (original?.image_url) {
+        const out = await composeAlice({
+          imageUrl: original.image_url,
+          largura: original.largura,
+          altura: original.altura,
+          assets: (assets ?? []) as TemaAsset[],
+          nome: nome.trim(),
+          idade: idade.trim() || undefined,
+        });
+        setSvg(out);
+        setArteOriginal(true);
+        toast.success(`Kit ${temaSel?.name} da ${nome.trim()} — arte original! ✨`);
+        return;
+      }
+      setArteOriginal(false);
       // aplica a escolha de personagem em destaque (troca de roles em memória)
       let lista = (assets ?? []) as TemaAsset[];
       if (principalUrl) {
@@ -423,6 +448,11 @@ export default function Editor() {
                   </div>
                 )}
               </div>
+              {svg && !busy && arteOriginal && (
+                <p className="text-xs font-semibold text-primary inline-flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Arte original do acervo — personalizada com o nome
+                </p>
+              )}
               {svg && !busy && (
                 <div className="flex flex-wrap gap-2 items-center">
                   <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
