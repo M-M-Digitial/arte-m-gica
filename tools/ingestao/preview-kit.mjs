@@ -88,11 +88,34 @@ const [top, body, principal, amigo, amigo2, placaImg, fonteBin] = await Promise.
   get(placa), fonte ? fetchBuf(fonte.url) : null,
 ]);
 
+// mesma análise de densidade do navegador (compose-kit.analisarPapel)
+async function analisarPapel(uri) {
+  const img = await loadImage(Buffer.from(uri.split(",")[1], "base64"));
+  const cv = createCanvas(32, 32);
+  const cx = cv.getContext("2d");
+  cx.drawImage(img, 0, 0, 32, 32);
+  const d = cx.getImageData(0, 0, 32, 32).data;
+  let sr = 0, sg = 0, sb = 0;
+  const lums = [];
+  for (let i = 0; i < 1024; i++) {
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    sr += r; sg += g; sb += b;
+    lums.push(0.299 * r + 0.587 * g + 0.114 * b);
+  }
+  const media = lums.reduce((a, b) => a + b, 0) / lums.length;
+  const desvio = Math.sqrt(lums.reduce((a, l) => a + (l - media) ** 2, 0) / lums.length);
+  const hex = (v) => Math.round(v / 1024).toString(16).padStart(2, "0");
+  return { busy: desvio > 26, corMedia: `#${hex(sr)}${hex(sg)}${hex(sb)}` };
+}
+const bodyInfo = body ? await analisarPapel(body.uri) : null;
+if (bodyInfo) console.log(`papel body: ${bodyInfo.busy ? "estampa DENSA (vira destaque)" : "calmo (cobre o corpo)"} | cor média ${bodyInfo.corMedia}`);
+
 const svg = mod.montarSvgKit({
   moldSvg, facesJson,
   maskUri: toDataUri(maskBuf),
   papelTopUri: top?.uri ?? null,
   papelBodyUri: body?.uri ?? null,
+  papelBodyInfo: bodyInfo,
   principal: principal ? { uri: principal.uri, w: principal.w, h: principal.h } : null,
   amigo: amigo ? { uri: amigo.uri, w: amigo.w, h: amigo.h } : null,
   amigo2: amigo2 ? { uri: amigo2.uri, w: amigo2.w, h: amigo2.h } : null,

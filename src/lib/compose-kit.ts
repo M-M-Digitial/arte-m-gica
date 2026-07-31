@@ -27,12 +27,17 @@ interface Face { x: number; y: number; w: number; h: number; cx: number; cy: num
 
 export interface ClipartDados { uri: string; w: number; h: number }
 
+// análise do papel do corpo: estampas densas ("busy") viram destaque em faces
+// alternadas/abas (padrão Alice), nunca papel de parede do corpo inteiro
+export interface PapelInfo { busy: boolean; corMedia: string }
+
 export interface KitDados {
   moldSvg: string;
   facesJson: string;
   maskUri: string;
   papelTopUri: string | null;
   papelBodyUri: string | null;
+  papelBodyInfo?: PapelInfo | null;
   principal: ClipartDados | null;
   amigo: ClipartDados | null;
   amigo2: ClipartDados | null;
@@ -66,6 +71,15 @@ const luminancia = (hex: string) => {
   return 0.299 * c(0) + 0.587 * c(2) + 0.114 * c(4);
 };
 
+// clareia uma cor em direção ao branco (0.8 = 80% do caminho) — céu do tema
+const clarear = (hex: string, fator: number) => {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return hex;
+  const f = (i: number) => Math.round(parseInt(m.slice(i, i + 2), 16) + (255 - parseInt(m.slice(i, i + 2), 16)) * fator)
+    .toString(16).padStart(2, "0");
+  return `#${f(0)}${f(2)}${f(4)}`;
+};
+
 // ---------------------------------------------------------------------------
 // LAYOUT PURO — "Padrão Alice": papel na escala certa, personagem grande
 // ancorado no chão, faixa de cenário, plaquinha de nome com contraste.
@@ -94,6 +108,12 @@ export function montarSvgKit(d: KitDados): string {
   const avgFaceW = big.reduce((s, f) => s + f.w, 0) / big.length;
   const avgFaceH = big.reduce((s, f) => s + f.h, 0) / big.length;
 
+  // face de respiro (padrão A-B-A-C dos kits reais): sem personagem; quando o
+  // papel do corpo é estampa densa, é ela que recebe a estampa em destaque
+  const respiro = big.length >= 4
+    ? big.filter((f) => f !== nameFace).sort((a, b) => Math.abs(b.cx - W / 2) - Math.abs(a.cx - W / 2))[0]
+    : null;
+
   // linha do chão: base das faces do corpo, com folga p/ personagem "pisar"
   // (estudo dos 30 kits reais da Alice: faixa de chão 20-30%, mediana 25%)
   const chaoAltura = avgFaceH * 0.25;
@@ -117,11 +137,26 @@ export function montarSvgKit(d: KitDados): string {
     // abas nunca ficam sem tratamento: cor sólida do tema
     fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corIdade}" opacity="0.30"/>`;
   }
-  if (d.papelBodyUri) {
+  const estampaDensa = !!(d.papelBodyUri && d.papelBodyInfo?.busy);
+  let destaqueEstampa = "";
+  if (d.papelBodyUri && !estampaDensa) {
+    // papel calmo (aquarela/wash): cobre o corpo inteiro, como nos murais da Alice
     defsPapel.push(
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
+  } else if (estampaDensa) {
+    // estampa densa: o corpo vira cenário limpo (céu no tom do papel) e a
+    // estampa aparece em destaque só na face de respiro (padrão CENA/ESTAMPA)
+    const base = d.papelBodyInfo?.corMedia || corIdade;
+    defsPapel.push(
+      `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`,
+      `<linearGradient id="ceuTema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${clarear(base, 0.85)}"/><stop offset="1" stop-color="${clarear(base, 0.6)}"/></linearGradient>`
+    );
+    fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceuTema)"/>`;
+    if (respiro) {
+      destaqueEstampa = `<rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
+    }
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
   }
@@ -160,14 +195,16 @@ export function montarSvgKit(d: KitDados): string {
 
   // ---- personagem grande ancorado no chão (efeito adesivo) ----
   const personagens = [d.principal, d.amigo, d.amigo2].filter(Boolean) as ClipartDados[];
-  const personagemBlock = (img: ClipartDados, f: Face, alturaPct: number) => {
+  const personagemBlock = (img: ClipartDados, f: Face, alturaPct: number, espelhar = false) => {
     const ratio = img.w / img.h;
     let ah = f.h * alturaPct;
     let aw = ah * ratio;
     if (aw > f.w * 0.92) { aw = f.w * 0.92; ah = aw / ratio; }
     const cx = f.cx;
     const base = bodyBot - chaoAltura * 0.12; // pé a ~3% da borda inferior (estudo Alice)
-    return `<image href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
+    const imagem = `<image href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
+    // repetição do mesmo personagem em outra face: espelha p/ dar variedade
+    return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${imagem}</g>` : imagem;
   };
 
   // ---- plaquinha de nome com contraste forte ----
@@ -223,22 +260,22 @@ export function montarSvgKit(d: KitDados): string {
       plateBlock({ ...f, cx: f.x + f.w * 0.68 } as Face) +
       (personagens[1] ? personagemBlock(personagens[1], { ...f, cx: f.x + f.w * 0.88, w: f.w * 0.4 } as Face, 0.4) : "");
   } else {
-    const respiro = big.length >= 4
-      ? big.filter((f) => f !== nameFace).sort((a, b) => Math.abs(b.cx - W / 2) - Math.abs(a.cx - W / 2))[0]
-      : null;
     let idx = 0;
     content = big
       .map((f) => {
         if (f === nameFace) {
+          // com 1 personagem só, a cópia da face do nome sai espelhada
           const abaixo = personagens[0]
-            ? personagemBlock(personagens[0], f, 0.5)
+            ? personagemBlock(personagens[0], f, 0.5, personagens.length === 1)
             : "";
           return abaixo + plateBlock(f);
         }
         if (f === respiro) return "";
         // estudo Alice: herói mediano = 60-62% da altura da face
-        const img = personagens.length ? personagens[idx++ % personagens.length] : null;
-        return img ? personagemBlock(img, f, 0.62) : "";
+        const img = personagens.length ? personagens[idx % personagens.length] : null;
+        const espelhar = personagens.length ? Math.floor(idx / personagens.length) % 2 === 1 : false;
+        idx++;
+        return img ? personagemBlock(img, f, 0.62, espelhar) : "";
       })
       .join("");
   }
@@ -268,6 +305,7 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoCorpo}
     ${salpicos}
     ${faixaChao}
+    ${destaqueEstampa}
     ${content}
     <rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="#FFFFFF"/>
   </g>
@@ -322,6 +360,29 @@ async function trimTransparent(dataUri: string): Promise<{ uri: string; w: numbe
   return { uri: out.toDataURL("image/png"), w, h };
 }
 
+// mede a "densidade" do papel (desvio-padrão de luminância em 32×32) e a cor
+// média — decide se ele cobre o corpo ou vira estampa de destaque
+async function analisarPapel(dataUri: string): Promise<PapelInfo> {
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUri; });
+  const cv = document.createElement("canvas");
+  cv.width = 32; cv.height = 32;
+  const cx = cv.getContext("2d")!;
+  cx.drawImage(img, 0, 0, 32, 32);
+  const d = cx.getImageData(0, 0, 32, 32).data;
+  let sr = 0, sg = 0, sb = 0;
+  const lums: number[] = [];
+  for (let i = 0; i < 1024; i++) {
+    const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    sr += r; sg += g; sb += b;
+    lums.push(0.299 * r + 0.587 * g + 0.114 * b);
+  }
+  const media = lums.reduce((a, b) => a + b, 0) / lums.length;
+  const desvio = Math.sqrt(lums.reduce((a, l) => a + (l - media) ** 2, 0) / lums.length);
+  const hex = (v: number) => Math.round(v / 1024).toString(16).padStart(2, "0");
+  return { busy: desvio > 26, corMedia: `#${hex(sr)}${hex(sg)}${hex(sb)}` };
+}
+
 export async function composeKit({ molde, assets, nome, idade }: ComposeInput): Promise<string> {
   const byRole = (role: string) => assets.find((a) => a.role === role);
   const fonte = assets.find((a) => a.kind === "fonte");
@@ -346,10 +407,11 @@ export async function composeKit({ molde, assets, nome, idade }: ComposeInput): 
       fonte ? fetchDataUri(fonte.url) : Promise.resolve(null),
     ]);
 
-  const [pTrim, aTrim, a2Trim] = await Promise.all([
+  const [pTrim, aTrim, a2Trim, bodyInfo] = await Promise.all([
     principalUri ? trimTransparent(principalUri) : Promise.resolve(null),
     amigoUri ? trimTransparent(amigoUri) : Promise.resolve(null),
     amigo2Uri ? trimTransparent(amigo2Uri) : Promise.resolve(null),
+    bodyUri ? analisarPapel(bodyUri).catch(() => null) : Promise.resolve(null),
   ]);
 
   return montarSvgKit({
@@ -358,6 +420,7 @@ export async function composeKit({ molde, assets, nome, idade }: ComposeInput): 
     maskUri,
     papelTopUri: topUri,
     papelBodyUri: bodyUri,
+    papelBodyInfo: bodyInfo,
     principal: pTrim ? { uri: pTrim.uri, w: pTrim.w, h: pTrim.h } : null,
     amigo: aTrim ? { uri: aTrim.uri, w: aTrim.w, h: aTrim.h } : null,
     amigo2: a2Trim ? { uri: a2Trim.uri, w: a2Trim.w, h: a2Trim.h } : null,
