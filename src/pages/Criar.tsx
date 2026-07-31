@@ -9,6 +9,7 @@ import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { Thumb } from "@/components/Thumb";
+import { baixarSvgDaArte } from "@/lib/svg-arte";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -403,30 +404,14 @@ export default function Criar() {
     }
   };
 
-  // SVG híbrido: arte gerada como fundo + linhas de corte/dobra VETORIAIS por cima
+  // SVG híbrido (formato oficial de entrega): arte como fundo + linhas vetoriais
   const baixarSvgHibrido = async () => {
     if (!generatedImageBase64) return;
-    try {
-      const svgUrl = (selectedMolde as any)?.svg_url;
-      let overlay = "", vw = 2526, vh = 1786;
-      if (svgUrl) {
-        const moldSvg = await (await fetch(svgUrl)).text();
-        const vb = moldSvg.match(/viewBox="([^"]+)"/);
-        if (vb) [, , vw, vh] = vb[1].split(/\s+/).map(Number) as any;
-        const path = moldSvg.match(/<path[\s\S]*?\/>/i)?.[0] ?? "";
-        overlay = `<g fill="#111111">${path.replace(/fill="[^"]*"/, "")}</g>`;
-      }
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${vw}" height="${vh}" viewBox="0 0 ${vw} ${vh}"><image href="${generatedImageBase64}" x="0" y="0" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet"/>${overlay}</svg>`;
-      const blob = new Blob([svg], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `arte-${nome.trim() || "molde"}.svg`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Erro ao montar o SVG.");
-    }
+    await baixarSvgDaArte({
+      imagem: generatedImageBase64,
+      moldeSvgUrl: (selectedMolde as any)?.svg_url,
+      nomeArquivo: `arte-${nome.trim() || "molde"}`,
+    });
   };
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();

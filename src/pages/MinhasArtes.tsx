@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Thumb } from "@/components/Thumb";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { baixarSvgDaArte } from "@/lib/svg-arte";
 import { toast } from "sonner";
 
 export interface ArteSalva {
@@ -68,6 +69,20 @@ export default function MinhasArtes() {
     navigate("/criar", { state: { refazer: arte } });
   };
 
+  // entrega oficial em SVG: arte + linhas vetoriais do molde
+  const baixarSvg = async (arte: ArteSalva) => {
+    const { data: molde } = await (supabase as any)
+      .from("moldes")
+      .select("svg_url")
+      .eq("name", arte.molde_name)
+      .maybeSingle();
+    await baixarSvgDaArte({
+      imagem: arte.image_url,
+      moldeSvgUrl: molde?.svg_url ?? null,
+      nomeArquivo: `molde-${arte.tema_nome}-${arte.nome}`.replace(/\s+/g, "-").toLowerCase(),
+    });
+  };
+
   return (
     <div className="animate-fade-in max-w-6xl space-y-7">
       <header className="border-b border-border/60 pb-6">
@@ -124,10 +139,8 @@ export default function MinhasArtes() {
                     <RefreshCw className="mr-1.5 h-3 w-3" /> Refazer com outro nome
                   </Button>
                   <div className="flex gap-2">
-                    <Button asChild size="sm" variant="secondary" className="flex-1 rounded-full text-xs h-8">
-                      <a href={arte.image_url} target="_blank" rel="noreferrer" download>
-                        <Download className="mr-1.5 h-3 w-3" /> Baixar
-                      </a>
+                    <Button size="sm" variant="secondary" className="flex-1 rounded-full text-xs h-8" onClick={() => baixarSvg(arte)}>
+                      <Download className="mr-1.5 h-3 w-3" /> Baixar SVG
                     </Button>
                     <Button
                       size="sm"
