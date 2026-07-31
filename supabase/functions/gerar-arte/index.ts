@@ -345,6 +345,14 @@ DECORAÇÃO A APLICAR:
 - DENSIDADE VISUAL: ${densityDesc}.
 - ACABAMENTO: qualidade de estúdio de papelaria premium — ilustração nítida, cores vibrantes e harmônicas, composição equilibrada, sem ruído, sem artefatos, sem nenhum texto além dos especificados.
 
+COMPOSIÇÃO PROFISSIONAL (padrão dos kits de festa vendáveis — siga em TODAS as faces):
+- FUNDO: cada face coberta por um padrão de motivo PEQUENO tom-sobre-tom nas cores do tema (poá, listras, estrelinhas…), como papel digital de scrapbook — nunca fundo vazio nem motivo gigante.
+- FAIXA DE CHÃO: base de cada face com uma faixa de cenário (grama, areia, nuvens — conforme o tema) ocupando ~15% da altura; personagens e elementos APOIADOS nessa faixa, nunca flutuando nem cortados pelas dobras.
+- HERÓI: 1 personagem/elemento grande por face principal (~metade da altura da face), centralizado.
+- NOME: dentro de uma plaquinha CLARA (branca ou pastel) com borda dupla na cor de destaque; a palavra "${nome}" grande em cor escura de alto contraste sobre a plaquinha${idade ? `; o numeral "${idade}" em um selo pequeno separado` : ""}.
+- ABAS E ÁREAS DE COLAGEM: apenas estampa contínua ou cor lisa — nunca texto nem personagem.
+- HIERARQUIA: personagem > nome > estampa > detalhes; cobertura de elementos entre 45% e 55% da face, com respiro ao redor do herói.
+
 PROIBIÇÕES DE CONTEÚDO:
 - Sem crianças, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.
 - Todos os textos em português do Brasil.
