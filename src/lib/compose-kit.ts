@@ -54,6 +54,15 @@ export interface KitDados {
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+const escAttr = (s: string) => esc(s).replace(/'/g, "&apos;");
+
+// Os moldes gerados pelo pipeline podem conter mais de um path. Manter todas
+// as geometrias evita perder abas, linhas de dobra ou recortes no SVG final.
+const extractMoldGeometry = (moldSvg: string) =>
+  Array.from(moldSvg.matchAll(/<(?:path|line|polyline|polygon|rect|circle|ellipse)\b[^>]*?(?:\/>|>)/gi))
+    .map(([markup]) => markup)
+    .join("\n");
+
 // escurece uma cor hex por um fator (0.12 = 12% mais escura) — tons da faixa de chão
 const escurecer = (hex: string, fator: number) => {
   const m = hex.replace("#", "");
@@ -87,11 +96,12 @@ const clarear = (hex: string, fator: number) => {
 export function montarSvgKit(d: KitDados): string {
   const { nome, idade, corNome, corIdade } = d;
   const family = d.fonteFamily || "sans-serif";
+  const familyAttr = escAttr(family);
 
   const vb = d.moldSvg.match(/viewBox="([^"]+)"/);
   if (!vb) throw new Error("Molde SVG sem viewBox");
   const [, , W, H] = vb[1].split(/\s+/).map(Number);
-  const moldPath = d.moldSvg.match(/<path[\s\S]*?\/>/i)?.[0] ?? "";
+  const moldGeometry = extractMoldGeometry(d.moldSvg);
   const { faces } = JSON.parse(d.facesJson) as { faces: Face[] };
 
   // ---- zonas ----
@@ -115,8 +125,9 @@ export function montarSvgKit(d: KitDados): string {
     : null;
 
   // linha do chão: base das faces do corpo, com folga p/ personagem "pisar"
-  // (estudo dos 30 kits reais da Alice: faixa de chão 20-30%, mediana 25%)
-  const chaoAltura = avgFaceH * 0.25;
+  // preset equilibrado da pesquisa Alice: faixa de chão de 18%; temas densos
+  // sobem para 22% para ancorar a cena sem roubar espaço da plaquinha.
+  const chaoAltura = avgFaceH * (d.papelBodyInfo?.busy ? 0.22 : 0.18);
   const chaoY = bodyBot - chaoAltura;
 
   // ---- fundo: papel em ESCALA DE MOTIVO (pattern), não imagem esticada ----
@@ -202,7 +213,7 @@ export function montarSvgKit(d: KitDados): string {
     if (aw > f.w * 0.92) { aw = f.w * 0.92; ah = aw / ratio; }
     const cx = f.cx;
     const base = bodyBot - chaoAltura * 0.12; // pé a ~3% da borda inferior (estudo Alice)
-    const imagem = `<image href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
+    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
     // repetição do mesmo personagem em outra face: espelha p/ dar variedade
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${imagem}</g>` : imagem;
   };
@@ -229,12 +240,15 @@ export function montarSvgKit(d: KitDados): string {
       }
     }
     const fundoPlaca = temPlaca
-      ? `<image href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}"/>`
+      ? `<image href="${d.placaUri}" xlink:href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" preserveAspectRatio="xMidYMid meet"/>`
       : `${escalope.join("")}
          <ellipse cx="${cx}" cy="${plY + plH / 2}" rx="${plW * 0.5}" ry="${plH * 0.55}" fill="#FFFFFF" stroke="${corNome}" stroke-width="7"/>
          <ellipse cx="${cx}" cy="${plY + plH / 2}" rx="${plW * 0.44}" ry="${plH * 0.46}" fill="none" stroke="${corIdade}" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round"/>`;
     // nome ajustado à largura (nunca estoura a plaquinha)
     const fsNome = Math.min(plW * 0.19, (plW * 0.8) / Math.max(3, nome.length) * 1.9);
+    const nomeFit = nome.length > 10
+      ? ` textLength="${plW * 0.78}" lengthAdjust="spacingAndGlyphs"`
+      : "";
     const idadeTxt = idade?.trim()
       ? (() => {
           const bW = Math.max(plW * 0.34, idade.length * plW * 0.07 + plW * 0.2);
@@ -242,11 +256,11 @@ export function montarSvgKit(d: KitDados): string {
           const bY = plY + plH * 0.78;
           return `
         <rect x="${cx - bW / 2}" y="${bY}" width="${bW}" height="${bH}" rx="${bH / 2}" fill="${corIdade}" stroke="#FFFFFF" stroke-width="5"/>
-        <text x="${cx}" y="${bY + bH * 0.68}" text-anchor="middle" font-family="${family}" font-weight="bold" font-size="${bH * 0.55}" fill="#FFFFFF">${esc(idade)} ${/^\d+$/.test(idade) ? "anos" : ""}</text>`;
+        <text x="${cx}" y="${bY + bH * 0.68}" text-anchor="middle" font-family="${familyAttr}" font-weight="bold" font-size="${bH * 0.55}" fill="#FFFFFF">${esc(idade)} ${/^\d+$/.test(idade) ? "anos" : ""}</text>`;
         })()
       : "";
     return `${fundoPlaca}
-    <text x="${cx}" y="${plY + plH * 0.5}" text-anchor="middle" dominant-baseline="middle" font-family="${family}" font-size="${fsNome}" fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.09}" paint-order="stroke" font-weight="bold">${esc(nome)}</text>
+    <text x="${cx}" y="${plY + plH * 0.5}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.09}" paint-order="stroke" font-weight="bold">${esc(nome)}</text>
     ${idadeTxt}`;
   };
 
@@ -256,7 +270,7 @@ export function montarSvgKit(d: KitDados): string {
   if (big.length === 1) {
     const f = big[0];
     content =
-      (personagens[0] ? personagemBlock(personagens[0], { ...f, cx: f.x + f.w * 0.26 } as Face, 0.62) : "") +
+      (personagens[0] ? personagemBlock(personagens[0], { ...f, cx: f.x + f.w * 0.26 } as Face, 0.55) : "") +
       plateBlock({ ...f, cx: f.x + f.w * 0.68 } as Face) +
       (personagens[1] ? personagemBlock(personagens[1], { ...f, cx: f.x + f.w * 0.88, w: f.w * 0.4 } as Face, 0.4) : "");
   } else {
@@ -271,11 +285,11 @@ export function montarSvgKit(d: KitDados): string {
           return abaixo + plateBlock(f);
         }
         if (f === respiro) return "";
-        // estudo Alice: herói mediano = 60-62% da altura da face
+        // pesquisa Alice: herói equilibrado ocupa cerca de 55% da face
         const img = personagens.length ? personagens[idx % personagens.length] : null;
         const espelhar = personagens.length ? Math.floor(idx / personagens.length) % 2 === 1 : false;
         idx++;
-        return img ? personagemBlock(img, f, 0.62, espelhar) : "";
+        return img ? personagemBlock(img, f, estampaDensa ? 0.50 : 0.55, espelhar) : "";
       })
       .join("");
   }
@@ -284,7 +298,9 @@ export function montarSvgKit(d: KitDados): string {
     ? `<style>@font-face{font-family:'${family}';src:url('${d.fonteUri}');}</style>`
     : "";
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">
+  <title>Kit personalizado de ${esc(nome)}</title>
   <defs>
     ${fontFace}
     ${defsPapel.join("\n    ")}
@@ -297,7 +313,7 @@ export function montarSvgKit(d: KitDados): string {
       <feComposite in="cor" in2="dila" operator="in" result="contorno"/>
       <feMerge><feMergeNode in="contorno"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
-    <mask id="interior"><image href="${d.maskUri}" x="0" y="0" width="${W}" height="${H}"/></mask>
+    <mask id="interior" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}" mask-type="alpha" style="mask-type:alpha"><image href="${d.maskUri}" xlink:href="${d.maskUri}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></mask>
   </defs>
   <rect width="${W}" height="${H}" fill="#FFFFFF"/>
   <g mask="url(#interior)">
@@ -309,7 +325,7 @@ export function montarSvgKit(d: KitDados): string {
     ${content}
     <rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="#FFFFFF"/>
   </g>
-  <g fill="#111111">${moldPath.replace(/fill="[^"]*"/, "")}</g>
+  <g id="molde-tecnico" fill="#111111" stroke="#111111">${moldGeometry}</g>
 </svg>`;
 }
 
@@ -332,18 +348,21 @@ export interface ArteAliceDados {
 export function montarSvgAlice(d: ArteAliceDados): string {
   const { largura: W, altura: H, nome, idade } = d;
   const family = d.fonteFamily || "sans-serif";
+  const familyAttr = escAttr(family);
   const corTexto = luminancia(d.corNome) > 0.6 ? escurecer(d.corNome, 0.45) : d.corNome;
   const fsNome = Math.min(W * 0.045, (W * 0.26) / Math.max(4, nome.length) * 1.9);
   const cx = W * 0.5;
   const cy = H * 0.24;
   const fontFace = d.fonteUri
-    ? `<style>@font-face{font-family:'${family}';src:url('${d.fonteUri}');}</style>`
+    ? `<style>@font-face{font-family:'${familyAttr}';src:url('${d.fonteUri}');}</style>`
     : "";
   const texto = (txt: string, y: number, tam: number) =>
-    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${family}" font-weight="bold" font-size="${tam}" fill="${corTexto}" stroke="#FFFFFF" stroke-width="${tam * 0.22}" stroke-linejoin="round" paint-order="stroke">${esc(txt)}</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${familyAttr}" font-weight="bold" font-size="${tam}" fill="${corTexto}" stroke="#FFFFFF" stroke-width="${tam * 0.22}" stroke-linejoin="round" paint-order="stroke">${esc(txt)}</text>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">
+  <title>Arte personalizada de ${esc(nome)}</title>
   <defs>${fontFace}</defs>
-  <image href="${d.imagemUri}" x="0" y="0" width="${W}" height="${H}"/>
+  <image id="arte-original" href="${d.imagemUri}" xlink:href="${d.imagemUri}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>
   ${texto(nome, cy, fsNome)}
   ${idade?.trim() ? texto(/^\d+$/.test(idade) ? `${idade} anos` : idade, cy + fsNome * 0.95, fsNome * 0.6) : ""}
 </svg>`;
@@ -534,12 +553,15 @@ export function downloadText(filename: string, text: string, mime = "image/svg+x
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 export function downloadDataUrl(filename: string, dataUrl: string) {
   const a = document.createElement("a");
   a.href = dataUrl;
   a.download = filename;
+  a.click();
 }
