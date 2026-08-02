@@ -190,6 +190,159 @@ const jsonResponse = (payload: unknown, status = 200) =>
 const isModerationError = (text: string) =>
   /moderation_blocked|content_policy|safety/i.test(text);
 
+const MAX_ALICE_REFERENCE_IMAGES = 5;
+const MAX_ALICE_REFERENCE_BYTES = 8 * 1024 * 1024;
+
+type AliceReferenceCandidate = {
+  url: string;
+  kind: string;
+  role: string;
+};
+
+type AliceReferenceImage = AliceReferenceCandidate & {
+  dataUrl: string;
+};
+
+const normalizeLibraryKey = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const slugifyTheme = (value: string) =>
+  normalizeLibraryKey(value)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+function isAliceStorageUrl(value: string, supabaseUrl: string): boolean {
+  try {
+    const candidate = new URL(value);
+    const origin = new URL(supabaseUrl).origin;
+    return candidate.protocol === "https:"
+      && candidate.origin === origin
+      && candidate.pathname.startsWith("/storage/v1/object/public/");
+  } catch {
+    return false;
+  }
+}
+
+function orderAliceCandidates(candidates: AliceReferenceCandidate[]) {
+  const rank = (candidate: AliceReferenceCandidate) => {
+    if (candidate.kind === "original") return 0;
+    if (candidate.kind === "papel" && candidate.role === "body") return 1;
+    if (candidate.kind === "papel" && candidate.role === "top") return 2;
+    if (candidate.kind === "clipart" && candidate.role === "principal") return 3;
+    if (candidate.kind === "clipart") return 4;
+    if (candidate.kind === "placa") return 5;
+    return 6;
+  };
+
+  const seen = new Set<string>();
+  return candidates
+    .filter((candidate) => {
+      if (!candidate.url || seen.has(candidate.url)) return false;
+      seen.add(candidate.url);
+      return true;
+    })
+    .sort((a, b) => rank(a) - rank(b))
+    .slice(0, MAX_ALICE_REFERENCE_IMAGES);
+}
+
+async function loadAliceReferenceImages(
+  adminDb: any,
+  temaNome: string,
+  moldeName: string,
+  supabaseUrl: string,
+): Promise<{ themeSlug: string; images: AliceReferenceImage[] }> {
+  const { data: themeRows, error: themeError } = await adminDb
+    .from("modelos_prontos_temas")
+    .select("slug,name");
+  if (themeError) console.warn("Alice theme lookup failed:", themeError.message);
+
+  const themeKey = normalizeLibraryKey(temaNome);
+  const exactTheme = (themeRows ?? []).find(
+    (row: { name?: string }) => normalizeLibraryKey(row.name ?? "") === themeKey,
+  );
+  const relatedTheme = exactTheme ?? (themeRows ?? []).find((row: { name?: string }) => {
+    const rowKey = normalizeLibraryKey(row.name ?? "");
+    return rowKey.includes(themeKey) || themeKey.includes(rowKey);
+  });
+  const themeSlug = relatedTheme?.slug ?? slugifyTheme(temaNome);
+
+  const [{ data: assets, error: assetsError }, { data: original, error: originalError }] =
+    await Promise.all([
+      adminDb
+        .from("tema_assets")
+        .select("url,kind,role")
+        .eq("theme_slug", themeSlug),
+      adminDb
+        .from("alice_artes")
+        .select("image_url")
+        .eq("tema_slug", themeSlug)
+        .eq("molde_name", moldeName)
+        .maybeSingle(),
+    ]);
+
+  if (assetsError) console.warn("Alice asset lookup failed:", assetsError.message);
+  if (originalError) console.warn("Alice original lookup failed:", originalError.message);
+
+  const candidates: AliceReferenceCandidate[] = [];
+  if (original?.image_url) {
+    candidates.push({ url: original.image_url, kind: "original", role: "original" });
+  }
+  for (const asset of orderAliceCandidates(
+    ((assets ?? []) as Array<{ url?: string; kind?: string; role?: string | null }>)
+      .filter((asset) => asset.url)
+      .map((asset) => ({
+        url: asset.url!,
+        kind: asset.kind ?? "asset",
+        role: asset.role ?? "",
+      })),
+  )) {
+    candidates.push(asset);
+  }
+
+  const ordered = orderAliceCandidates(candidates).filter((candidate) =>
+    isAliceStorageUrl(candidate.url, supabaseUrl),
+  );
+
+  const images = (await Promise.all(ordered.map(async (candidate) => {
+    try {
+      const response = await fetch(candidate.url, { headers: { Accept: "image/*" } });
+      if (!response.ok) {
+        console.warn("Alice reference fetch failed:", response.status, candidate.url);
+        return null;
+      }
+
+      const contentType = (response.headers.get("content-type") ?? "")
+        .split(";", 1)[0]
+        .trim()
+        .toLowerCase();
+      if (!/^(image\/(png|jpeg|webp|gif))$/.test(contentType)) {
+        console.warn("Alice reference ignored: unsupported content type", contentType);
+        return null;
+      }
+
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength === 0 || bytes.byteLength > MAX_ALICE_REFERENCE_BYTES) {
+        console.warn("Alice reference ignored: invalid size", bytes.byteLength);
+        return null;
+      }
+
+      return {
+        ...candidate,
+        dataUrl: `data:${contentType};base64,${bytesToBase64(bytes)}`,
+      } satisfies AliceReferenceImage;
+    } catch (error) {
+      console.warn("Alice reference fetch error:", error);
+      return null;
+    }
+  }))).filter((image): image is AliceReferenceImage => Boolean(image));
+
+  return { themeSlug, images };
+}
+
 // ---- START: cria o job em background na OpenAI ----
 async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
   const { moldeName, moldeTemplateUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode } = body as Record<string, any>;
@@ -228,6 +381,12 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     }
   }
 
+  const aliceLibrary = safeMode === true
+    ? { themeSlug: slugifyTheme(temaNome), images: [] as AliceReferenceImage[] }
+    : await loadAliceReferenceImages(adminDb, temaNome, moldeName, supabaseUrl);
+  const aliceReferences = aliceLibrary.images;
+  const hasAliceReferences = aliceReferences.length > 0;
+
   const colorsDesc = corDominante
     ? `Cor dominante/principal: ${corDominante}. Use esta cor como destaque principal.`
     : temaColors?.length
@@ -235,6 +394,12 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
       : "";
 
   const safeThemeDesc = getSafeThemeDescription(temaNome);
+  const themeReferenceText = hasAliceReferences
+    ? "BIBLIOTECA AUTORIZADA DA ALICE: use as imagens de referencia anexadas como fonte principal para identidade visual, paleta, personagens, fundos, proporcoes e acabamento. O acervo foi liberado para uso neste produto. Quando houver uma arte original para este tema e molde, preserve sua linguagem visual e adapte somente o necessario ao nome, idade e frase solicitados; nao troque a referencia por uma versao generica."
+    : `TEMA DECORATIVO SEGURO: ${safeThemeDesc}`;
+  const contentRestrictions = hasAliceReferences
+    ? "Nao introduza pessoas reais, celebridades, logos ou marcas que nao estejam nas referencias autorizadas. Use os elementos licenciados da biblioteca Alice e ornamentos originais coerentes."
+    : "Sem criancas, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.";
   const idadeText = idade ? ` — incluir o número "${idade}" como numeral decorativo, sem mencionar idade ou aniversário` : "";
   const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — usar como lettering curto em uma face secundária do molde.` : "";
 
@@ -337,7 +502,7 @@ REGRAS ABSOLUTAS (não negociáveis):
 4. Aplique a decoração SOMENTE dentro das áreas internas (faces fechadas) do molde.
 
 DECORAÇÃO A APLICAR:
-- TEMA DECORATIVO SEGURO: ${safeThemeDesc}
+- ${themeReferenceText}
 - PALAVRA EM DESTAQUE: escreva EXATAMENTE "${nome}" — confira LETRA POR LETRA (acentos incluídos), sem traduzir, sem abreviar, sem duplicar letras. Grande, legível, na face principal${idadeText}
 - ${colorsDesc}${fraseText}
 - ESTILO TIPOGRÁFICO: ${fonteDesc} para a palavra "${nome}" e demais textos.
@@ -354,7 +519,7 @@ COMPOSIÇÃO PROFISSIONAL (padrão dos kits de festa vendáveis — siga em TODA
 - HIERARQUIA: personagem > nome > estampa > detalhes; cobertura de elementos entre 45% e 55% da face, com respiro ao redor do herói.
 
 PROIBIÇÕES DE CONTEÚDO:
-- Sem crianças, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.
+- ${contentRestrictions}
 - Todos os textos em português do Brasil.
 
 Resultado: o MESMO molde da entrada, com decoração aplicada dentro das faces, linhas técnicas intactas, fundo branco.`;
@@ -393,7 +558,21 @@ REGRAS:
       content.push({
         type: "input_image",
         image_url: `data:image/png;base64,${bytesToBase64(templateBytes)}`,
+        detail: "high",
       });
+    }
+    if (aliceReferences.length > 0) {
+      content.push({
+        type: "input_text",
+        text: "REFERENCIAS VISUAIS DA BIBLIOTECA ALICE: analise estas imagens em conjunto. Elas sao referencias licenciadas do tema; use-as para manter coerencia de estilo, cores, personagens, fundos e proporcoes. Nao faca uma colagem literal e nao altere a estrutura tecnica do molde.",
+      });
+      for (const reference of aliceReferences) {
+        content.push({
+          type: "input_image",
+          image_url: reference.dataUrl,
+          detail: "high",
+        });
+      }
     }
     const tool: Record<string, unknown> = {
       type: "image_generation",
@@ -461,8 +640,24 @@ REGRAS:
     });
   }
 
-  console.log("Job criado:", job.id, "status:", job.status, "quality:", quality);
-  return jsonResponse({ jobId: job.id, usedSafeFallback });
+  console.log(
+    "Job criado:",
+    job.id,
+    "status:",
+    job.status,
+    "quality:",
+    quality,
+    "Alice refs:",
+    aliceReferences.length,
+    "theme:",
+    aliceLibrary.themeSlug,
+  );
+  return jsonResponse({
+    jobId: job.id,
+    usedSafeFallback,
+    referenceCount: aliceReferences.length,
+    referenceThemeSlug: aliceLibrary.themeSlug,
+  });
 }
 
 // ---- STATUS: consulta o job; quando pronto, compõe as linhas + sobe pro Storage ----
