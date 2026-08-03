@@ -313,10 +313,11 @@ export function montarSvgKit(d: KitDados): string {
       <feComposite in="cor" in2="dila" operator="in" result="contorno"/>
       <feMerge><feMergeNode in="contorno"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <clipPath id="paperShape" clipPathUnits="userSpaceOnUse">${moldGeometry}</clipPath>
     <mask id="interior" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}" mask-type="alpha" style="mask-type:alpha"><image href="${d.maskUri}" xlink:href="${d.maskUri}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></mask>
   </defs>
   <rect width="${W}" height="${H}" fill="#FFFFFF"/>
-  <g mask="url(#interior)">
+  <g mask="url(#interior)" clip-path="url(#paperShape)">
     ${fundoTopo}
     ${fundoCorpo}
     ${salpicos}

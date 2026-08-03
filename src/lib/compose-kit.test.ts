@@ -23,6 +23,8 @@ describe("composição SVG do kit", () => {
 
     expect(svg).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
     expect(svg).toContain('mask-type="alpha"');
+    expect(svg).toContain('clipPath id="paperShape"');
+    expect(svg).toContain('clip-path="url(#paperShape)"');
     expect(svg).toContain("M0 0 H100");
     expect(svg).toContain("M0 80 H100");
     expect(svg).toContain('stroke-dasharray="4 3"');

@@ -71,12 +71,28 @@ for (let s = 0; s < N; s++) {
     const nb = [x>0?idx-1:-1, x<W-1?idx+1:-1, y>0?idx-W:-1, y<H-1?idx+W:-1];
     for (const n of nb) if (n>=0 && !isLine[n] && !outside[n] && !label[n]) { label[n]=comp; stack[sp++]=n; }
   }
-  faces.push({ x: minX, y: minY, w: maxX-minX+1, h: maxY-minY+1, area, cx: (minX+maxX)/2, cy: (minY+maxY)/2 });
+  faces.push({ component: comp, x: minX, y: minY, w: maxX-minX+1, h: maxY-minY+1, area, cx: (minX+maxX)/2, cy: (minY+maxY)/2 });
 }
 
 const minArea = N * 0.004; // ignora ruído
-const kept = faces.filter(f => f.area >= minArea).sort((a,b)=>b.area-a.area);
-fs.writeFileSync(outJson, JSON.stringify({ W, H, faces: kept }, null, 0));
+const candidates = faces.filter(f => f.area >= minArea).sort((a,b)=>b.area-a.area);
+// Componentes totalmente contidos em outro são recortes vazados (por exemplo,
+// o furo central das alças), não superfícies que devam receber estampa.
+const holeComponents = new Set(
+  candidates
+    .filter((inner) => candidates.some((outer) =>
+      inner.component !== outer.component
+      && inner.area < outer.area * 0.9
+      && inner.x > outer.x + 2
+      && inner.y > outer.y + 2
+      && inner.x + inner.w < outer.x + outer.w - 2
+      && inner.y + inner.h < outer.y + outer.h - 2
+    ))
+    .map((face) => face.component),
+);
+const kept = candidates.filter((face) => !holeComponents.has(face.component));
+const publicFaces = kept.map(({ component, ...face }) => face);
+fs.writeFileSync(outJson, JSON.stringify({ W, H, faces: publicFaces }, null, 0));
 
 // máscara do interior (branco = pintável): tudo que não é "fora" nem linha original
 if (maskOut) {
@@ -95,7 +111,7 @@ if (maskOut) {
   const mx = mc.getContext("2d");
   const mi = mx.createImageData(W, H);
   for (let i = 0; i < N; i++) {
-    const inside = !outside[i] && !isLine0[i];
+    const inside = !outside[i] && !isLine0[i] && !holeComponents.has(label[i]);
     mi.data[i*4] = 255; mi.data[i*4+1] = 255; mi.data[i*4+2] = 255;
     mi.data[i*4+3] = inside ? 255 : 0;
   }
@@ -103,5 +119,5 @@ if (maskOut) {
   fs.writeFileSync(maskOut, mc.toBuffer("image/png"));
   console.log(`mascara interior -> ${maskOut}`);
 }
-console.log(`${inPath.split(/[\\/]/).pop()} | ${W}x${H} | ${comp} regioes, ${kept.length} faces validas`);
-for (const f of kept.slice(0, 8)) console.log(`  face area=${(f.area/N*100).toFixed(1)}%  bbox ${f.x},${f.y} ${f.w}x${f.h}`);
+console.log(`${inPath.split(/[\\/]/).pop()} | ${W}x${H} | ${comp} regioes, ${kept.length} faces validas (${holeComponents.size} recortes removidos)`);
+for (const f of publicFaces.slice(0, 8)) console.log(`  face area=${(f.area/N*100).toFixed(1)}%  bbox ${f.x},${f.y} ${f.w}x${f.h}`);

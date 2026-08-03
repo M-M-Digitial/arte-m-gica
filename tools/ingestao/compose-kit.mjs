@@ -109,12 +109,13 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
     <linearGradient id="areia" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FBF0C8"/><stop offset="1" stop-color="#F4DFA3"/>
     </linearGradient>
+    <clipPath id="paperShape" clipPathUnits="userSpaceOnUse">${moldInner}</clipPath>
     <mask id="interior"><image href="${interiorMask}" x="0" y="0" width="${W}" height="${H}"/></mask>
   </defs>
 
   <rect width="${W}" height="${H}" fill="#FFFFFF"/>
 
-  <g mask="url(#interior)">
+  <g mask="url(#interior)" clip-path="url(#paperShape)">
     <!-- zona topo: papel de escamas (tudo acima do corpo) -->
     <image href="${escamas}" x="0" y="0" width="${W}" height="${bodyTop}" preserveAspectRatio="xMidYMid slice"/>
     <!-- corpo: cena aquática -->

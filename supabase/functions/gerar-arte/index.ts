@@ -172,6 +172,129 @@ async function buildEditMask(templateBytes: Uint8Array): Promise<Uint8Array | nu
   return await mask.encode();
 }
 
+// The official mold mask marks printable paper with white/alpha. Resample it
+// to the exact template size and remove components nested inside another
+// component (handle holes, windows and other cutouts).
+async function buildEditMaskFromInteriorMask(
+  interiorMaskBytes: Uint8Array,
+  templateBytes: Uint8Array,
+): Promise<Uint8Array | null> {
+  const interior = await Image.decode(interiorMaskBytes);
+  const template = await Image.decode(templateBytes);
+  const W = template.width;
+  const H = template.height;
+  const N = W * H;
+  if (!N || !interior.width || !interior.height) return null;
+
+  const paintable = new Uint8Array(N);
+  const isLine = new Uint8Array(N);
+  const templateData = template.bitmap;
+  const interiorData = interior.bitmap;
+
+  for (let y = 0; y < H; y++) {
+    const my = Math.min(interior.height - 1, Math.round((y * interior.height) / H));
+    for (let x = 0; x < W; x++) {
+      const mx = Math.min(interior.width - 1, Math.round((x * interior.width) / W));
+      const target = y * W + x;
+      const maskIndex = (my * interior.width + mx) * 4;
+      const maskLum = 0.299 * interiorData[maskIndex]
+        + 0.587 * interiorData[maskIndex + 1]
+        + 0.114 * interiorData[maskIndex + 2];
+      paintable[target] = interiorData[maskIndex + 3] >= 128 && maskLum >= 180 ? 1 : 0;
+
+      const templateIndex = target * 4;
+      const alpha = templateData[templateIndex + 3];
+      const lum = 0.299 * templateData[templateIndex]
+        + 0.587 * templateData[templateIndex + 1]
+        + 0.114 * templateData[templateIndex + 2];
+      if (alpha >= 200 && lum <= 200) isLine[target] = 1;
+    }
+  }
+
+  const componentId = new Int32Array(N);
+  const stack = new Int32Array(N);
+  const components: Array<{
+    id: number;
+    area: number;
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  }> = [];
+  let componentCount = 0;
+  let stackSize = 0;
+  const visit = (idx: number, id: number) => {
+    if (!paintable[idx] || isLine[idx] || componentId[idx]) return;
+    componentId[idx] = id;
+    stack[stackSize++] = idx;
+  };
+
+  for (let start = 0; start < N; start++) {
+    if (!paintable[start] || isLine[start] || componentId[start]) continue;
+    const id = ++componentCount;
+    let area = 0;
+    let minX = W;
+    let minY = H;
+    let maxX = 0;
+    let maxY = 0;
+    stackSize = 0;
+    visit(start, id);
+    while (stackSize > 0) {
+      const idx = stack[--stackSize];
+      const x = idx % W;
+      const y = (idx / W) | 0;
+      area++;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      if (x > 0) visit(idx - 1, id);
+      if (x < W - 1) visit(idx + 1, id);
+      if (y > 0) visit(idx - W, id);
+      if (y < H - 1) visit(idx + W, id);
+    }
+    components.push({ id, area, minX, minY, maxX, maxY });
+  }
+
+  const holeComponents = new Uint8Array(componentCount + 1);
+  for (const inner of components) {
+    if (inner.area < N * 0.002) continue;
+    for (const outer of components) {
+      if (inner.id === outer.id || inner.area >= outer.area * 0.9) continue;
+      const nested = inner.minX > outer.minX + 2
+        && inner.minY > outer.minY + 2
+        && inner.maxX < outer.maxX - 2
+        && inner.maxY < outer.maxY - 2;
+      if (nested) {
+        holeComponents[inner.id] = 1;
+        break;
+      }
+    }
+  }
+
+  const mask = new Image(W, H);
+  let editableCount = 0;
+  for (let i = 0; i < N; i++) {
+    const editable = Boolean(
+      paintable[i] && !isLine[i] && !holeComponents[componentId[i]],
+    );
+    if (editable) editableCount++;
+    mask.bitmap[i * 4] = 0;
+    mask.bitmap[i * 4 + 1] = 0;
+    mask.bitmap[i * 4 + 2] = 0;
+    mask.bitmap[i * 4 + 3] = editable ? 0 : 255;
+  }
+
+  const frac = editableCount / N;
+  if (frac < 0.04 || frac > 0.92) {
+    console.warn(`buildEditMaskFromInteriorMask: editable fraction ${frac.toFixed(3)} is degenerate.`);
+    return null;
+  }
+  const removed = holeComponents.reduce((total, value) => total + value, 0);
+  console.log(`buildEditMaskFromInteriorMask: editable fraction ${frac.toFixed(3)}; ${removed} cutouts preserved.`);
+  return await mask.encode();
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let bin = "";
   const chunk = 0x8000;
@@ -345,7 +468,7 @@ async function loadAliceReferenceImages(
 
 // ---- START: cria o job em background na OpenAI ----
 async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
-  const { moldeName, moldeTemplateUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode } = body as Record<string, any>;
+  const { moldeName, moldeTemplateUrl, moldeMaskUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode } = body as Record<string, any>;
 
   const quality = qualityRaw === "low" ? "low" : "high";
 
@@ -476,17 +599,30 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     }
   }
 
-  // A4 — constrói a máscara de edição a partir do template (só PNG).
+  // Prefer the mask generated from the real mold geometry. The old
+  // flood-fill fallback leaks through dashed fold lines on several molds.
   let maskDataUrl: string | null = null;
+  let interiorMaskBytes: Uint8Array | null = null;
+  if (typeof moldeMaskUrl === "string" && isAliceStorageUrl(moldeMaskUrl, supabaseUrl)) {
+    try {
+      const maskRes = await fetch(moldeMaskUrl, { headers: { Accept: "image/*" } });
+      if (maskRes.ok) interiorMaskBytes = new Uint8Array(await maskRes.arrayBuffer());
+      else console.warn("Mold mask fetch failed:", maskRes.status);
+    } catch (e) {
+      console.warn("Mold mask fetch error:", e);
+    }
+  }
   if (templateBytes && templateBytes[0] === 0x89 && templateBytes[1] === 0x50) {
     try {
-      const maskBytes = await buildEditMask(templateBytes);
+      const maskBytes = interiorMaskBytes
+        ? await buildEditMaskFromInteriorMask(interiorMaskBytes, templateBytes)
+        : await buildEditMask(templateBytes);
       if (maskBytes) {
         maskDataUrl = `data:image/png;base64,${bytesToBase64(new Uint8Array(maskBytes))}`;
-        console.log("Máscara de edição construída.");
+        console.log("Edit mask built.");
       }
     } catch (e) {
-      console.warn("Falha ao construir máscara — seguindo sem ela:", e);
+      console.warn("Failed to build edit mask; continuing without it:", e);
     }
   }
 
@@ -499,7 +635,7 @@ REGRAS ABSOLUTAS (não negociáveis):
 1. NÃO redesenhe o molde. NÃO altere contorno externo, proporções, abas de colagem, formato das faces.
 2. PRESERVE EXATAMENTE as linhas de corte (traço contínuo) e linhas de dobra (traço pontilhado) — idênticas à imagem de referência.
 3. PRESERVE o fundo branco fora do contorno do molde — não invada essa área.
-4. Aplique a decoração SOMENTE dentro das áreas internas (faces fechadas) do molde.
+4. Aplique a decoração SOMENTE nas áreas pintáveis definidas pelo gabarito; mantenha branco o exterior, recortes vazados, furos e abas de colagem sem superfície visível.
 
 DECORAÇÃO A APLICAR:
 - ${themeReferenceText}
@@ -515,7 +651,9 @@ COMPOSIÇÃO PROFISSIONAL (padrão dos kits de festa vendáveis — siga em TODA
 - FAIXA DE CHÃO: base de cada face com uma faixa de cenário (grama, areia, nuvens — conforme o tema) ocupando ~15% da altura; personagens e elementos APOIADOS nessa faixa, nunca flutuando nem cortados pelas dobras.
 - HERÓI: 1 personagem/elemento grande por face principal (~metade da altura da face), centralizado.
 - NOME: dentro de uma plaquinha CLARA (branca ou pastel) com borda dupla na cor de destaque; a palavra "${nome}" grande em cor escura de alto contraste sobre a plaquinha${idade ? `; o numeral "${idade}" em um selo pequeno separado` : ""}.
-- ABAS E ÁREAS DE COLAGEM: apenas estampa contínua ou cor lisa — nunca texto nem personagem.
+- ALÇAS, PEGADORES E TIRAS: a faixa de papel da alça é uma superfície visível após a montagem. Cubra-a com a mesma estampa, cor ou textura contínua do tema; nunca a deixe branca. Preserve o recorte interno da alça, que deve continuar vazado/branco.
+- SUPERFÍCIES VISÍVEIS APÓS A MONTAGEM: toda face, tampa, triângulo, aba superior e faixa da alça que ficará exposta recebe arte contínua coerente com o tema.
+- ABAS DE COLAGEM: use somente estampa contínua ou cor lisa nas abas que ficam visíveis; não coloque texto nem personagem em áreas de cola que serão escondidas.
 - HIERARQUIA: personagem > nome > estampa > detalhes; cobertura de elementos entre 45% e 55% da face, com respiro ao redor do herói.
 
 PROIBIÇÕES DE CONTEÚDO:
@@ -527,12 +665,12 @@ Resultado: o MESMO molde da entrada, com decoração aplicada dentro das faces, 
   const fallbackPrompt = templateBytes
     ? `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
 
-TAREFA: aplicar decoração genérica e segura APENAS dentro das faces internas, sem alterar a estrutura.
+TAREFA: aplicar decoração genérica e segura apenas nas áreas pintáveis do gabarito, incluindo superfícies visíveis de alças e tampas, sem alterar a estrutura.
 
 REGRAS ABSOLUTAS:
 1. NÃO redesenhe o molde. PRESERVE contorno, abas, linhas de corte (contínuas) e dobra (pontilhadas) idênticas à referência.
 2. PRESERVE o fundo branco fora do contorno.
-3. Decoração apenas dentro das faces.
+3. Decoração apenas nas áreas pintáveis. Preserve exterior, recortes vazados, furos e abas de cola que ficarão escondidas.
 
 DECORAÇÃO: ${safeThemeDesc}. ${colorsDesc} Estilo: ${drawDesc}. Densidade: ${densityDesc}.
 Sem nomes, sem idade, sem crianças, sem personagens registrados, sem marcas, sem pessoas reais. Apenas padrões, flores, estrelas, laços e elementos abstratos originais.`

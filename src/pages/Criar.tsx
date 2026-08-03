@@ -450,6 +450,7 @@ export default function Criar() {
           moldeName: selectedMolde.name,
           // template em alta resolução (2048px) quando existir; thumb como fallback
           moldeTemplateUrl: (selectedMolde as any).template_png_url || (selectedMolde as any).image_url || undefined,
+          moldeMaskUrl: (selectedMolde as any).mask_url || undefined,
           temaNome: selectedTema.name,
           temaColors: selectedTema.colors,
           nome: nome.trim(),
@@ -830,7 +831,7 @@ export default function Criar() {
     <div className="min-h-screen min-h-[100dvh] bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 glass border-b border-border/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-5 h-14 flex items-center justify-between">
+        <div className="max-w-[1320px] w-full mx-auto px-4 sm:px-5 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-xl gradient-hero flex items-center justify-center shrink-0 shadow-soft">
               <Sparkles className="h-3.5 w-3.5 text-white" />
@@ -841,25 +842,35 @@ export default function Criar() {
           </div>
 
           {/* Step pills — desktop */}
-          <nav className="hidden sm:flex items-center gap-1">
+          <nav className="hidden sm:flex items-center gap-1.5" aria-label="Etapas da criação">
             {STEPS.map((s, i) => {
               const isActive = step === i + 1;
               const isDone = step > i + 1;
+              const StepIcon = s.icon;
               return (
                 <button
                   key={s.key}
                   onClick={() => { if (isDone) setStep(i + 1); }}
                   disabled={!isDone && !isActive}
+                  aria-current={isActive ? "step" : undefined}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
                       ? "gradient-hero text-white shadow-soft"
                       : isDone
                       ? "bg-primary/10 text-primary hover:bg-primary/15 cursor-pointer"
-                      : "text-border cursor-default"
+                      : "bg-secondary/70 text-muted-foreground cursor-default"
                   }`}
                 >
-                  {isDone && <Check className="h-3 w-3 inline mr-1" />}
-                  {s.label}
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full mr-1.5 ${
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : isDone
+                      ? "bg-primary/15 text-primary"
+                      : "bg-background text-muted-foreground"
+                  }`}>
+                    {isDone ? <Check className="h-3 w-3" /> : <StepIcon className="h-3 w-3" />}
+                  </span>
+                  <span>{s.label}</span>
                 </button>
               );
             })}
@@ -881,7 +892,7 @@ export default function Criar() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-5 py-6 sm:py-10 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <main className="max-w-[1320px] w-full mx-auto px-4 sm:px-5 py-6 sm:py-10 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         <SelectionsBreadcrumb />
 
         {/* ─── STEP 1: TEMA ─── */}
