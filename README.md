@@ -2,7 +2,7 @@
 
 Base compartilhada de dois produtos para artesãs:
 
-- **Meu Ateliê Digital**: oito assistentes de IA para atendimento, vendas, conteúdo, catálogo, pós-venda, impressão, revisão e agenda. As respostas seguem a regra de ouro de brevidade: uma entrega por resposta.
+- **Meu Ateliê Digital**: nove assistentes de IA para atendimento, vendas, conteúdo, catálogo, pós-venda, impressão, curadoria de moldes, revisão e agenda. As respostas seguem a regra de ouro de brevidade: uma entrega por resposta.
 - **MoldePronto**: gerador de moldes personalizados para exportação em PDF, PNG e SVG. Inclui o Compositor de Kits (composição local com a biblioteca de temas), o Criar com IA (personalização em quiz de 7 perguntas; geração via job em background da OpenAI Responses API com gpt-image-2), o histórico "Minhas Artes" e a "Galeria" universal (tabela `minhas_artes`), com refazer trocando só o nome. Miniaturas das galerias saem do transformador de imagens do Storage (`src/lib/thumb.ts`).
 
 O modo **Meu Ateliê Digital** é publicado em `https://www.appateliedigital.com.br/agentes-artesaos/`, sem substituir o aplicativo existente na raiz do domínio. A mesma rota também aceita o host sem `www` quando ele chega ao servidor principal.

@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 // imagescript é nativa de Deno — o pngjs via esm.sh falhava em runtime no
 // edge (PNG.sync.read), e máscara + carimbo eram pulados em silêncio.
 import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
+import { buildAliceGenerationStandard } from "../_shared/alice-quality-standard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -313,7 +314,7 @@ const jsonResponse = (payload: unknown, status = 200) =>
 const isModerationError = (text: string) =>
   /moderation_blocked|content_policy|safety/i.test(text);
 
-const MAX_ALICE_REFERENCE_IMAGES = 5;
+const MAX_ALICE_REFERENCE_IMAGES = 8;
 const MAX_ALICE_REFERENCE_BYTES = 8 * 1024 * 1024;
 
 type AliceReferenceCandidate = {
@@ -352,13 +353,12 @@ function isAliceStorageUrl(value: string, supabaseUrl: string): boolean {
 
 function orderAliceCandidates(candidates: AliceReferenceCandidate[]) {
   const rank = (candidate: AliceReferenceCandidate) => {
-    if (candidate.kind === "original") return 0;
-    if (candidate.kind === "papel" && candidate.role === "body") return 1;
-    if (candidate.kind === "papel" && candidate.role === "top") return 2;
-    if (candidate.kind === "clipart" && candidate.role === "principal") return 3;
-    if (candidate.kind === "clipart") return 4;
-    if (candidate.kind === "placa") return 5;
-    return 6;
+    if (candidate.kind === "papel" && candidate.role === "body") return 0;
+    if (candidate.kind === "papel" && candidate.role === "top") return 1;
+    if (candidate.kind === "clipart" && candidate.role === "principal") return 2;
+    if (candidate.kind === "clipart") return 3;
+    if (candidate.kind === "placa") return 4;
+    return 5;
   };
 
   const seen = new Set<string>();
@@ -375,7 +375,6 @@ function orderAliceCandidates(candidates: AliceReferenceCandidate[]) {
 async function loadAliceReferenceImages(
   adminDb: any,
   temaNome: string,
-  moldeName: string,
   supabaseUrl: string,
 ): Promise<{ themeSlug: string; images: AliceReferenceImage[] }> {
   const { data: themeRows, error: themeError } = await adminDb
@@ -393,27 +392,14 @@ async function loadAliceReferenceImages(
   });
   const themeSlug = relatedTheme?.slug ?? slugifyTheme(temaNome);
 
-  const [{ data: assets, error: assetsError }, { data: original, error: originalError }] =
-    await Promise.all([
-      adminDb
-        .from("tema_assets")
-        .select("url,kind,role")
-        .eq("theme_slug", themeSlug),
-      adminDb
-        .from("alice_artes")
-        .select("image_url")
-        .eq("tema_slug", themeSlug)
-        .eq("molde_name", moldeName)
-        .maybeSingle(),
-    ]);
+  const { data: assets, error: assetsError } = await adminDb
+    .from("tema_assets")
+    .select("url,kind,role")
+    .eq("theme_slug", themeSlug);
 
   if (assetsError) console.warn("Alice asset lookup failed:", assetsError.message);
-  if (originalError) console.warn("Alice original lookup failed:", originalError.message);
 
   const candidates: AliceReferenceCandidate[] = [];
-  if (original?.image_url) {
-    candidates.push({ url: original.image_url, kind: "original", role: "original" });
-  }
   for (const asset of orderAliceCandidates(
     ((assets ?? []) as Array<{ url?: string; kind?: string; role?: string | null }>)
       .filter((asset) => asset.url)
@@ -506,7 +492,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
 
   const aliceLibrary = safeMode === true
     ? { themeSlug: slugifyTheme(temaNome), images: [] as AliceReferenceImage[] }
-    : await loadAliceReferenceImages(adminDb, temaNome, moldeName, supabaseUrl);
+    : await loadAliceReferenceImages(adminDb, temaNome, supabaseUrl);
   const aliceReferences = aliceLibrary.images;
   const hasAliceReferences = aliceReferences.length > 0;
 
@@ -518,13 +504,28 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
 
   const safeThemeDesc = getSafeThemeDescription(temaNome);
   const themeReferenceText = hasAliceReferences
-    ? "BIBLIOTECA AUTORIZADA DA ALICE: use as imagens de referencia anexadas como fonte principal para identidade visual, paleta, personagens, fundos, proporcoes e acabamento. O acervo foi liberado para uso neste produto. Quando houver uma arte original para este tema e molde, preserve sua linguagem visual e adapte somente o necessario ao nome, idade e frase solicitados; nao troque a referencia por uma versao generica."
+    ? "BIBLIOTECA DE ESTILO DA ALICE: as imagens anexadas sao componentes isolados para reconhecer paleta, linguagem de ilustracao, personagens e nivel de acabamento. Crie uma composicao nova para este molde. Nao reproduza a sequencia de faces, o fundo, as bordas, o enquadramento ou a distribuicao de qualquer kit pronto do acervo."
     : `TEMA DECORATIVO SEGURO: ${safeThemeDesc}`;
   const contentRestrictions = hasAliceReferences
-    ? "Nao introduza pessoas reais, celebridades, logos ou marcas que nao estejam nas referencias autorizadas. Use os elementos licenciados da biblioteca Alice e ornamentos originais coerentes."
+    ? "Nao introduza pessoas reais, celebridades, logos ou marcas que nao estejam nas referencias do acervo. Use os personagens e elementos disponiveis no Drive com ornamentos originais coerentes."
     : "Sem criancas, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.";
-  const idadeText = idade ? ` — incluir o número "${idade}" como numeral decorativo, sem mencionar idade ou aniversário` : "";
-  const fraseText = frase ? `\nFRASE DECORATIVA: "${frase}" — usar como lettering curto em uma face secundária do molde.` : "";
+  const idadeText = idade
+    ? " — incluir o número \"" + idade + "\" como numeral decorativo, sem mencionar idade ou aniversário"
+    : "";
+  const fraseText = frase
+    ? "\nFRASE DECORATIVA: \"" + frase + "\" — usar como lettering curto em uma face secundária do molde."
+    : "";
+  const isMilkMold = normalizeLibraryKey(String(moldeName)).includes("caixa milk");
+  const idadeNoNome = idade
+    ? "; o numeral \"" + idade + "\" fica logo abaixo, com cerca de 42% do corpo do nome"
+    : "";
+  let namePlacementText = "proporcional e legível, na parte inferior de uma face que continue visível depois da montagem, com área reservada e sem personagem por baixo" + idadeText;
+  let nameCompositionRule = "NOME: reserve uma área sem personagem na parte inferior da face. Use 38-58% da largura, alvo 50%; em fundo calmo prefira lettering com halo e em fundo movimentado use placa sólida simples ou a placa própria do tema. A palavra \"" + nome + "\" deve ter alto contraste" + idadeNoNome + ".";
+
+  if (isMilkMold) {
+    namePlacementText = "pequeno e delicado, na parte inferior de duas faces laterais alternadas que continuem visíveis depois da montagem" + idadeText;
+    nameCompositionRule = "NOME NA CAIXA MILK: reserve duas faces laterais alternadas, sem personagem por baixo. Use uma placa discreta com 30-44% da largura da face e tipografia delicada; posicione nome e idade na parte inferior da área visível do corpo, nunca no telhado, fechamento, fundo ou aba escondida.";
+  }
 
   const fonteMap: Record<string, string> = {
     divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
@@ -550,10 +551,10 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
   const drawDesc = drawMap[desenhoEstilo || "cartoon"] || drawMap.cartoon;
 
   const densityMap: Record<string, string> = {
-    minimalista: "design MINIMALISTA — poucos elementos, muito espaço em branco, clean e elegante, apenas o essencial",
-    equilibrado: "design EQUILIBRADO — quantidade moderada de elementos decorativos, nem vazio nem cheio demais",
-    decorado: "design DECORADO — bastante detalhes, enfeites, padrões e elementos decorativos em todas as faces",
-    maximalista: "design MAXIMALISTA — extremamente cheio de elementos, cores vibrantes, padrões complexos, sem espaço vazio, muitos detalhes e enfeites por toda parte",
+    minimalista: "design MINIMALISTA — todas as faces úteis recebem um elemento principal ou temático, com 35-50% de cobertura ativa e grandes áreas calmas tratadas por cor, wash ou textura sutil",
+    equilibrado: "design EQUILIBRADO — todas as faces úteis recebem arte, com 45-70% de cobertura ativa, alvo 58%, alternando herói, secundário, cenário e personalização sem deixar painéis mortos",
+    decorado: "design DECORADO — todas as faces recebem composição em três camadas (fundo, cenário e elemento principal), com 60-78% de cobertura ativa e detalhes menores coordenados",
+    maximalista: "design MAXIMALISTA — 70-85% de cobertura ativa nas faces, cores vibrantes e padrões complexos, preservando linhas técnicas e a faixa segura do nome",
   };
   const densityDesc = densityMap[densidadeVisual || "equilibrado"] || densityMap.equilibrado;
 
@@ -626,6 +627,12 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     }
   }
 
+  const aliceQualityStandard = buildAliceGenerationStandard(
+    safeMode === true
+      ? { moldName: String(moldeName) }
+      : { moldName: String(moldeName), name: String(nome), age: idade ? String(idade) : undefined },
+  );
+
   // Prompt de EDIÇÃO — o molde já está pronto na imagem de entrada
   const editPrompt = `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
 
@@ -639,22 +646,26 @@ REGRAS ABSOLUTAS (não negociáveis):
 
 DECORAÇÃO A APLICAR:
 - ${themeReferenceText}
-- PALAVRA EM DESTAQUE: escreva EXATAMENTE "${nome}" — confira LETRA POR LETRA (acentos incluídos), sem traduzir, sem abreviar, sem duplicar letras. Grande, legível, na face principal${idadeText}
+- PERSONALIZAÇÃO: escreva EXATAMENTE "${nome}" — confira LETRA POR LETRA (acentos incluídos), sem traduzir, sem abreviar, sem duplicar letras. Posicionamento: ${namePlacementText}.
 - ${colorsDesc}${fraseText}
 - ESTILO TIPOGRÁFICO: ${fonteDesc} para a palavra "${nome}" e demais textos.
 - ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
 - DENSIDADE VISUAL: ${densityDesc}.
 - ACABAMENTO: qualidade de estúdio de papelaria premium — ilustração nítida, cores vibrantes e harmônicas, composição equilibrada, sem ruído, sem artefatos, sem nenhum texto além dos especificados.
 
-COMPOSIÇÃO PROFISSIONAL (padrão dos kits de festa vendáveis — siga em TODAS as faces):
-- FUNDO: cada face coberta por um padrão de motivo PEQUENO tom-sobre-tom nas cores do tema (poá, listras, estrelinhas…), como papel digital de scrapbook — nunca fundo vazio nem motivo gigante.
-- FAIXA DE CHÃO: base de cada face com uma faixa de cenário (grama, areia, nuvens — conforme o tema) ocupando ~15% da altura; personagens e elementos APOIADOS nessa faixa, nunca flutuando nem cortados pelas dobras.
-- HERÓI: 1 personagem/elemento grande por face principal (~metade da altura da face), centralizado.
-- NOME: dentro de uma plaquinha CLARA (branca ou pastel) com borda dupla na cor de destaque; a palavra "${nome}" grande em cor escura de alto contraste sobre a plaquinha${idade ? `; o numeral "${idade}" em um selo pequeno separado` : ""}.
+COMPOSIÇÃO PROFISSIONAL (padrão dos kits de festa vendáveis):
+- MAPA DE ZONAS: antes de decorar, identifique exterior, vazados, cola escondida, corpo visível, fechamento/tampa, lateral/fole e área segura para nome. A arte deve respeitar essas funções.
+- PERFIL: escolha CENÁRIO para murais e personagens grandes ou MODULAR para corpo claro, fechamento estampado e elementos pequenos distribuídos por face. A escolha parte da geometria do molde e dos componentes disponíveis, nunca da reprodução da sequência visual de um kit pronto.
+- FUNÇÕES DE FACE: no perfil modular, distribua personagem, nome/idade, título visual do tema quando existir e estampa/respiro em faces diferentes. Fundo claro colorido ou texturizado é acabamento intencional, não área esquecida.
+- DENSIDADE: no perfil cenário, todas as faces úteis recebem personagem, coadjuvante ou elemento temático; a face do nome pode receber arte menor ACIMA da faixa de personalização. Não reserve uma segunda face inteira vazia. No modular, preencha personagem, nome, título/ícone e estampa de destaque.
+- VARIEDADE: distribua poses/personagens diferentes disponíveis no acervo entre as faces. Não reutilize nem apenas espelhe o mesmo recorte para fingir variedade. Quando faltarem poses, use cenário, ícone ou elemento temático coordenado na face restante.
+- ${nameCompositionRule}
 - ALÇAS, PEGADORES E TIRAS: a faixa de papel da alça é uma superfície visível após a montagem. Cubra-a com a mesma estampa, cor ou textura contínua do tema; nunca a deixe branca. Preserve o recorte interno da alça, que deve continuar vazado/branco.
-- SUPERFÍCIES VISÍVEIS APÓS A MONTAGEM: toda face, tampa, triângulo, aba superior e faixa da alça que ficará exposta recebe arte contínua coerente com o tema.
+- SUPERFÍCIES VISÍVEIS APÓS A MONTAGEM: toda face, tampa, triângulo, aba superior e faixa da alça que ficará exposta recebe tratamento coerente com o tema. Esse tratamento pode ser cor lisa, wash, microestampa, textura ou ilustração.
 - ABAS DE COLAGEM: use somente estampa contínua ou cor lisa nas abas que ficam visíveis; não coloque texto nem personagem em áreas de cola que serão escondidas.
-- HIERARQUIA: personagem > nome > estampa > detalhes; cobertura de elementos entre 45% e 55% da face, com respiro ao redor do herói.
+- HIERARQUIA: preserve leitura imediata e contraste. No perfil cenário: personagem > nome > cenário > estampa. No perfil modular: nome/personagem/título por face > fundo calmo > microestampa de fechamento.
+
+${aliceQualityStandard}
 
 PROIBIÇÕES DE CONTEÚDO:
 - ${contentRestrictions}
@@ -673,6 +684,7 @@ REGRAS ABSOLUTAS:
 3. Decoração apenas nas áreas pintáveis. Preserve exterior, recortes vazados, furos e abas de cola que ficarão escondidas.
 
 DECORAÇÃO: ${safeThemeDesc}. ${colorsDesc} Estilo: ${drawDesc}. Densidade: ${densityDesc}.
+${aliceQualityStandard}
 Sem nomes, sem idade, sem crianças, sem personagens registrados, sem marcas, sem pessoas reais. Apenas padrões, flores, estrelas, laços e elementos abstratos originais.`
     : `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
 
@@ -680,6 +692,7 @@ TEMA VISUAL: ${safeThemeDesc}.
 ${colorsDesc}
 ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
 DENSIDADE VISUAL: ${densityDesc}.
+${aliceQualityStandard}
 
 REGRAS:
 1. Sem nomes próprios, idade, crianças, pessoas reais, personagens registrados, logotipos ou marcas.
@@ -702,7 +715,7 @@ REGRAS:
     if (aliceReferences.length > 0) {
       content.push({
         type: "input_text",
-        text: "REFERENCIAS VISUAIS DA BIBLIOTECA ALICE: analise estas imagens em conjunto. Elas sao referencias licenciadas do tema; use-as para manter coerencia de estilo, cores, personagens, fundos e proporcoes. Nao faca uma colagem literal e nao altere a estrutura tecnica do molde.",
+        text: "COMPONENTES VISUAIS DISPONIVEIS NO ACERVO ALICE: use os personagens para identidade do tema, mas nunca use a arte final como planta de composicao. Construa um layout inedito e altere pelo menos tres decisoes estruturais em relacao a qualquer referencia conhecida: construcao do fundo, cores, ordem das funcoes por face, agrupamento/escala dos personagens, moldura da personalizacao, elementos de cenario ou padrao de acabamento. Nao trace, nao reconstrua e nao faca colagem literal de kit pronto.",
       });
       for (const reference of aliceReferences) {
         content.push({

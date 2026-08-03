@@ -16,7 +16,7 @@ const MAX_TOTAL_CHARS = 48_000;
 const MAX_IMAGES = 4;
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
 
-type UserSupabase = ReturnType<typeof createClient>;
+type UserSupabase = ReturnType<typeof createClient<any>>;
 
 interface Attachment {
   path: string;

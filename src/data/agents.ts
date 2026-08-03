@@ -5,6 +5,7 @@ export const agentIds = [
   "violeta",
   "sofia",
   "bella",
+  "cora",
   "elisa",
   "maia",
 ] as const;
@@ -97,6 +98,19 @@ export const agents: Agent[] = [
       "Qual papel devo usar neste personalizado?",
       "Minha impressão está com a cor errada. O que verifico?",
       "Pesquise a configuração correta para minha impressora.",
+    ],
+  },
+  {
+    id: "cora",
+    name: "Cora",
+    title: "Curadoria de Moldes e Artes",
+    description:
+      "Analisa o molde aberto e a peça montada, compara com o padrão Alice e com o mercado e aponta exatamente o que precisa ser corrigido.",
+    deliverables: ["Status e nota técnica", "Bloqueios de qualidade", "Correções prioritárias"],
+    starters: [
+      "Revise este molde aberto antes de eu imprimir.",
+      "Compare esta caixa montada com o padrão Alice.",
+      "Diga se esta arte está pronta para vender ou precisa ser refeita.",
     ],
   },
   {

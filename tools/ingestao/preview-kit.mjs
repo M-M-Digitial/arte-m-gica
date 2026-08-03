@@ -70,6 +70,11 @@ if (!assets.length) throw new Error(`tema "${slug}" sem assets`);
 const byRole = (role) => assets.find((a) => a.role === role);
 const fonte = assets.find((a) => a.kind === "fonte");
 const placa = assets.find((a) => a.kind === "placa");
+const rolePriority = (role) => role === "principal" ? 0 : role === "amigo" ? 1 : role === "amigo2" ? 2 : 3;
+const cliparts = assets
+  .filter((asset) => asset.kind === "clipart" && asset.url)
+  .filter((asset, index, list) => list.findIndex((candidate) => candidate.url === asset.url) === index)
+  .sort((a, b) => rolePriority(a.role) - rolePriority(b.role));
 
 const [moldSvg, facesJson, maskBuf] = await Promise.all([
   fetch(molde.svg_url).then((r) => r.text()),
@@ -82,9 +87,9 @@ const get = async (a, doTrim = false) => {
   if (doTrim) return trim(buf);
   return { uri: toDataUri(buf), w: 0, h: 0 };
 };
-const [top, body, principal, amigo, amigo2, placaImg, fonteBin] = await Promise.all([
+const [top, body, personagens, placaImg, fonteBin] = await Promise.all([
   get(byRole("top")), get(byRole("body")),
-  get(byRole("principal"), true), get(byRole("amigo"), true), get(byRole("amigo2"), true),
+  Promise.all(cliparts.map((clipart) => get(clipart, true))),
   get(placa), fonte ? fetchBuf(fonte.url) : null,
 ]);
 
@@ -111,14 +116,13 @@ const bodyInfo = body ? await analisarPapel(body.uri) : null;
 if (bodyInfo) console.log(`papel body: ${bodyInfo.busy ? "estampa DENSA (vira destaque)" : "calmo (cobre o corpo)"} | cor média ${bodyInfo.corMedia}`);
 
 const svg = mod.montarSvgKit({
+  moldName: moldeName,
   moldSvg, facesJson,
   maskUri: toDataUri(maskBuf),
   papelTopUri: top?.uri ?? null,
   papelBodyUri: body?.uri ?? null,
   papelBodyInfo: bodyInfo,
-  principal: principal ? { uri: principal.uri, w: principal.w, h: principal.h } : null,
-  amigo: amigo ? { uri: amigo.uri, w: amigo.w, h: amigo.h } : null,
-  amigo2: amigo2 ? { uri: amigo2.uri, w: amigo2.w, h: amigo2.h } : null,
+  personagens: personagens.map(({ uri, w, h }) => ({ uri, w, h })),
   placaUri: placaImg?.uri ?? null,
   placaMeta: placa?.meta ?? null,
   fonteFamily: fonte?.meta?.family || "sans-serif",

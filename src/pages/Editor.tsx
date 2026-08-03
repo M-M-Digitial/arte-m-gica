@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   composeKit,
-  composeAlice,
   svgToPngDataUrl,
   downloadText,
   downloadDataUrl,
+  type KitPalette,
   type TemaAsset,
 } from "@/lib/compose-kit";
 import { Thumb } from "@/components/Thumb";
@@ -26,6 +26,20 @@ interface TemaCard {
   cor: string;
 }
 
+const PALETAS: Array<KitPalette & { id: string; label: string }> = [
+  { id: "vibrante", label: "Festa vibrante", primary: "#D93680", secondary: "#F2A900", background: "#FFF2D5", accent: "#159A9C" },
+  { id: "pastel", label: "Pastel delicado", primary: "#B85C8A", secondary: "#79BFAF", background: "#FFF5F8", accent: "#E7B84B" },
+  { id: "aventura", label: "Aventura", primary: "#245F4F", secondary: "#E4A82B", background: "#E9F5EA", accent: "#C9533F" },
+  { id: "magica", label: "Ceu magico", primary: "#4D62A8", secondary: "#D77DA5", background: "#ECF3FF", accent: "#E7B93F" },
+];
+
+const PALETA_PERSONALIZADA: KitPalette = {
+  primary: "#D93680",
+  secondary: "#F2A900",
+  background: "#FFF2D5",
+  accent: "#159A9C",
+};
+
 // Compositor "padrão Alice": biblioteca de 100 temas + molde vetorial + nome → arte editável na hora.
 export default function Editor() {
   const [themeSlug, setThemeSlug] = useState<string>("");
@@ -35,9 +49,12 @@ export default function Editor() {
   const [busca, setBusca] = useState("");
   const [svg, setSvg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [arteOriginal, setArteOriginal] = useState(false);
   const [cliparts, setCliparts] = useState<{ url: string; role: string }[]>([]);
   const [principalUrl, setPrincipalUrl] = useState<string>("");
+  const [paletaId, setPaletaId] = useState("tema");
+  const [paletaPersonalizada, setPaletaPersonalizada] = useState<KitPalette>(PALETA_PERSONALIZADA);
+  const [previewing, setPreviewing] = useState(false);
+  const previewRequestRef = useRef(0);
   // Quiz em página inteira: 1 tema → 2 molde → 3 nome → 4 toque final → 5 resultado
   const [etapa, setEtapa] = useState(1);
 
@@ -112,13 +129,20 @@ export default function Editor() {
 
   const temaSel = useMemo(() => (temas ?? []).find((t) => t.slug === themeSlug), [temas, themeSlug]);
   const molde = useMemo(() => (moldes ?? []).find((m: any) => m.id === moldeId), [moldes, moldeId]);
+  const paletaAtiva = useMemo<KitPalette | undefined>(() => {
+    if (paletaId === "tema") return undefined;
+    if (paletaId === "personalizada") return paletaPersonalizada;
+    return PALETAS.find((paleta) => paleta.id === paletaId);
+  }, [paletaId, paletaPersonalizada]);
 
-  const gerar = async () => {
+  const gerar = useCallback(async (previewOnly = false) => {
     if (!themeSlug || !molde || !nome.trim()) {
       toast.error("Escolha o tema, o molde e digite o nome da criança.");
       return;
     }
-    setBusy(true);
+    const requestId = previewOnly ? ++previewRequestRef.current : 0;
+    if (previewOnly) setPreviewing(true);
+    else setBusy(true);
     try {
       const { data: assets, error } = await (supabase as any)
         .from("tema_assets")
@@ -126,30 +150,8 @@ export default function Editor() {
         .eq("theme_slug", themeSlug);
       if (error) throw error;
 
-      // arte ORIGINAL da Alice para este tema × molde? Ela tem prioridade.
-      const { data: original } = await (supabase as any)
-        .from("alice_artes")
-        .select("image_url,largura,altura")
-        .eq("tema_slug", themeSlug)
-        .eq("molde_name", (molde as any).name)
-        .maybeSingle();
-      if (original?.image_url) {
-        const out = await composeAlice({
-          imageUrl: original.image_url,
-          largura: original.largura,
-          altura: original.altura,
-          assets: (assets ?? []) as TemaAsset[],
-          nome: nome.trim(),
-          idade: idade.trim() || undefined,
-        });
-        setSvg(out);
-        setArteOriginal(true);
-        toast.success(`Kit ${temaSel?.name} da ${nome.trim()} — arte original! ✨`);
-        return;
-      }
-      setArteOriginal(false);
       // aplica a escolha de personagem em destaque (troca de roles em memória)
-      let lista = (assets ?? []) as TemaAsset[];
+      const lista = (assets ?? []) as TemaAsset[];
       if (principalUrl) {
         const atual = lista.find((a) => a.kind === "clipart" && a.role === "principal");
         const escolhido = lista.find((a) => a.kind === "clipart" && a.url === principalUrl);
@@ -164,16 +166,28 @@ export default function Editor() {
         assets: lista,
         nome: nome.trim(),
         idade: idade.trim() || undefined,
+        palette: paletaAtiva,
       });
-      setSvg(out);
-      toast.success(`Kit ${temaSel?.name} da ${nome.trim()} pronto! 🎉`);
+      if (!previewOnly || requestId === previewRequestRef.current) setSvg(out);
+      if (!previewOnly) toast.success(`Kit ${temaSel?.name} da ${nome.trim()} pronto! 🎉`);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Erro ao compor o kit.");
+      if (!previewOnly) toast.error(e?.message ?? "Erro ao compor o kit.");
     } finally {
-      setBusy(false);
+      if (previewOnly) {
+        if (requestId === previewRequestRef.current) setPreviewing(false);
+      } else setBusy(false);
     }
-  };
+  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, temaSel?.name]);
+
+  useEffect(() => {
+    if (etapa !== 4 || !themeSlug || !molde || !nome.trim()) return;
+    const timer = window.setTimeout(() => void gerar(true), 300);
+    return () => {
+      window.clearTimeout(timer);
+      previewRequestRef.current += 1;
+    };
+  }, [etapa, themeSlug, molde, nome, gerar]);
 
   const baixarSvg = () => svg && downloadText(`kit-${nome || "arte"}.svg`, svg);
   const baixarPng = async () => {
@@ -406,6 +420,97 @@ export default function Editor() {
           ) : (
             <h2 className="font-display text-2xl font-semibold text-foreground">Último toque ✨</h2>
           )}
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <Palette className="h-4 w-4 text-primary" /> Escolha a paleta
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                As cores atualizam a arte abaixo sem trocar os personagens.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                {
+                  id: "tema",
+                  label: "Cores do tema",
+                  primary: temaSel?.cor || "#D93680",
+                  secondary: "#F2A900",
+                  background: "#FFFFFF",
+                  accent: "#159A9C",
+                },
+                ...PALETAS,
+                { id: "personalizada", label: "Personalizada", ...paletaPersonalizada },
+              ].map((paleta) => (
+                <button
+                  key={paleta.id}
+                  type="button"
+                  aria-pressed={paletaId === paleta.id}
+                  onClick={() => setPaletaId(paleta.id)}
+                  className={`min-h-16 rounded-lg border-2 px-3 py-2 text-left transition-colors ${
+                    paletaId === paleta.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border/50 bg-card hover:border-primary/40"
+                  }`}
+                >
+                  <span className="mb-2 flex gap-1" aria-hidden="true">
+                    {[paleta.primary, paleta.secondary, paleta.background, paleta.accent].map((cor, index) => (
+                      <span
+                        key={`${cor}-${index}`}
+                        className="h-4 flex-1 rounded-sm border border-black/10"
+                        style={{ backgroundColor: cor }}
+                      />
+                    ))}
+                  </span>
+                  <span className="block text-xs font-semibold text-foreground">{paleta.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {paletaId === "personalizada" && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border border-border/50 bg-secondary/40 p-3">
+                {(
+                  [
+                    ["primary", "Principal"],
+                    ["secondary", "Secundária"],
+                    ["background", "Fundo"],
+                    ["accent", "Detalhe"],
+                  ] as const
+                ).map(([campo, label]) => (
+                  <label key={campo} className="space-y-1 text-[11px] font-medium text-muted-foreground">
+                    <span>{label}</span>
+                    <input
+                      type="color"
+                      value={paletaPersonalizada[campo]}
+                      onChange={(event) => setPaletaPersonalizada((atual) => ({
+                        ...atual,
+                        [campo]: event.target.value,
+                      }))}
+                      className="h-9 w-full cursor-pointer rounded border border-border bg-card p-1"
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-border/60 bg-secondary/50">
+            <div className="flex h-9 items-center justify-between border-b border-border/50 px-3">
+              <span className="text-xs font-semibold text-foreground">Prévia da paleta</span>
+              {previewing && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
+            </div>
+            <div className="aspect-[2526/1786] bg-white flex items-center justify-center">
+              {previewSrc ? (
+                <img src={previewSrc} alt="Prévia do molde com a paleta selecionada" className="h-full w-full object-contain" />
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" /> Preparando a prévia
+                </div>
+              )}
+            </div>
+          </div>
+
           {temaSel && molde && nome.trim() && (
             <p className="text-xs text-muted-foreground">
               <Heart className="h-3 w-3 inline mr-1 text-primary" />
@@ -415,7 +520,7 @@ export default function Editor() {
           )}
           <Button
             onClick={() => { setEtapa(5); gerar(); }}
-            disabled={busy || !themeSlug || !moldeId || !nome.trim()}
+            disabled={busy || previewing || !themeSlug || !moldeId || !nome.trim()}
             className="w-full h-12 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft disabled:opacity-30"
           >
             <Wand2 className="h-4 w-4 mr-2" /> Compor kit agora
@@ -448,11 +553,6 @@ export default function Editor() {
                   </div>
                 )}
               </div>
-              {svg && !busy && arteOriginal && (
-                <p className="text-xs font-semibold text-primary inline-flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" /> Arte original do acervo — personalizada com o nome
-                </p>
-              )}
               {svg && !busy && (
                 <div className="flex flex-wrap gap-2 items-center">
                   <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
@@ -464,7 +564,7 @@ export default function Editor() {
                   <Button onClick={baixarPdf} variant="outline" className="rounded-full" size="sm" disabled={busy}>
                     <FileText className="h-4 w-4 mr-1.5" /> PDF pra imprimir
                   </Button>
-                  <Button onClick={gerar} variant="ghost" className="rounded-full" size="sm" disabled={busy}>
+                  <Button onClick={() => gerar()} variant="ghost" className="rounded-full" size="sm" disabled={busy}>
                     <RefreshCw className="h-4 w-4 mr-1.5" /> Recompor
                   </Button>
                 </div>

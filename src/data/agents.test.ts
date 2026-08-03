@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { agentIds, agents, getAgentById, getCanonicalAgentId } from "@/data/agents";
 
 describe("catálogo do Meu Ateliê Digital", () => {
-  it("expõe exatamente as oito assistentes prometidas", () => {
+  it("expõe exatamente as nove assistentes prometidas", () => {
     expect(agentIds).toEqual([
       "nina",
       "iris",
@@ -10,11 +10,12 @@ describe("catálogo do Meu Ateliê Digital", () => {
       "violeta",
       "sofia",
       "bella",
+      "cora",
       "elisa",
       "maia",
     ]);
-    expect(agents).toHaveLength(8);
-    expect(new Set(agents.map((agent) => agent.id)).size).toBe(8);
+    expect(agents).toHaveLength(9);
+    expect(new Set(agents.map((agent) => agent.id)).size).toBe(9);
   });
 
   it("mantém conversas antigas nos agentes sucessores", () => {

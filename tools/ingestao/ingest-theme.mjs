@@ -109,12 +109,13 @@ for (let i = 0; i < Math.min(papers.length, 2); i++) {
   console.log("papel", roles[i]);
 }
 const croles = ["principal", "amigo", "amigo2"];
-for (let i = 0; i < Math.min(cliparts.length, 3); i++) {
+for (let i = 0; i < Math.min(cliparts.length, 8); i++) {
   const c = cliparts[i];
-  const name = `clipart-${croles[i]}.png`;
+  const role = croles[i] ?? `variacao-${i + 1}`;
+  const name = `clipart-${role}.png`;
   await put(`temas/${slug}/${name}`, c.png, "image/png");
-  sql.push(`INSERT INTO public.tema_assets (theme_slug, kind, name, url, role, meta) VALUES (${q(slug)}, 'clipart', ${q(name)}, ${q(`${PUB}/temas/${slug}/${name}`)}, ${q(croles[i])}, ${q(JSON.stringify({ w: c.w, h: c.h }))}::jsonb) ON CONFLICT (theme_slug, kind, name) DO UPDATE SET url=EXCLUDED.url, role=EXCLUDED.role, meta=EXCLUDED.meta;`);
-  console.log("clipart", croles[i], `${c.w}x${c.h} alpha=${c.alpha.toFixed(2)}`);
+  sql.push(`INSERT INTO public.tema_assets (theme_slug, kind, name, url, role, meta) VALUES (${q(slug)}, 'clipart', ${q(name)}, ${q(`${PUB}/temas/${slug}/${name}`)}, ${q(role)}, ${q(JSON.stringify({ w: c.w, h: c.h }))}::jsonb) ON CONFLICT (theme_slug, kind, name) DO UPDATE SET url=EXCLUDED.url, role=EXCLUDED.role, meta=EXCLUDED.meta;`);
+  console.log("clipart", role, `${c.w}x${c.h} alpha=${c.alpha.toFixed(2)}`);
 }
 if (fonts.length) {
   sql.push(`INSERT INTO public.tema_assets (theme_slug, kind, name, url, role, meta) VALUES (${q(slug)}, 'fonte', 'fonte.ttf', ${q(`${PUB}/temas/${slug}/fonte.ttf`)}, 'fonte', ${q(JSON.stringify({ family, cor, cor2 }))}::jsonb) ON CONFLICT (theme_slug, kind, name) DO UPDATE SET url=EXCLUDED.url, meta=EXCLUDED.meta;`);

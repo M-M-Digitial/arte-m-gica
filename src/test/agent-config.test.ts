@@ -17,6 +17,7 @@ describe("configuração operacional dos agentes", () => {
       "violeta",
       "sofia",
       "bella",
+      "cora",
       "elisa",
       "maia",
     ]);
@@ -37,8 +38,14 @@ describe("configuração operacional dos agentes", () => {
 
   it("define critérios verificáveis para as áreas de maior risco", () => {
     expect(AGENT_PROMPTS.bella).toContain("manual ou suporte oficial");
+    expect(AGENT_PROMPTS.cora).toContain("APROVADO, AJUSTAR, REPROVADO ou SEM EVIDÊNCIA");
+    expect(AGENT_PROMPTS.cora).toContain("padrão Alice");
     expect(AGENT_PROMPTS.elisa).toContain("APROVADO, PENDÊNCIA ou RISCO");
     expect(AGENT_PROMPTS.maia).toContain("ACEITAR, RENEGOCIAR ou RECUSAR");
+    expect(AGENT_PROMPTS.cora).toContain("CENÁRIO ou MODULAR");
+    expect(AGENT_PROMPTS.cora).toContain("Fundo claro com cor, wash, textura ou microestampa");
+    expect(AGENT_PROMPTS.cora).toContain("Originalidade (10)");
+    expect(AGENT_PROMPTS.cora).toContain("painéis mortos");
     expect(canonicalAgentId("violeta")).toBe("violeta");
   });
 

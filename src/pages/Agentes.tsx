@@ -53,7 +53,7 @@ export default function Agentes() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <p className="text-xs font-medium text-muted-foreground">8 assistentes especializadas</p>
+            <p className="text-xs font-medium text-muted-foreground">9 assistentes especializadas</p>
             <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs" onClick={() => setEditandoPerfil(true)}>
               <Settings2 className="mr-1.5 h-3.5 w-3.5" /> Meu ateliê
             </Button>

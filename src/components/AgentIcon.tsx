@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   Bot,
   Calculator,
   CalendarClock,
@@ -21,6 +22,7 @@ const icons: Record<AgentId, LucideIcon> = {
   violeta: LibraryBig,
   sofia: HeartHandshake,
   bella: Printer,
+  cora: BadgeCheck,
   elisa: ClipboardCheck,
   maia: CalendarClock,
 };
@@ -32,6 +34,7 @@ const colors: Record<AgentId, string> = {
   violeta: "bg-violet-50 text-violet-700",
   sofia: "bg-teal-50 text-teal-700",
   bella: "bg-orange-50 text-orange-700",
+  cora: "bg-emerald-50 text-emerald-700",
   elisa: "bg-blue-50 text-blue-700",
   maia: "bg-red-50 text-red-700",
 };
