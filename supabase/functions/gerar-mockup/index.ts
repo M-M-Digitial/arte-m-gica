@@ -82,6 +82,170 @@ function getProductGeometry(moldeName: string): string {
   return `produto de papel no formato comercial reconhecível de ${moldeName}, seguindo sua estrutura real e sem adicionar alças, vazados ou tampas que não pertençam ao modelo`;
 }
 
+interface QualityReview {
+  approved: boolean;
+  score: number;
+  geometry_ok: boolean;
+  personalization_ok: boolean;
+  product_prominence_ok: boolean;
+  scene_ok: boolean;
+  finish_ok: boolean;
+  issues: string[];
+  correction_prompt: string;
+}
+
+function responseOutputText(response: Record<string, any>): string {
+  return ((response.output ?? []) as Array<Record<string, any>>)
+    .filter((item) => item.type === "message")
+    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
+    .filter((item) => item?.type === "output_text" && typeof item.text === "string")
+    .map((item) => item.text)
+    .join("\n");
+}
+
+async function reviewMockup(
+  imageBase64: string,
+  context: { moldeName: string; nome: string; idade: string; formato: string },
+  OPENAI_API_KEY: string,
+): Promise<QualityReview | null> {
+  const geometry = getProductGeometry(context.moldeName);
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-5.4-mini",
+      store: false,
+      reasoning: { effort: "low" },
+      max_output_tokens: 900,
+      instructions: `Você é o curador final de um estúdio brasileiro de papelaria personalizada. Avalie com rigor de fotografia publicitária profissional. Reprove erros pequenos de geometria, texto, recorte, material, iluminação ou composição. Aprove somente com nota mínima 90 e todos os critérios booleanos verdadeiros.`,
+      input: [{
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nO produto deve estar inteiro, em foco e ser inequivocamente o elemento principal. A maior dimensão visível do produto deve ocupar aproximadamente 65% a 90% do quadro, com margem suficiente para não cortar nenhuma parte; avalie a proporção conforme a geometria, sem exigir que produtos altos e estreitos ocupem a mesma área de produtos largos. O cenário deve parecer uma festa real e elegante, sem linhas técnicas, textos sobrepostos, marcas d'água, mãos ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
+          },
+          { type: "input_image", image_url: `data:image/png;base64,${imageBase64}`, detail: "high" },
+        ],
+      }],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "mockup_quality_review",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              approved: { type: "boolean" },
+              score: { type: "integer", minimum: 0, maximum: 100 },
+              geometry_ok: { type: "boolean" },
+              personalization_ok: { type: "boolean" },
+              product_prominence_ok: { type: "boolean" },
+              scene_ok: { type: "boolean" },
+              finish_ok: { type: "boolean" },
+              issues: { type: "array", items: { type: "string" }, maxItems: 6 },
+              correction_prompt: { type: "string" },
+            },
+            required: [
+              "approved",
+              "score",
+              "geometry_ok",
+              "personalization_ok",
+              "product_prominence_ok",
+              "scene_ok",
+              "finish_ok",
+              "issues",
+              "correction_prompt",
+            ],
+          },
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    console.warn("Mockup quality review failed:", response.status, await response.text().catch(() => ""));
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(responseOutputText(await response.json())) as QualityReview;
+    const allCriteria = parsed.geometry_ok && parsed.personalization_ok && parsed.product_prominence_ok && parsed.scene_ok && parsed.finish_ok;
+    return {
+      ...parsed,
+      approved: parsed.approved && parsed.score >= 90 && allCriteria,
+      issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 6) : [],
+    };
+  } catch (error) {
+    console.warn("Mockup quality review parse failed:", error);
+    return null;
+  }
+}
+
+async function startQualityCorrection(
+  imageBase64: string,
+  review: QualityReview,
+  context: { moldeName: string; nome: string; idade: string; formato: string },
+  OPENAI_API_KEY: string,
+): Promise<string | null> {
+  const size = context.formato === "story" ? "1024x1536" : "1024x1024";
+  const geometry = getProductGeometry(context.moldeName);
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-5.4-mini",
+      background: true,
+      store: true,
+      input: [{
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `Aprimore esta fotografia de produto sem trocar sua identidade visual. Corrija somente os defeitos apontados pelo curador: ${review.correction_prompt}. Garanta a geometria de ${context.moldeName}: ${geometry}. Preserve exatamente o nome "${context.nome}"${context.idade ? ` e a idade "${context.idade}"` : ""}. Produto inteiro, grande e em foco, acabamento premium, cenário de festa realista, sem texto sobreposto, marca d'água, mãos, linhas técnicas ou deformações.`,
+          },
+          { type: "input_image", image_url: `data:image/png;base64,${imageBase64}` },
+        ],
+      }],
+      tools: [{
+        type: "image_generation",
+        model: "gpt-image-2",
+        size,
+        quality: "high",
+        moderation: "low",
+        action: "edit",
+      }],
+      tool_choice: { type: "image_generation" },
+    }),
+  });
+
+  if (!response.ok) {
+    console.warn("Mockup correction failed to start:", response.status, await response.text().catch(() => ""));
+    return null;
+  }
+  const job = await response.json();
+  return typeof job?.id === "string" ? job.id : null;
+}
+
+async function storeMockup(bytes: Uint8Array) {
+  const base64 = `data:image/png;base64,${bytesToBase64(bytes)}`;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const fileName = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
+  const filePath = `public/${fileName}`;
+  const { error } = await supabase.storage
+    .from("artes-geradas")
+    .upload(filePath, bytes, { contentType: "image/png", upsert: false });
+  if (error) {
+    console.error("upload error:", error);
+    return { mockupUrl: null, mockupBase64: base64 };
+  }
+  const { data } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
+  return { mockupUrl: data.publicUrl, mockupBase64: base64 };
+}
+
 async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
   const {
     arteImageUrl,
@@ -138,7 +302,7 @@ CONSTRUÇÃO DO PRODUTO:
 - Geometria obrigatória: ${productGeometry}.
 - Mostre apenas dobras, tampas, abas ou alças que realmente pertençam a esse modelo; não misture estruturas de outros moldes.
 - Aplique cada parte da arte nas faces correspondentes, sem linhas de corte ou vinco visíveis no produto montado.
-- Mostre uma unidade principal grande, inteira e nítida, em ângulo de três quartos, ocupando cerca de 55% a 70% do quadro.
+- Mostre uma unidade principal grande, inteira e nítida, em ângulo de três quartos; a maior dimensão do produto deve ocupar cerca de 65% a 88% do quadro, respeitando a proporção real do molde e sem cortes.
 - O produto deve ser o ponto de maior contraste e nitidez, sem ficar escondido por doces, balões ou outros objetos.
 
 CENÁRIO FICTÍCIO:
@@ -256,27 +420,39 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   }
 
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  const fileName = `mockup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.png`;
-  const filePath = `public/${fileName}`;
-  const { error: upErr } = await supabase.storage
-    .from("artes-geradas")
-    .upload(filePath, bytes, { contentType: "image/png", upsert: false });
-  if (upErr) {
-    console.error("upload error:", upErr);
-    return jsonResponse({
-      status: "done",
-      mockupUrl: null,
-      mockupBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
-    });
+  const moldeName = typeof body.moldeName === "string" ? body.moldeName : "";
+  const qualityPass = typeof body.qualityPass === "number" ? body.qualityPass : 0;
+  const qualityContext = {
+    moldeName,
+    nome: typeof body.nome === "string" ? body.nome : "",
+    idade: typeof body.idade === "string" ? body.idade : "",
+    formato: body.formato === "story" ? "story" : "feed",
+  };
+
+  const qualityReview = moldeName
+    ? await reviewMockup(b64, qualityContext, OPENAI_API_KEY)
+    : null;
+
+  if (qualityReview && !qualityReview.approved && qualityPass === 0) {
+    const fallback = await storeMockup(bytes);
+    const correctedJobId = await startQualityCorrection(b64, qualityReview, qualityContext, OPENAI_API_KEY);
+    if (correctedJobId) {
+      return jsonResponse({
+        status: "retrying",
+        jobId: correctedJobId,
+        qualityReview,
+        fallback,
+      });
+    }
+    return jsonResponse({ status: "done", ...fallback, qualityReview, qualityCorrected: false });
   }
-  const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
+
+  const stored = await storeMockup(bytes);
   return jsonResponse({
     status: "done",
-    mockupUrl: pub.publicUrl,
-    mockupBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
+    ...stored,
+    qualityReview,
+    qualityCorrected: qualityPass > 0,
   });
 }
 

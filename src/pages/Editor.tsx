@@ -40,6 +40,11 @@ interface ClipartOption {
 
 type ResultadoTab = "arte" | "mockup";
 type MockupFormato = "feed" | "story";
+type MockupQuality = {
+  score: number;
+  approved: boolean;
+  corrected: boolean;
+};
 
 const isSelectableCharacter = (asset: ClipartOption) => {
   if (asset.meta?.enabled === false) return false;
@@ -84,6 +89,7 @@ export default function Editor() {
   const [mockupImageBase64, setMockupImageBase64] = useState<string | null>(null);
   const [mockupBusy, setMockupBusy] = useState(false);
   const [mockupError, setMockupError] = useState<string | null>(null);
+  const [mockupQuality, setMockupQuality] = useState<MockupQuality | null>(null);
   const previewRequestRef = useRef(0);
   // Quiz em página inteira: 1 tema → 2 molde → 3 nome → 4 toque final → 5 resultado
   const [etapa, setEtapa] = useState(1);
@@ -173,6 +179,7 @@ export default function Editor() {
     setMockupError(null);
     setMockupImage(null);
     setMockupImageBase64(null);
+    setMockupQuality(null);
 
     try {
       const arteImageUrl = await svgToPngDataUrl(sourceSvg, 1536);
@@ -199,6 +206,13 @@ export default function Editor() {
             if (meta.mockupBase64) setMockupImageBase64(meta.mockupBase64);
             if (meta.mockupUrl || meta.mockupBase64) {
               setMockupImage(meta.mockupUrl ?? meta.mockupBase64);
+            }
+            if (typeof meta.qualityReview?.score === "number") {
+              setMockupQuality({
+                score: meta.qualityReview.score,
+                approved: Boolean(meta.qualityReview.approved),
+                corrected: Boolean(meta.qualityCorrected),
+              });
             }
           },
         }
@@ -229,6 +243,7 @@ export default function Editor() {
       setMockupImage(null);
       setMockupImageBase64(null);
       setMockupError(null);
+      setMockupQuality(null);
     }
     try {
       const { data: assets, error } = await (supabase as any)
@@ -699,7 +714,15 @@ export default function Editor() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
-                      <h2 className="text-base font-semibold text-foreground">Produto montado em uma festa fictícia</h2>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base font-semibold text-foreground">Produto montado em uma festa fictícia</h2>
+                        {mockupQuality && (
+                          <Badge variant="secondary" className="text-[11px]">
+                            Curadoria {mockupQuality.approved ? "aprovada" : "revisar"} · {mockupQuality.score}/100
+                            {mockupQuality.corrected ? " · corrigida" : ""}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">Imagem pronta para divulgar o produto nas redes sociais.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1" aria-label="Formato do mockup">
