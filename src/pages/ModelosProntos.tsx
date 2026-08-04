@@ -33,7 +33,11 @@ export default function ModelosProntos() {
           arr.push({ name: a.file_name, label: a.label, url: a.url });
           byTheme.set(a.theme_slug, arr);
         });
-        setThemes((temas ?? []).map((t) => ({ slug: t.slug, name: t.name, files: byTheme.get(t.slug) ?? [] })));
+        setThemes(
+          (temas ?? [])
+            .map((t) => ({ slug: t.slug, name: t.name, files: byTheme.get(t.slug) ?? [] }))
+            .filter((theme) => theme.files.length > 0),
+        );
       } catch (e: any) {
         setError(e?.message ?? "Erro ao carregar");
       } finally {

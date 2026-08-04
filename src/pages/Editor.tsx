@@ -20,6 +20,7 @@ import {
 } from "@/lib/compose-kit";
 import { Thumb } from "@/components/Thumb";
 import { runImageGenerationJob } from "@/lib/image-job";
+import { getThemeReadiness, isThemeHeroAsset } from "@/lib/theme-curation";
 
 interface TemaCard {
   slug: string;
@@ -55,14 +56,8 @@ const FONTES = [
   { id: "forte", label: "Forte", family: "Arial Black, Arial, sans-serif", preview: "Arial Black, Arial, sans-serif", useThemeFont: false },
 ] as const;
 
-const isSelectableCharacter = (asset: ClipartOption) => {
-  if (asset.meta?.enabled === false) return false;
-  if (asset.meta?.usage) return asset.meta.usage === "hero";
-  const role = asset.role.toLowerCase();
-  if (/placa|ornamento|decoracao|borda|border|faixa|painel|panel/.test(role)) return false;
-  const ratio = asset.meta?.w && asset.meta?.h ? asset.meta.w / asset.meta.h : 1;
-  return ratio < 2.15;
-};
+const isSelectableCharacter = (asset: ClipartOption) =>
+  isThemeHeroAsset({ ...asset, kind: "clipart" });
 
 const PALETAS: Array<KitPalette & { id: string; label: string }> = [
   { id: "vibrante", label: "Festa vibrante", primary: "#D93680", secondary: "#F2A900", background: "#FFF2D5", accent: "#159A9C" },
@@ -157,12 +152,17 @@ export default function Editor() {
         .from("tema_assets")
         .select("theme_slug,kind,url,role,meta");
       if (error) throw error;
-      const { data: nomes } = await supabase
+      const { data: nomes, error: nomesError } = await supabase
         .from("modelos_prontos_temas")
         .select("slug,name");
+      if (nomesError) throw nomesError;
       const nameBySlug = new Map((nomes ?? []).map((t: any) => [t.slug, t.name]));
       const bySlug = new Map<string, TemaCard>();
+      const assetsBySlug = new Map<string, typeof assets>();
       for (const a of assets ?? []) {
+        const grouped = assetsBySlug.get(a.theme_slug) ?? [];
+        grouped.push(a);
+        assetsBySlug.set(a.theme_slug, grouped);
         const variant = BABY_SHARK_VARIANTS[a.theme_slug];
         if (!bySlug.has(a.theme_slug)) {
           bySlug.set(a.theme_slug, {
@@ -179,7 +179,9 @@ export default function Editor() {
         if (a.kind === "papel" && a.role === "top") t.papel = a.url;
         if (!variant && a.kind === "fonte" && a.meta?.cor) t.cor = a.meta.cor;
       }
-      return [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+      return [...bySlug.values()]
+        .filter((theme) => getThemeReadiness(assetsBySlug.get(theme.slug) ?? []).ready)
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
   });
 
@@ -291,6 +293,10 @@ export default function Editor() {
 
       // aplica a escolha de personagem em destaque (troca de roles em memória)
       const lista = (assets ?? []) as TemaAsset[];
+      const readiness = getThemeReadiness(lista);
+      if (!readiness.ready) {
+        throw new Error(`Este tema está em revisão: ${readiness.reasons.join(", ")}.`);
+      }
       if (principalUrl) {
         const atual = lista.find((a) => a.kind === "clipart" && a.role === "principal");
         const escolhido = lista.find((a) => a.kind === "clipart" && a.url === principalUrl);

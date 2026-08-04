@@ -12,6 +12,7 @@
     "build:escola": "vite build --mode escola",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "audit:library": "node tools/ingestao/audit-library.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -3,6 +3,7 @@
 // navegador e no harness de prévia (tools/ingestao/preview-kit.mjs).
 
 import { ALICE_QUALITY_STANDARD } from "../../supabase/functions/_shared/alice-quality-standard.ts";
+import { assertThemeReadyForComposition } from "./theme-curation";
 
 export interface MoldeCompose {
   name?: string;
@@ -609,6 +610,10 @@ async function analisarPapel(dataUri: string): Promise<PapelInfo> {
 }
 
 export async function composeKit({ molde, assets, nome, idade, palette, typography }: ComposeInput): Promise<string> {
+  if (!molde.svg_url || !molde.mask_url || !molde.faces_url) {
+    throw new Error("Molde incompleto: geometria, máscara ou faces ausentes.");
+  }
+  assertThemeReadyForComposition(assets);
   const byRole = (role: string) => assets.find((a) => a.role === role);
   const fonteTema = assets.find((a) => a.kind === "fonte");
   const fonte = typography?.useThemeFont === false ? undefined : fonteTema;
