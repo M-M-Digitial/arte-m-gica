@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   type TemaAsset,
 } from "@/lib/compose-kit";
 import { Thumb } from "@/components/Thumb";
+import { runImageGenerationJob } from "@/lib/image-job";
 
 interface TemaCard {
   slug: string;
@@ -36,6 +37,9 @@ interface ClipartOption {
     h?: number;
   } | null;
 }
+
+type ResultadoTab = "arte" | "mockup";
+type MockupFormato = "feed" | "story";
 
 const isSelectableCharacter = (asset: ClipartOption) => {
   if (asset.meta?.enabled === false) return false;
@@ -74,6 +78,12 @@ export default function Editor() {
   const [paletaId, setPaletaId] = useState("tema");
   const [paletaPersonalizada, setPaletaPersonalizada] = useState<KitPalette>(PALETA_PERSONALIZADA);
   const [previewing, setPreviewing] = useState(false);
+  const [resultadoTab, setResultadoTab] = useState<ResultadoTab>("arte");
+  const [mockupFormato, setMockupFormato] = useState<MockupFormato>("feed");
+  const [mockupImage, setMockupImage] = useState<string | null>(null);
+  const [mockupImageBase64, setMockupImageBase64] = useState<string | null>(null);
+  const [mockupBusy, setMockupBusy] = useState(false);
+  const [mockupError, setMockupError] = useState<string | null>(null);
   const previewRequestRef = useRef(0);
   // Quiz em página inteira: 1 tema → 2 molde → 3 nome → 4 toque final → 5 resultado
   const [etapa, setEtapa] = useState(1);
@@ -155,6 +165,57 @@ export default function Editor() {
     return PALETAS.find((paleta) => paleta.id === paletaId);
   }, [paletaId, paletaPersonalizada]);
 
+  const gerarMockup = useCallback(async (sourceSvg: string, formato: MockupFormato = "feed") => {
+    if (!molde || !temaSel) return;
+
+    setMockupFormato(formato);
+    setMockupBusy(true);
+    setMockupError(null);
+    setMockupImage(null);
+    setMockupImageBase64(null);
+
+    try {
+      const arteImageUrl = await svgToPngDataUrl(sourceSvg, 1536);
+      await runImageGenerationJob(
+        "gerar-mockup",
+        {
+          arteImageUrl,
+          moldeName: molde.name,
+          temaNome: temaSel.name,
+          nome: nome.trim(),
+          idade: idade.trim() || undefined,
+          palette: paletaAtiva ?? {
+            primary: temaSel.cor || "#D93680",
+            secondary: "#F2A900",
+            background: "#FFFFFF",
+            accent: "#159A9C",
+          },
+          formato,
+          quality: "high",
+        },
+        {
+          onFrame: ({ dataUrl }) => setMockupImage(dataUrl),
+          onMeta: (meta) => {
+            if (meta.mockupBase64) setMockupImageBase64(meta.mockupBase64);
+            if (meta.mockupUrl || meta.mockupBase64) {
+              setMockupImage(meta.mockupUrl ?? meta.mockupBase64);
+            }
+          },
+        }
+      );
+      toast.success("Mockup de divulgação pronto!");
+    } catch (error: unknown) {
+      console.error("Erro ao gerar mockup:", error);
+      const message = error instanceof Error
+        ? error.message
+        : "Não foi possível gerar o mockup. Tente novamente.";
+      setMockupError(message);
+      toast.error(message);
+    } finally {
+      setMockupBusy(false);
+    }
+  }, [idade, molde, nome, paletaAtiva, temaSel]);
+
   const gerar = useCallback(async (previewOnly = false) => {
     if (!themeSlug || !molde || !nome.trim()) {
       toast.error("Escolha o tema, o molde e digite o nome da criança.");
@@ -162,7 +223,13 @@ export default function Editor() {
     }
     const requestId = previewOnly ? ++previewRequestRef.current : 0;
     if (previewOnly) setPreviewing(true);
-    else setBusy(true);
+    else {
+      setBusy(true);
+      setResultadoTab("arte");
+      setMockupImage(null);
+      setMockupImageBase64(null);
+      setMockupError(null);
+    }
     try {
       const { data: assets, error } = await (supabase as any)
         .from("tema_assets")
@@ -189,7 +256,12 @@ export default function Editor() {
         palette: paletaAtiva,
       });
       if (!previewOnly || requestId === previewRequestRef.current) setSvg(out);
-      if (!previewOnly) toast.success(`Kit ${temaSel?.name} da ${nome.trim()} pronto! 🎉`);
+      if (!previewOnly) {
+        toast.success(`Kit ${temaSel?.name} da ${nome.trim()} pronto!`);
+        setBusy(false);
+        setResultadoTab("mockup");
+        await gerarMockup(out, "feed");
+      }
     } catch (e: any) {
       console.error(e);
       if (!previewOnly) toast.error(e?.message ?? "Erro ao compor o kit.");
@@ -198,7 +270,7 @@ export default function Editor() {
         if (requestId === previewRequestRef.current) setPreviewing(false);
       } else setBusy(false);
     }
-  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, temaSel?.name]);
+  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, temaSel?.name, gerarMockup]);
 
   useEffect(() => {
     if (etapa !== 4 || !themeSlug || !molde || !nome.trim()) return;
@@ -231,6 +303,12 @@ export default function Editor() {
       doc.text("MoldePronto", 297 - margin, 210 - 6, { align: "right" });
       doc.save(`kit-${nome || "arte"}.pdf`);
     } finally { setBusy(false); }
+  };
+
+  const baixarMockup = () => {
+    const source = mockupImageBase64 ?? mockupImage;
+    if (!source) return;
+    downloadDataUrl(`mockup-${mockupFormato}-${nome || "arte"}.png`, source);
   };
 
   const previewSrc = useMemo(
@@ -556,37 +634,126 @@ export default function Editor() {
         <section key="etapa-resultado" className="space-y-4 animate-fade-in">
           <Card className="border-border/50">
             <CardContent className="p-5 space-y-4">
-              <div className="aspect-[2526/1786] rounded-xl bg-secondary overflow-hidden flex items-center justify-center">
-                {busy ? (
-                  <div className="text-center px-8 py-10 space-y-3">
-                    <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">
-                      Compondo o kit {temaSel?.name} da {nome.trim() || "sua cliente"}…
-                    </p>
-                  </div>
-                ) : previewSrc ? (
-                  <img src={previewSrc} alt="Kit composto" className="w-full h-full object-contain" />
-                ) : (
-                  <div className="text-center px-8 py-10 space-y-2">
-                    <Sparkles className="h-8 w-8 mx-auto text-primary/60" />
-                    <p className="text-sm text-muted-foreground">Algo deu errado — tente compor de novo.</p>
-                  </div>
-                )}
+              <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1" role="tablist" aria-label="Resultado do kit">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={resultadoTab === "arte"}
+                  onClick={() => setResultadoTab("arte")}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-2 py-2 text-center text-sm font-semibold leading-tight transition-colors ${
+                    resultadoTab === "arte" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ImageIcon className="h-4 w-4" /> Arte para impressão
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={resultadoTab === "mockup"}
+                  onClick={() => setResultadoTab("mockup")}
+                  className={`flex min-h-10 items-center justify-center gap-2 rounded-md px-2 py-2 text-center text-sm font-semibold leading-tight transition-colors ${
+                    resultadoTab === "mockup" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Camera className="h-4 w-4" /> Mockup de divulgação
+                </button>
               </div>
-              {svg && !busy && (
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
-                    <Download className="h-4 w-4 mr-1.5" /> SVG editável (Canva)
-                  </Button>
-                  <Button onClick={baixarPng} variant="outline" className="rounded-full" size="sm" disabled={busy}>
-                    <Download className="h-4 w-4 mr-1.5" /> PNG
-                  </Button>
-                  <Button onClick={baixarPdf} variant="outline" className="rounded-full" size="sm" disabled={busy}>
-                    <FileText className="h-4 w-4 mr-1.5" /> PDF pra imprimir
-                  </Button>
-                  <Button onClick={() => gerar()} variant="ghost" className="rounded-full" size="sm" disabled={busy}>
-                    <RefreshCw className="h-4 w-4 mr-1.5" /> Recompor
-                  </Button>
+
+              {resultadoTab === "arte" ? (
+                <>
+                  <div className="aspect-[2526/1786] rounded-lg bg-secondary overflow-hidden flex items-center justify-center">
+                    {busy ? (
+                      <div className="text-center px-8 py-10 space-y-3">
+                        <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin" />
+                        <p className="text-sm text-muted-foreground">
+                          Compondo o kit {temaSel?.name} da {nome.trim() || "sua cliente"}…
+                        </p>
+                      </div>
+                    ) : previewSrc ? (
+                      <img src={previewSrc} alt="Kit composto" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="text-center px-8 py-10 space-y-2">
+                        <Sparkles className="h-8 w-8 mx-auto text-primary/60" />
+                        <p className="text-sm text-muted-foreground">Algo deu errado — tente compor de novo.</p>
+                      </div>
+                    )}
+                  </div>
+                  {svg && !busy && (
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
+                        <Download className="h-4 w-4 mr-1.5" /> SVG editável (Canva)
+                      </Button>
+                      <Button onClick={baixarPng} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                        <Download className="h-4 w-4 mr-1.5" /> PNG
+                      </Button>
+                      <Button onClick={baixarPdf} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                        <FileText className="h-4 w-4 mr-1.5" /> PDF pra imprimir
+                      </Button>
+                      <Button onClick={() => gerar()} variant="ghost" className="rounded-full" size="sm" disabled={busy || mockupBusy}>
+                        <RefreshCw className="h-4 w-4 mr-1.5" /> Recompor
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <h2 className="text-base font-semibold text-foreground">Produto montado em uma festa fictícia</h2>
+                      <p className="text-xs text-muted-foreground">Imagem pronta para divulgar o produto nas redes sociais.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1" aria-label="Formato do mockup">
+                      {(["feed", "story"] as const).map((formato) => (
+                        <button
+                          key={formato}
+                          type="button"
+                          aria-pressed={mockupFormato === formato}
+                          disabled={mockupBusy || !svg}
+                          onClick={() => svg && void gerarMockup(svg, formato)}
+                          className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors disabled:opacity-40 ${
+                            mockupFormato === formato ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {formato === "feed" ? "Feed 1:1" : "Story 9:16"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={`mx-auto flex w-full items-center justify-center overflow-hidden rounded-lg bg-secondary ${
+                    mockupFormato === "story" ? "max-w-sm aspect-[9/16]" : "max-w-2xl aspect-square"
+                  }`}>
+                    {mockupBusy ? (
+                      <div className="max-w-xs space-y-3 px-6 text-center">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm font-medium text-foreground">Montando a cena da festa…</p>
+                        <p className="text-xs text-muted-foreground">Aplicando a arte na caixa e preparando a fotografia de divulgação.</p>
+                      </div>
+                    ) : mockupImage ? (
+                      <img src={mockupImage} alt={`Mockup da ${molde?.name} no tema ${temaSel?.name}`} className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="max-w-sm space-y-3 px-6 text-center">
+                        <Camera className="mx-auto h-8 w-8 text-primary/70" />
+                        <p className="text-sm text-muted-foreground">{mockupError ?? "O mockup será criado depois da arte."}</p>
+                        {svg && (
+                          <Button onClick={() => void gerarMockup(svg, mockupFormato)} size="sm" className="rounded-full" disabled={mockupBusy}>
+                            <RefreshCw className="mr-1.5 h-4 w-4" /> Gerar novamente
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {mockupImage && !mockupBusy && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button onClick={baixarMockup} className="rounded-full gradient-hero border-0 text-white" size="sm">
+                        <Download className="mr-1.5 h-4 w-4" /> Baixar mockup PNG
+                      </Button>
+                      <Button onClick={() => svg && void gerarMockup(svg, mockupFormato)} variant="outline" className="rounded-full" size="sm">
+                        <RefreshCw className="mr-1.5 h-4 w-4" /> Nova versão
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
               {!busy && (
