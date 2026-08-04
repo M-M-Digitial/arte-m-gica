@@ -22,6 +22,8 @@ export interface TemaAsset {
     cor2?: string;
     w?: number;
     h?: number;
+    usage?: AssetUsage;
+    enabled?: boolean;
     [key: string]: unknown;
   };
 }
@@ -43,7 +45,17 @@ export interface ComposeInput {
 
 interface Face { x: number; y: number; w: number; h: number; cx: number; cy: number; area: number }
 
-export interface ClipartDados { uri: string; w: number; h: number }
+export type AssetUsage = "hero" | "ornament" | "border" | "panel";
+
+export interface ClipartDados {
+  uri: string;
+  w: number;
+  h: number;
+  name?: string;
+  role?: string;
+  usage?: AssetUsage;
+  visibleCoverage?: number;
+}
 
 export interface PixelBounds { minX: number; minY: number; maxX: number; maxY: number }
 
@@ -101,8 +113,19 @@ export function findVisibleBounds(
   return { minX, minY, maxX, maxY };
 }
 
-// análise do papel do corpo: estampas densas ("busy") viram destaque em faces
-// alternadas/abas (padrão Alice), nunca papel de parede do corpo inteiro
+export function classifyClipartUsage(asset: ClipartDados): AssetUsage {
+  if (asset.usage) return asset.usage;
+  const semantic = normalizarId(`${asset.role ?? ""} ${asset.name ?? ""}`);
+  if (/ornamento|decoracao|flor|rosa/.test(semantic)) return "ornament";
+  if (/borda|border|faixa|rodape/.test(semantic)) return "border";
+  if (/painel|panel|textura/.test(semantic)) return "panel";
+  const ratio = asset.h > 0 ? asset.w / asset.h : 1;
+  if (ratio >= 2.15) return "border";
+  if ((asset.visibleCoverage ?? 0) >= 0.84 && ratio >= 1.1) return "panel";
+  return "hero";
+}
+
+// Analise do papel do corpo para escolher a densidade e a escala dos elementos.
 export interface PapelInfo { busy: boolean; corMedia: string }
 
 export interface KitDados {
@@ -194,13 +217,10 @@ export function montarSvgKit(d: KitDados): string {
   const { faces } = JSON.parse(d.facesJson) as { faces: Face[] };
 
   // ---- zonas ----
-  const maxH = Math.max(...faces.map((f) => f.h));
-  const body = faces.filter((f) => f.h >= maxH * 0.6);
-  const bodyTop = Math.min(...body.map((f) => f.y));
-  const bodyBot = Math.max(...body.map((f) => f.y + f.h));
-
   const maxA = Math.max(...faces.map((f) => f.area));
   const big = faces.filter((f) => f.area >= maxA * 0.45).sort((a, b) => a.x - b.x);
+  const bodyTop = Math.min(...big.map((f) => f.y));
+  const bodyBot = Math.max(...big.map((f) => f.y + f.h));
   const defaultNameFace = big
     .slice()
     .sort((a, b) => Math.abs(a.cx - W / 2) - Math.abs(b.cx - W / 2))[0];
@@ -209,22 +229,33 @@ export function montarSvgKit(d: KitDados): string {
   const avgFaceW = big.reduce((s, f) => s + f.w, 0) / big.length;
   const avgFaceH = big.reduce((s, f) => s + f.h, 0) / big.length;
 
-  // face de respiro (padrão A-B-A-C dos kits reais): sem personagem; quando o
-  // papel do corpo é estampa densa, é ela que recebe a estampa em destaque
-  const respiro = big.length >= 4
-    ? big.filter((f) => f !== nameFace).sort((a, b) => Math.abs(b.cx - W / 2) - Math.abs(a.cx - W / 2))[0]
-    : null;
-
-  // Estampas densas com quatro ou mais faces usam a linguagem modular vista
-  // em caixas de mercado: corpo calmo, uma face estampada e elementos menores.
+  // Estampas densas continuam coordenadas com o tema, mas recebem mais respiro
+  // entre os elementos. O papel nunca vira um retângulo isolado sem função.
   const estampaDensa = !!(d.papelBodyUri && d.papelBodyInfo?.busy);
   const compositionProfile = estampaDensa && big.length >= 4 ? "modular" : "cenario";
 
-  const lowerBandTarget = compositionProfile === "modular"
-    ? qualityStandard.modularLowerBand.target
-    : qualityStandard.floorBand.target;
-  const chaoAltura = avgFaceH * (lowerBandTarget / 100);
-  const chaoY = bodyBot - chaoAltura;
+  const sourceAssets = d.personagens?.length
+    ? d.personagens
+    : [d.principal, d.amigo, d.amigo2].filter(Boolean) as ClipartDados[];
+  const uniqueAssets = sourceAssets.filter(
+    (asset, index, list) => list.findIndex((candidate) => candidate.uri === asset.uri) === index,
+  );
+  const heroAssets = uniqueAssets.filter((asset) => classifyClipartUsage(asset) === "hero");
+  const ornamentAssets = uniqueAssets.filter((asset) => classifyClipartUsage(asset) === "ornament");
+  const borderAssets = uniqueAssets.filter((asset) => classifyClipartUsage(asset) === "border");
+  const panelAssets = uniqueAssets.filter((asset) => classifyClipartUsage(asset) === "panel");
+
+  const principalHero = heroAssets.find((asset) => asset.role === "principal") ?? heroAssets[0];
+  const alternateHeroes = heroAssets.filter((asset) => asset !== principalHero);
+  const nameSeed = Array.from(nome).reduce((sum, char) => sum + char.codePointAt(0)!, 0);
+  const alternateOffset = alternateHeroes.length ? nameSeed % alternateHeroes.length : 0;
+  const orderedHeroes = principalHero
+    ? [
+        principalHero,
+        ...alternateHeroes.slice(alternateOffset),
+        ...alternateHeroes.slice(0, alternateOffset),
+      ]
+    : [];
 
   // ---- fundo: papel em ESCALA DE MOTIVO (pattern), não imagem esticada ----
   // o spec fala do MOTIVO interno (~8% da face); cada arquivo de papel já traz
@@ -234,84 +265,52 @@ export function montarSvgKit(d: KitDados): string {
   const motTopo = Math.max(120, avgFaceW * 0.33);
   const defsPapel: string[] = [];
   let fundoTopo = "";
+  let fundoBase = "";
   let fundoCorpo = "";
   if (d.papelTopUri) {
     defsPapel.push(
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = paletteTint
-      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corAcento}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="0.22"/>`
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="0.48"/>`
       : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
+    fundoBase = paletteTint
+      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="0.42"/>`
+      : `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)"/>`;
   } else {
-    // abas nunca ficam sem tratamento: cor sólida do tema
-    fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${paletteTint ? corAcento : corIdade}" opacity="${paletteTint ? 1 : 0.30}"/>`;
+    const fechamento = paletteTint ? corNome : clarear(corIdade, 0.18);
+    fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${fechamento}"/>`;
+    fundoBase = `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${fechamento}"/>`;
   }
-  let destaqueEstampa = "";
-  if (d.papelBodyUri && !estampaDensa) {
-    // papel calmo (aquarela/wash): cobre o corpo inteiro, como nos murais da Alice
+  if (d.papelBodyUri) {
     defsPapel.push(
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = paletteTint
-      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="0.20"/>`
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${estampaDensa ? 0.44 : 0.52}"/>`
       : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
-  } else if (estampaDensa) {
-    // estampa densa: o corpo vira cenário limpo (céu no tom do papel) e a
-    // estampa aparece em destaque só na face de respiro (padrão CENA/ESTAMPA)
-    const base = paletteTint ? corFundo : d.papelBodyInfo?.corMedia || corIdade;
-    defsPapel.push(
-      `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`,
-      `<linearGradient id="ceuTema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${clarear(base, 0.85)}"/><stop offset="1" stop-color="${clarear(base, 0.6)}"/></linearGradient>`
-    );
-    fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceuTema)"/>`;
-    if (respiro) {
-      destaqueEstampa = paletteTint
-        ? `<rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="${corAcento}"/><rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="0.28"/>`
-        : `<rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
-    }
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
   }
 
-  // ---- faixa de cenário (chão) na base do corpo — sempre presente ----
-  const morros: string[] = [];
-  const passo = avgFaceW * 0.9;
-  for (let x = -passo * 0.5; x < W + passo; x += passo) {
-    morros.push(`M ${x} ${bodyBot} L ${x} ${chaoY + chaoAltura * 0.45} Q ${x + passo * 0.5} ${chaoY - chaoAltura * 0.35} ${x + passo} ${chaoY + chaoAltura * 0.45} L ${x + passo} ${bodyBot} Z`);
-  }
-  // dois tons (colina clara atrás + base ~12% mais escura), padrão dos kits reais
-  const faixaChao = `
-    <path d="${morros.join(" ")}" fill="${corIdade}" opacity="0.95"/>
-    <path d="M 0 ${chaoY + chaoAltura * 0.5} Q ${W * 0.25} ${chaoY + chaoAltura * 0.18} ${W * 0.5} ${chaoY + chaoAltura * 0.46} T ${W} ${chaoY + chaoAltura * 0.42} L ${W} ${bodyBot} L 0 ${bodyBot} Z" fill="${escurecer(corIdade, 0.12)}"/>`;
+  const firstBodyFace = big[0];
+  const lastBodyFace = big[big.length - 1];
+  const bodyRowX = firstBodyFace?.x ?? 0;
+  const bodyRowW = firstBodyFace && lastBodyFace
+    ? lastBodyFace.x + lastBodyFace.w - firstBodyFace.x
+    : W;
+  const borderAsset = borderAssets[0];
+  const borderRatio = borderAsset && borderAsset.h > 0 ? borderAsset.w / borderAsset.h : 1;
+  const borderHeight = borderAsset
+    ? Math.min(avgFaceH * 0.24, bodyRowW / Math.max(1, borderRatio))
+    : 0;
+  const faixaTema = borderAsset
+    ? `<image data-theme-border="true" href="${borderAsset.uri}" xlink:href="${borderAsset.uri}" x="${bodyRowX}" y="${bodyBot - borderHeight * 0.92}" width="${bodyRowW}" height="${borderHeight}" preserveAspectRatio="xMidYMid meet"/>`
+    : !d.papelBodyUri
+      ? `<rect x="${bodyRowX}" y="${bodyBot - avgFaceH * 0.14}" width="${bodyRowW}" height="${avgFaceH * 0.14}" fill="${corIdade}" opacity="0.82"/><path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.14} H ${bodyRowX + bodyRowW}" stroke="#FFFFFF" stroke-width="${Math.max(3, avgFaceH * 0.014)}" opacity="0.82"/>`
+      : "";
 
-  // confetes/estrelinhas no "céu" das faces (densidade padrão Alice)
-  const estrela = (x: number, y: number, s: number, cor: string, op: number) =>
-    `<path d="M0,-10 L2.9,-3.1 10,-3.1 4.5,1.8 6.5,9 0,4.9 -6.5,9 -4.5,1.8 -10,-3.1 -2.9,-3.1 Z" transform="translate(${x} ${y}) scale(${s})" fill="${cor}" opacity="${op}"/>`;
-  const bolinha = (x: number, y: number, r: number, cor: string, op: number) =>
-    `<circle cx="${x}" cy="${y}" r="${r}" fill="${cor}" opacity="${op}"/>`;
-  // máx. 3 elementos de céu por face, só no terço superior (estudo: 2-3 nuvens/estrelas; miolo respira)
-  const nuvem = (x: number, y: number, s: number) =>
-    `<g transform="translate(${x} ${y}) scale(${s})" fill="#FFFFFF" opacity="0.9"><ellipse rx="26" ry="15"/><ellipse cx="-20" cy="5" rx="16" ry="10"/><ellipse cx="20" cy="5" rx="17" ry="11"/></g>`;
-  const salpicos = big
-    .map((f, i) => {
-      const seed = (i + 1) * 7;
-      const px = (k: number) => f.x + f.w * ((((seed * (k + 3)) % 74) + 13) / 100);
-      const py = (k: number) => f.y + (chaoY - f.y) * ((((seed * (k + 7)) % 27) + 6) / 100);
-      return (
-        nuvem(px(1), py(1), 1.15) +
-        estrela(px(2), py(2), 1.3, "#FFFFFF", 0.75) +
-        bolinha(px(3), py(3), 6, corNome, 0.4)
-      );
-    })
-    .join("");
-
-  // ---- personagem grande ancorado no chão (efeito adesivo) ----
-  const personagensBase = d.personagens?.length
-    ? d.personagens
-    : [d.principal, d.amigo, d.amigo2].filter(Boolean) as ClipartDados[];
-  const personagens = personagensBase.filter(
-    (img, index, list) => list.findIndex((candidate) => candidate.uri === img.uri) === index,
-  );
+  // ---- personagem grande ancorado na base da face ----
   const personagemBlock = (
     img: ClipartDados,
     f: Face,
@@ -327,29 +326,51 @@ export function montarSvgKit(d: KitDados): string {
       ah = aw / ratio;
     }
     const cx = f.cx;
-    const base = baseOverride ?? bodyBot - chaoAltura * 0.12;
+    const base = baseOverride ?? bodyBot - Math.max(4, borderHeight * 0.08);
     const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
-    // repetição do mesmo personagem em outra face: espelha p/ dar variedade
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${imagem}</g>` : imagem;
   };
 
-  const themedAccentBlock = (f: Face, compact = false) => {
-    const size = Math.min(f.w * (compact ? 0.34 : 0.48), f.h * (compact ? 0.25 : 0.36));
+  const monogramBlock = (f: Face) => {
+    const size = Math.min(f.w * 0.68, f.h * 0.60);
     const cx = f.cx;
-    const cy = compact ? f.y + f.h * 0.43 : f.y + f.h * 0.48;
-    const fill = d.papelTopUri ? "url(#papelTop)" : clarear(corIdade, 0.65);
-    return `<g data-theme-accent="true">
-      <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.58}" ry="${size * 0.46}" fill="#FFFFFF" fill-opacity="0.88" stroke="${corNome}" stroke-width="${Math.max(2, size * 0.035)}"/>
-      <circle cx="${cx}" cy="${cy}" r="${size * 0.32}" fill="${fill}" stroke="#FFFFFF" stroke-width="${Math.max(2, size * 0.025)}"/>
-      ${estrela(cx, cy, size * 0.018, corAcento, 0.92)}
-      ${bolinha(cx - size * 0.42, cy - size * 0.28, size * 0.045, corIdade, 0.78)}
-      ${bolinha(cx + size * 0.40, cy + size * 0.24, size * 0.035, corNome, 0.68)}
+    const cy = f.y + f.h * 0.48;
+    const initial = esc(Array.from(nome.trim())[0]?.toUpperCase() || "");
+    return `<g data-theme-monogram="true">
+      <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.43}" ry="${size * 0.50}" fill="#FFFDF8" fill-opacity="0.92" stroke="${corAcento}" stroke-width="${Math.max(4, size * 0.035)}"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.36}" ry="${size * 0.43}" fill="${d.papelTopUri ? "url(#papelTop)" : clarear(corNome, 0.68)}" stroke="${corNome}" stroke-width="${Math.max(2, size * 0.015)}"/>
+      <text x="${cx}" y="${cy + size * 0.04}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${size * 0.42}" fill="#FFFFFF" stroke="${escurecer(corNome, 0.25)}" stroke-width="${size * 0.025}" paint-order="stroke">${initial}</text>
+    </g>`;
+  };
+
+  const panelBlock = (f: Face, asset: ClipartDados) => {
+    const panelW = f.w * 0.76;
+    const panelH = f.h * 0.58;
+    const x = f.cx - panelW / 2;
+    const y = f.y + f.h * 0.16;
+    return `<g data-theme-panel="true">
+      <rect x="${x - f.w * 0.025}" y="${y - f.h * 0.025}" width="${panelW + f.w * 0.05}" height="${panelH + f.h * 0.05}" rx="${f.w * 0.06}" fill="#FFFDF8" fill-opacity="0.90" stroke="${corIdade}" stroke-width="${Math.max(3, f.w * 0.012)}"/>
+      <image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${panelW}" height="${panelH}" preserveAspectRatio="xMidYMid slice" opacity="0.82"/>
     </g>`;
   };
 
   // ---- plaquinha de nome com contraste forte ----
   // estudo Alice: largura mediana 58% da face, encostada na linha do chão
   // (o personagem pode sobrepor a placa — assinatura dos kits reais)
+  const ornamentBlock = (f: Face, asset?: ClipartDados) => {
+    if (!asset) return "";
+    const ratio = asset.h > 0 ? asset.w / asset.h : 1;
+    let aw = f.w * 0.66;
+    let ah = aw / Math.max(0.1, ratio);
+    if (ah > f.h * 0.32) {
+      ah = f.h * 0.32;
+      aw = ah * ratio;
+    }
+    const x = f.cx - aw / 2;
+    const y = f.y + f.h * 0.055;
+    return `<image data-theme-ornament="true" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/>`;
+  };
+
   const plateBlock = (f: Face) => {
     // texto sempre legível: cores de tema claras são escurecidas na plaquinha
     const corTexto = luminancia(corNome) > 0.6 ? escurecer(corNome, 0.45) : corNome;
@@ -359,69 +380,72 @@ export function montarSvgKit(d: KitDados): string {
       avgFaceW * (nameWidth.max / 100),
     );
     const temPlaca = !!d.placaUri;
-    const textoDireto = !temPlaca && !estampaDensa && !isMilk;
+    const maxPlateHeight = f.h * (isMilk ? 0.28 : 0.32);
     const plH = temPlaca
-      ? plW * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320))
-      : plW * (textoDireto ? 0.24 : 0.30);
+      ? Math.min(maxPlateHeight, plW * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320)))
+      : maxPlateHeight;
     const cx = f.cx;
-    const plY = isMilk
-      ? bodyBot - plH - f.h * 0.035
-      : compositionProfile === "modular"
-      ? bodyBot - plH - f.h * 0.03
-      : f.y + f.h - f.h * 0.14 - plH;
+    const plY = bodyBot - plH - f.h * 0.045;
+    const inset = Math.max(5, plH * 0.075);
     const fundoPlaca = temPlaca
       ? `<image href="${d.placaUri}" xlink:href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" preserveAspectRatio="xMidYMid meet"/>`
-      : textoDireto
-        ? ""
-        : `<rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.48}" fill="#FFFFFF" fill-opacity="0.94" stroke="${corNome}" stroke-width="${Math.max(2, plW * 0.012)}"/>`;
+      : `<rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(5, plH * 0.055)}"/>
+        <rect x="${cx - plW / 2 + inset}" y="${plY + inset}" width="${plW - inset * 2}" height="${plH - inset * 2}" rx="${plH * 0.18}" fill="#FFFDF8" fill-opacity="0.96" stroke="${corNome}" stroke-width="${Math.max(3, plH * 0.027)}"/>
+        <path d="M ${cx - plW * 0.43} ${plY + plH * 0.5} l ${plH * 0.075} -${plH * 0.075} l ${plH * 0.075} ${plH * 0.075} l -${plH * 0.075} ${plH * 0.075} z M ${cx + plW * 0.43} ${plY + plH * 0.5} l ${plH * 0.075} -${plH * 0.075} l ${plH * 0.075} ${plH * 0.075} l -${plH * 0.075} ${plH * 0.075} z" fill="${corAcento}"/>`;
     // nome ajustado à largura (nunca estoura a plaquinha)
-    const fsNome = Math.min(plW * (isMilk ? 0.16 : 0.19), (plW * 0.8) / Math.max(3, nome.length) * 1.9);
+    const fsNome = Math.min(plH * (isMilk ? 0.28 : 0.31), (plW * 0.76) / Math.max(3, nome.length) * 1.75);
     const nomeFit = nome.length > 10
-      ? ` textLength="${plW * 0.78}" lengthAdjust="spacingAndGlyphs"`
+      ? ` textLength="${plW * 0.76}" lengthAdjust="spacingAndGlyphs"`
       : "";
     const idadeLimpa = idade?.trim() || "";
     const fsIdade = fsNome * qualityStandard.ageToNameFontRatio.target;
     const idadeTxt = idadeLimpa
-      ? `<text x="${cx}" y="${plY + plH * 0.73}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-weight="500" font-size="${fsIdade}" fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsIdade * qualityStandard.directTextHaloToFontSize}" paint-order="stroke">${esc(idadeLimpa)} ${/^\d+$/.test(idadeLimpa) ? "anos" : ""}</text>`
+      ? `<text x="${cx}" y="${plY + plH * 0.75}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsIdade}" fill="${corTexto}">${esc(idadeLimpa)} ${/^\d+$/.test(idadeLimpa) ? "anos" : ""}</text>`
       : "";
-    const nomeY = plY + plH * (idadeLimpa ? 0.40 : 0.52);
-    return `${fundoPlaca}
-    <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * qualityStandard.directTextHaloToFontSize}" paint-order="stroke" font-weight="600">${esc(nome)}</text>
-    ${idadeTxt}`;
+    const nomeY = plY + plH * (idadeLimpa ? 0.43 : 0.52);
+    return `<g data-name-plate="true">
+      ${fundoPlaca}
+      <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.08}" paint-order="stroke">${esc(nome)}</text>
+      ${idadeTxt}
+    </g>`;
   };
 
-  // ---- distribuição: nome na face central; personagens grandes nas demais;
-  // com 4+ faces grandes, uma fica de RESPIRO só com cenário (padrão A-B-A-C) ----
+  // ---- uma funcao visual por face: personagem, nome, painel ou monograma ----
   const heroTarget = compositionProfile === "modular"
     ? qualityStandard.modularElementHeight.target / 100
     : qualityStandard.heroHeight.target / 100;
+  const heroHeightFor = (img: ClipartDados) => {
+    const ratio = img.h > 0 ? img.w / img.h : 1;
+    return ratio >= 1.1 ? Math.max(heroTarget, 0.86) : Math.max(heroTarget, 0.90);
+  };
   let content = "";
   if (big.length === 1) {
     const f = big[0];
+    const heroFace = { ...f, w: f.w * 0.52, cx: f.x + f.w * 0.28 } as Face;
+    const plateFace = { ...f, w: f.w * 0.50, cx: f.x + f.w * 0.73 } as Face;
     content =
-      (personagens[0] ? personagemBlock(personagens[0], { ...f, cx: f.x + f.w * 0.26 } as Face, heroTarget) : "") +
-      plateBlock({ ...f, cx: f.x + f.w * 0.68 } as Face) +
-      (personagens[1] ? personagemBlock(personagens[1], { ...f, cx: f.x + f.w * 0.88, w: f.w * 0.4 } as Face, 0.4) : "");
+      (orderedHeroes[0] ? personagemBlock(orderedHeroes[0], heroFace, heroHeightFor(orderedHeroes[0])) : monogramBlock(heroFace)) +
+      plateBlock(plateFace);
   } else {
-    let idx = 0;
+    let heroIndex = 0;
+    let panelUsed = false;
+    let nameIndex = 0;
     content = big
       .map((f) => {
         if (milkNameFaces.includes(f) || f === nameFace) {
-          if (compositionProfile === "modular" || personagens.length === 0) return plateBlock(f);
-          const img = personagens[idx];
-          idx++;
-          const arteAcimaDoNome = img
-            ? personagemBlock(img, f, qualityStandard.nameFaceElementHeight.target / 100, false, f.y + f.h * 0.72)
-            : themedAccentBlock(f, true);
-          return arteAcimaDoNome + plateBlock(f);
+          const ornament = ornamentAssets.length
+            ? ornamentBlock(f, ornamentAssets[nameIndex % ornamentAssets.length])
+            : "";
+          nameIndex++;
+          return ornament + plateBlock(f);
         }
-        if (f === respiro && compositionProfile === "modular") return "";
-        // A escala depende da linguagem visual escolhida para o papel.
-        const img = personagens[idx] ?? null;
-        idx++;
-        return img
-          ? personagemBlock(img, f, compositionProfile === "modular" ? heroTarget : qualityStandard.heroHeight.target / 100)
-          : themedAccentBlock(f);
+        const img = orderedHeroes[heroIndex++];
+        if (img) return personagemBlock(img, f, heroHeightFor(img));
+        if (!panelUsed && panelAssets[0]) {
+          panelUsed = true;
+          return panelBlock(f, panelAssets[0]);
+        }
+        return monogramBlock(f);
       })
       .join("");
   }
@@ -453,12 +477,10 @@ export function montarSvgKit(d: KitDados): string {
   <rect width="${W}" height="${H}" fill="#FFFFFF"/>
   <g mask="url(#interior)" clip-path="url(#paperShape)">
     ${fundoTopo}
+    ${fundoBase}
     ${fundoCorpo}
-    ${salpicos}
-    ${faixaChao}
-    ${destaqueEstampa}
+    ${faixaTema}
     ${content}
-    <rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="#FFFFFF"/>
   </g>
   <g id="molde-tecnico" fill="#111111" stroke="#111111">${moldGeometry}</g>
 </svg>`;
@@ -469,7 +491,9 @@ export function montarSvgKit(d: KitDados): string {
 // ---------------------------------------------------------------------------
 const textCache = new Map<string, Promise<string>>();
 const dataUriCache = new Map<string, Promise<string>>();
-const trimCache = new Map<string, Promise<{ uri: string; w: number; h: number }>>();
+type TrimmedClipart = Pick<ClipartDados, "uri" | "w" | "h" | "visibleCoverage">;
+
+const trimCache = new Map<string, Promise<TrimmedClipart>>();
 
 const fetchText = (url: string) => {
   const cached = textCache.get(url);
@@ -507,7 +531,7 @@ const fetchDataUri = (url: string) => {
   return request;
 };
 
-function trimTransparent(dataUri: string): Promise<{ uri: string; w: number; h: number }> {
+function trimTransparent(dataUri: string): Promise<TrimmedClipart> {
   const cached = trimCache.get(dataUri);
   if (cached) return cached;
   const request = trimTransparentUncached(dataUri).catch((error) => {
@@ -518,7 +542,7 @@ function trimTransparent(dataUri: string): Promise<{ uri: string; w: number; h: 
   return request;
 }
 
-async function trimTransparentUncached(dataUri: string): Promise<{ uri: string; w: number; h: number }> {
+async function trimTransparentUncached(dataUri: string): Promise<TrimmedClipart> {
   const img = new Image();
   await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUri; });
   const cv = document.createElement("canvas");
@@ -528,9 +552,16 @@ async function trimTransparentUncached(dataUri: string): Promise<{ uri: string; 
   const d = cx.getImageData(0, 0, cv.width, cv.height).data;
   const bounds = findVisibleBounds(d, cv.width, cv.height);
   if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) {
-    return { uri: dataUri, w: cv.width, h: cv.height };
+    return { uri: dataUri, w: cv.width, h: cv.height, visibleCoverage: 0 };
   }
   let { minX, minY, maxX, maxY } = bounds;
+  let visiblePixels = 0;
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] > 24) visiblePixels++;
+    }
+  }
+  const visibleCoverage = visiblePixels / ((maxX - minX + 1) * (maxY - minY + 1));
   const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.04);
   minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
   maxX = Math.min(cv.width - 1, maxX + pad); maxY = Math.min(cv.height - 1, maxY + pad);
@@ -538,7 +569,7 @@ async function trimTransparentUncached(dataUri: string): Promise<{ uri: string; 
   const out = document.createElement("canvas");
   out.width = w; out.height = h;
   out.getContext("2d")!.drawImage(cv, minX, minY, w, h, 0, 0, w, h);
-  return { uri: out.toDataURL("image/png"), w, h };
+  return { uri: out.toDataURL("image/png"), w, h, visibleCoverage };
 }
 
 // mede a "densidade" do papel (desvio-padrão de luminância em 32×32) e a cor
@@ -577,7 +608,7 @@ export async function composeKit({ molde, assets, nome, idade, palette }: Compos
     return 3;
   };
   const cliparts = assets
-    .filter((asset) => asset.kind === "clipart" && asset.url)
+    .filter((asset) => asset.kind === "clipart" && asset.url && asset.meta?.enabled !== false)
     .filter((asset, index, list) => list.findIndex((candidate) => candidate.url === asset.url) === index)
     .sort((a, b) => rolePriority(a.role) - rolePriority(b.role));
 
@@ -606,7 +637,18 @@ export async function composeKit({ molde, assets, nome, idade, palette }: Compos
     papelTopUri: topUri,
     papelBodyUri: bodyUri,
     papelBodyInfo: bodyInfo,
-    personagens: personagens.map(({ uri, w, h }) => ({ uri, w, h })),
+    personagens: personagens.map((trimmed, index) => {
+      const asset = cliparts[index];
+      const usage = asset?.meta?.usage;
+      return {
+        ...trimmed,
+        name: asset?.name,
+        role: asset?.role,
+        usage: usage === "hero" || usage === "ornament" || usage === "border" || usage === "panel"
+          ? usage
+          : undefined,
+      };
+    }),
     placaUri,
     placaMeta: placa?.meta ?? null,
     fonteFamily: fonte?.meta?.family || "sans-serif",

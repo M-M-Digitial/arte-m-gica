@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findVisibleBounds, montarSvgKit } from "./compose-kit";
+import { classifyClipartUsage, findVisibleBounds, montarSvgKit } from "./compose-kit";
 
 describe("composição SVG do kit", () => {
   it("preserva todas as linhas do molde e uma máscara por alpha", () => {
@@ -29,7 +29,7 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('clip-path="url(#paperShape)"');
     expect(svg).toContain('metadata id="alice-quality-standard"');
     expect(svg).toContain('stop-color="#F4F0FF"');
-    expect(svg).toContain('fill="#E15587" opacity="1"');
+    expect(svg).toContain('data-name-plate="true"');
     expect(svg).toContain('<metadata id="alice-composition-profile">cenario</metadata>');
     expect(svg).toContain("M0 0 H100");
     expect(svg).toContain("M0 80 H100");
@@ -56,10 +56,12 @@ describe("composição SVG do kit", () => {
       nome: "Lia",
     });
 
-    expect(svg).toContain('height="20" fill="#C9533F"');
-    expect(svg).toContain('fill="url(#papelTop)" opacity="0.22"');
+    expect(svg).toContain('height="20" fill="#245F4F"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.48"');
+    expect(svg).toContain('height="10" fill="#245F4F"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.42"');
     expect(svg).toContain('height="70" fill="#E9F5EA"');
-    expect(svg).toContain('fill="url(#papelBody)" opacity="0.20"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.52"');
   });
 
   it("ignora pixels transparentes isolados ao calcular o recorte", () => {
@@ -72,6 +74,13 @@ describe("composição SVG do kit", () => {
     }
 
     expect(findVisibleBounds(rgba, width, height)).toEqual({ minX: 3, minY: 2, maxX: 6, maxY: 7 });
+  });
+
+  it("separa personagens de ornamentos, bordas e paineis", () => {
+    expect(classifyClipartUsage({ uri: "hero", w: 300, h: 500 })).toBe("hero");
+    expect(classifyClipartUsage({ uri: "border", w: 900, h: 200 })).toBe("border");
+    expect(classifyClipartUsage({ uri: "panel", w: 640, h: 400, visibleCoverage: 0.95 })).toBe("panel");
+    expect(classifyClipartUsage({ uri: "rose", w: 400, h: 400, usage: "ornament" })).toBe("ornament");
   });
 
   it("usa composicao modular quando o papel do corpo e uma estampa densa", () => {
@@ -109,7 +118,8 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('fill="url(#papelBody)"');
     expect(svg).toContain("Sofia");
     expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
-    expect(svg.match(/data-theme-accent="true"/g)).toHaveLength(1);
+    expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(2);
+    expect(svg).toContain('data-name-plate="true"');
   });
 
   it("reserva duas faces inferiores e delicadas para o nome na Caixa Milk", () => {
@@ -143,13 +153,13 @@ describe("composição SVG do kit", () => {
     });
 
     expect(svg.match(/>Flora<\/text>/g)).toHaveLength(2);
-    expect(svg.match(/font-weight="600"/g)).toHaveLength(2);
+    expect(svg.match(/data-name-plate="true"/g)).toHaveLength(2);
     expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
-    expect(svg.match(/data-theme-accent="true"/g)).toHaveLength(3);
-    expect(svg).toContain('width="38"');
+    expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(1);
+    expect(svg).toContain('width="64"');
   });
 
-  it("usa poses distintas antes de repetir um personagem", () => {
+  it("usa apenas poses distintas nas faces disponiveis", () => {
     const faces = Array.from({ length: 4 }, (_, index) => ({
       x: index * 100,
       y: 60,
@@ -182,10 +192,11 @@ describe("composição SVG do kit", () => {
       idade: "3",
     });
 
-    for (const pose of ["POSE_A", "POSE_B", "POSE_C", "POSE_D"]) {
-      expect(svg.match(new RegExp(`<image href="data:image/png;base64,${pose}"`, "g"))).toHaveLength(1);
-    }
-    expect(svg).not.toContain('data-theme-accent="true"');
+    const posesUsadas = Array.from(svg.matchAll(/<image href="data:image\/png;base64,(POSE_[A-D])"/g))
+      .map((match) => match[1]);
+    expect(posesUsadas).toHaveLength(2);
+    expect(new Set(posesUsadas).size).toBe(2);
+    expect(posesUsadas).toContain("POSE_A");
     expect(svg).not.toContain('scale(-1 1)');
   });
 });

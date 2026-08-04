@@ -54,16 +54,23 @@ async function trim(buf) {
   const d = cx.getImageData(0, 0, cv.width, cv.height).data;
   const bounds = mod.findVisibleBounds(d, cv.width, cv.height);
   if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) {
-    return { uri: toDataUri(buf), w: img.width, h: img.height };
+    return { uri: toDataUri(buf), w: img.width, h: img.height, visibleCoverage: 0 };
   }
   let { minX, minY, maxX, maxY } = bounds;
+  let visiblePixels = 0;
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] > 24) visiblePixels++;
+    }
+  }
+  const visibleCoverage = visiblePixels / ((maxX - minX + 1) * (maxY - minY + 1));
   const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.04);
   minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
   maxX = Math.min(cv.width - 1, maxX + pad); maxY = Math.min(cv.height - 1, maxY + pad);
   const w = maxX - minX + 1, h = maxY - minY + 1;
   const out = createCanvas(w, h);
   out.getContext("2d").drawImage(cv, minX, minY, w, h, 0, 0, w, h);
-  return { uri: toDataUri(out.toBuffer("image/png")), w, h };
+  return { uri: toDataUri(out.toBuffer("image/png")), w, h, visibleCoverage };
 }
 
 const [molde] = await rest(`moldes?select=*&name=eq.${encodeURIComponent(moldeName)}`);
@@ -76,7 +83,7 @@ const fonte = assets.find((a) => a.kind === "fonte");
 const placa = assets.find((a) => a.kind === "placa");
 const rolePriority = (role) => role === "principal" ? 0 : role === "amigo" ? 1 : role === "amigo2" ? 2 : 3;
 const cliparts = assets
-  .filter((asset) => asset.kind === "clipart" && asset.url)
+  .filter((asset) => asset.kind === "clipart" && asset.url && asset.meta?.enabled !== false)
   .filter((asset, index, list) => list.findIndex((candidate) => candidate.url === asset.url) === index)
   .sort((a, b) => rolePriority(a.role) - rolePriority(b.role));
 
@@ -126,7 +133,16 @@ const svg = mod.montarSvgKit({
   papelTopUri: top?.uri ?? null,
   papelBodyUri: body?.uri ?? null,
   papelBodyInfo: bodyInfo,
-  personagens: personagens.map(({ uri, w, h }) => ({ uri, w, h })),
+  personagens: personagens.map((trimmed, index) => {
+    const asset = cliparts[index];
+    const usage = asset?.meta?.usage;
+    return {
+      ...trimmed,
+      name: asset?.name,
+      role: asset?.role,
+      usage: ["hero", "ornament", "border", "panel"].includes(usage) ? usage : undefined,
+    };
+  }),
   placaUri: placaImg?.uri ?? null,
   placaMeta: placa?.meta ?? null,
   fonteFamily: fonte?.meta?.family || "sans-serif",

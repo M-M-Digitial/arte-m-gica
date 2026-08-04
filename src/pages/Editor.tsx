@@ -26,6 +26,26 @@ interface TemaCard {
   cor: string;
 }
 
+interface ClipartOption {
+  url: string;
+  role: string;
+  meta?: {
+    usage?: "hero" | "ornament" | "border" | "panel";
+    enabled?: boolean;
+    w?: number;
+    h?: number;
+  } | null;
+}
+
+const isSelectableCharacter = (asset: ClipartOption) => {
+  if (asset.meta?.enabled === false) return false;
+  if (asset.meta?.usage) return asset.meta.usage === "hero";
+  const role = asset.role.toLowerCase();
+  if (/placa|ornamento|decoracao|borda|border|faixa|painel|panel/.test(role)) return false;
+  const ratio = asset.meta?.w && asset.meta?.h ? asset.meta.w / asset.meta.h : 1;
+  return ratio < 2.15;
+};
+
 const PALETAS: Array<KitPalette & { id: string; label: string }> = [
   { id: "vibrante", label: "Festa vibrante", primary: "#D93680", secondary: "#F2A900", background: "#FFF2D5", accent: "#159A9C" },
   { id: "pastel", label: "Pastel delicado", primary: "#B85C8A", secondary: "#79BFAF", background: "#FFF5F8", accent: "#E7B84B" },
@@ -49,7 +69,7 @@ export default function Editor() {
   const [busca, setBusca] = useState("");
   const [svg, setSvg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cliparts, setCliparts] = useState<{ url: string; role: string }[]>([]);
+  const [cliparts, setCliparts] = useState<ClipartOption[]>([]);
   const [principalUrl, setPrincipalUrl] = useState<string>("");
   const [paletaId, setPaletaId] = useState("tema");
   const [paletaPersonalizada, setPaletaPersonalizada] = useState<KitPalette>(PALETA_PERSONALIZADA);
@@ -66,11 +86,11 @@ export default function Editor() {
     (async () => {
       const { data } = await (supabase as any)
         .from("tema_assets")
-        .select("url,role")
+        .select("url,role,meta")
         .eq("theme_slug", themeSlug)
         .eq("kind", "clipart");
       // a placa é elemento decorativo (medalhão/plaquinha), não personagem — fora do seletor
-      const list = ((data ?? []) as { url: string; role: string }[]).filter((c) => c.role !== "placa");
+      const list = ((data ?? []) as ClipartOption[]).filter(isSelectableCharacter);
       setCliparts(list);
       setPrincipalUrl(list.find((c) => c.role === "principal")?.url ?? list[0]?.url ?? "");
     })();
