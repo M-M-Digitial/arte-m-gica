@@ -159,6 +159,32 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('width="64"');
   });
 
+  it("aplica fonte e tamanho escolhidos sem reduzir a altura de nomes longos", () => {
+    const svg = montarSvgKit({
+      moldSvg: `<svg viewBox="0 0 240 180"><rect x="0" y="0" width="240" height="180"/></svg>`,
+      facesJson: JSON.stringify({ faces: [{ x: 20, y: 30, w: 200, h: 130, cx: 120, cy: 95, area: 26000 }] }),
+      maskUri: "data:image/png;base64,MASK",
+      papelTopUri: null,
+      papelBodyUri: null,
+      personagens: [],
+      placaUri: null,
+      placaMeta: null,
+      fonteFamily: "Georgia, serif",
+      fonteUri: null,
+      fonteScale: 1.5,
+      corNome: "#245F4F",
+      corIdade: "#E4A82B",
+      nome: "Maria Eduarda",
+      idade: "6",
+    });
+
+    expect(svg).toContain('font-family="Georgia, serif"');
+    expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
+    expect(svg).toContain('>Maria Eduarda</text>');
+    const tamanhoNome = svg.match(/font-size="([\d.]+)"[^>]*lengthAdjust="spacingAndGlyphs"[^>]*>Maria Eduarda/);
+    expect(Number(tamanhoNome?.[1])).toBeGreaterThan(12);
+  });
+
   it("usa apenas poses distintas nas faces disponiveis", () => {
     const faces = Array.from({ length: 4 }, (_, index) => ({
       x: index * 100,

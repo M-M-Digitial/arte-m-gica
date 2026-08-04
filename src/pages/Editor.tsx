@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -44,6 +46,14 @@ type MockupQuality = {
   score: number;
   approved: boolean;
 };
+
+const FONTES = [
+  { id: "tema", label: "Fonte do tema", family: undefined, preview: "inherit", useThemeFont: true },
+  { id: "divertida", label: "Divertida", family: "Trebuchet MS, sans-serif", preview: "Trebuchet MS, sans-serif", useThemeFont: false },
+  { id: "classica", label: "Clássica", family: "Georgia, serif", preview: "Georgia, serif", useThemeFont: false },
+  { id: "moderna", label: "Moderna", family: "Verdana, sans-serif", preview: "Verdana, sans-serif", useThemeFont: false },
+  { id: "forte", label: "Forte", family: "Arial Black, Arial, sans-serif", preview: "Arial Black, Arial, sans-serif", useThemeFont: false },
+] as const;
 
 const isSelectableCharacter = (asset: ClipartOption) => {
   if (asset.meta?.enabled === false) return false;
@@ -102,6 +112,8 @@ export default function Editor() {
   const [principalUrl, setPrincipalUrl] = useState<string>("");
   const [paletaId, setPaletaId] = useState("tema");
   const [paletaPersonalizada, setPaletaPersonalizada] = useState<KitPalette>(PALETA_PERSONALIZADA);
+  const [fonteId, setFonteId] = useState("tema");
+  const [fonteEscala, setFonteEscala] = useState(115);
   const [previewing, setPreviewing] = useState(false);
   const [resultadoTab, setResultadoTab] = useState<ResultadoTab>("arte");
   const [mockupFormato, setMockupFormato] = useState<MockupFormato>("feed");
@@ -198,6 +210,10 @@ export default function Editor() {
     if (paletaId === "personalizada") return paletaPersonalizada;
     return PALETAS.find((paleta) => paleta.id === paletaId);
   }, [paletaId, paletaPersonalizada, themeSlug]);
+  const fonteAtiva = useMemo(
+    () => FONTES.find((fonte) => fonte.id === fonteId) ?? FONTES[0],
+    [fonteId],
+  );
 
   const gerarMockup = useCallback(async (sourceSvg: string, formato: MockupFormato = "feed") => {
     if (!molde || !temaSel) return;
@@ -290,6 +306,11 @@ export default function Editor() {
         nome: nome.trim(),
         idade: idade.trim() || undefined,
         palette: paletaAtiva,
+        typography: {
+          family: fonteAtiva.family,
+          scale: fonteEscala / 100,
+          useThemeFont: fonteAtiva.useThemeFont,
+        },
       });
       if (!previewOnly || requestId === previewRequestRef.current) setSvg(out);
       if (!previewOnly) {
@@ -306,7 +327,7 @@ export default function Editor() {
         if (requestId === previewRequestRef.current) setPreviewing(false);
       } else setBusy(false);
     }
-  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, temaSel?.name, gerarMockup]);
+  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, fonteAtiva, fonteEscala, temaSel?.name, gerarMockup]);
 
   useEffect(() => {
     if (etapa !== 4 || !themeSlug || !molde || !nome.trim()) return;
@@ -639,9 +660,59 @@ export default function Editor() {
             )}
           </div>
 
+          <div className="space-y-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <Type className="h-4 w-4 text-primary" /> Tipografia do nome
+              </h3>
+            </div>
+            <div className="grid gap-4 rounded-lg border border-border/50 bg-card p-4 sm:grid-cols-2">
+              <label className="space-y-2 text-xs font-medium text-muted-foreground">
+                <span>Fonte</span>
+                <Select value={fonteId} onValueChange={setFonteId}>
+                  <SelectTrigger className="h-10 bg-background text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FONTES.map((fonte) => (
+                      <SelectItem key={fonte.id} value={fonte.id}>
+                        {fonte.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                  <span>Tamanho</span>
+                  <output className="font-semibold tabular-nums text-foreground">{fonteEscala}%</output>
+                </div>
+                <Slider
+                  aria-label="Tamanho do nome"
+                  min={85}
+                  max={150}
+                  step={5}
+                  value={[fonteEscala]}
+                  onValueChange={([valor]) => setFonteEscala(valor)}
+                />
+              </div>
+              <div className="flex min-h-16 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-secondary/40 px-3 sm:col-span-2">
+                <span
+                  className="max-w-full truncate text-center font-semibold text-foreground"
+                  style={{
+                    fontFamily: fonteAtiva.preview,
+                    fontSize: `${Math.min(30, 17 * (fonteEscala / 100))}px`,
+                  }}
+                >
+                  {nome.trim() || "Nome da criança"}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="overflow-hidden rounded-lg border border-border/60 bg-secondary/50">
             <div className="flex h-9 items-center justify-between border-b border-border/50 px-3">
-              <span className="text-xs font-semibold text-foreground">Prévia da paleta</span>
+              <span className="text-xs font-semibold text-foreground">Prévia da arte</span>
               {previewing && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
             </div>
             <div className="aspect-[2526/1786] bg-white flex items-center justify-center">

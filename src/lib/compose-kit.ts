@@ -35,12 +35,19 @@ export interface KitPalette {
   accent: string;
 }
 
+export interface KitTypography {
+  family?: string;
+  scale?: number;
+  useThemeFont?: boolean;
+}
+
 export interface ComposeInput {
   molde: MoldeCompose;
   assets: TemaAsset[];
   nome: string;
   idade?: string;
   palette?: KitPalette;
+  typography?: KitTypography;
 }
 
 interface Face { x: number; y: number; w: number; h: number; cx: number; cy: number; area: number }
@@ -144,6 +151,7 @@ export interface KitDados {
   placaMeta: { w?: number; h?: number } | null;
   fonteFamily: string;
   fonteUri: string | null;
+  fonteScale?: number;
   corNome: string;
   corIdade: string;
   corFundo?: string;
@@ -392,9 +400,14 @@ export function montarSvgKit(d: KitDados): string {
       : `<rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(5, plH * 0.055)}"/>
         <rect x="${cx - plW / 2 + inset}" y="${plY + inset}" width="${plW - inset * 2}" height="${plH - inset * 2}" rx="${plH * 0.18}" fill="#FFFDF8" fill-opacity="0.96" stroke="${corNome}" stroke-width="${Math.max(3, plH * 0.027)}"/>
         <path d="M ${cx - plW * 0.43} ${plY + plH * 0.5} l ${plH * 0.075} -${plH * 0.075} l ${plH * 0.075} ${plH * 0.075} l -${plH * 0.075} ${plH * 0.075} z M ${cx + plW * 0.43} ${plY + plH * 0.5} l ${plH * 0.075} -${plH * 0.075} l ${plH * 0.075} ${plH * 0.075} l -${plH * 0.075} ${plH * 0.075} z" fill="${corAcento}"/>`;
-    // nome ajustado à largura (nunca estoura a plaquinha)
-    const fsNome = Math.min(plH * (isMilk ? 0.28 : 0.31), (plW * 0.76) / Math.max(3, nome.length) * 1.75);
-    const nomeFit = nome.length > 10
+    // O SVG comprime apenas a largura quando necessario. Assim nomes longos
+    // continuam altos e legiveis, sem ultrapassar a plaquinha.
+    const fonteScale = Math.min(1.5, Math.max(0.85, d.fonteScale ?? 1.15));
+    const baseFontSize = plH * (isMilk ? 0.30 : 0.33);
+    const maxFontSize = plH * (idade?.trim() ? 0.42 : 0.50);
+    const fsNome = Math.min(baseFontSize * fonteScale, maxFontSize);
+    const larguraEstimada = fsNome * Math.max(3, nome.length) * 0.56;
+    const nomeFit = larguraEstimada > plW * 0.76
       ? ` textLength="${plW * 0.76}" lengthAdjust="spacingAndGlyphs"`
       : "";
     const idadeLimpa = idade?.trim() || "";
@@ -595,9 +608,10 @@ async function analisarPapel(dataUri: string): Promise<PapelInfo> {
   return { busy: desvio > 26, corMedia: `#${hex(sr)}${hex(sg)}${hex(sb)}` };
 }
 
-export async function composeKit({ molde, assets, nome, idade, palette }: ComposeInput): Promise<string> {
+export async function composeKit({ molde, assets, nome, idade, palette, typography }: ComposeInput): Promise<string> {
   const byRole = (role: string) => assets.find((a) => a.role === role);
-  const fonte = assets.find((a) => a.kind === "fonte");
+  const fonteTema = assets.find((a) => a.kind === "fonte");
+  const fonte = typography?.useThemeFont === false ? undefined : fonteTema;
   const placa = assets.find((a) => a.kind === "placa");
   const papelTop = byRole("top");
   const papelBody = byRole("body");
@@ -651,10 +665,11 @@ export async function composeKit({ molde, assets, nome, idade, palette }: Compos
     }),
     placaUri,
     placaMeta: placa?.meta ?? null,
-    fonteFamily: fonte?.meta?.family || "sans-serif",
+    fonteFamily: typography?.family || fonte?.meta?.family || "sans-serif",
     fonteUri,
-    corNome: palette?.primary || fonte?.meta?.cor || "#7A2FB0",
-    corIdade: palette?.secondary || fonte?.meta?.cor2 || "#1BA67C",
+    fonteScale: typography?.scale,
+    corNome: palette?.primary || fonteTema?.meta?.cor || "#7A2FB0",
+    corIdade: palette?.secondary || fonteTema?.meta?.cor2 || "#1BA67C",
     corFundo: palette?.background,
     corAcento: palette?.accent,
     nome,
