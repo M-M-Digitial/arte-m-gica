@@ -9,8 +9,9 @@ describe("padrão Alice e mercado", () => {
   it("mantém as proporções observadas nas referências", () => {
     expect(ALICE_QUALITY_STANDARD.evidence.aliceThemesReviewed).toBe(30);
     expect(ALICE_QUALITY_STANDARD.layout.floorBand.target).toBe(25);
-    expect(ALICE_QUALITY_STANDARD.layout.heroHeight.target).toBe(60);
-    expect(ALICE_QUALITY_STANDARD.layout.modularElementHeight.target).toBe(32);
+    expect(ALICE_QUALITY_STANDARD.layout.heroHeight.target).toBe(68);
+    expect(ALICE_QUALITY_STANDARD.layout.modularElementHeight.target).toBe(40);
+    expect(ALICE_QUALITY_STANDARD.layout.nameFaceElementHeight.target).toBe(52);
     expect(ALICE_QUALITY_STANDARD.layout.modularCalmArea.target).toBe(55);
     expect(ALICE_QUALITY_STANDARD.layout.namePlateWidth.target).toBe(50);
     expect(ALICE_QUALITY_STANDARD.layout.milkNamePlateWidth.target).toBe(38);

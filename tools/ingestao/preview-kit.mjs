@@ -1,7 +1,7 @@
 // Prévia do Compositor fora do navegador: busca os assets reais de um tema,
 // injeta o mesmo montarSvgKit do app (bundle via esbuild) e renderiza PNG
 // com resvg. Uso:
-//   node tools/ingestao/preview-kit.mjs <theme_slug> <molde_name> <saida.png> [nome] [idade]
+//   node tools/ingestao/preview-kit.mjs <theme_slug> <molde_name> <saida.png> [nome] [idade] [paleta]
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
@@ -9,7 +9,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Resvg } from "@resvg/resvg-js";
 
-const [slug, moldeName, outPath, nome = "Valentina", idade = "4"] = process.argv.slice(2);
+const [slug, moldeName, outPath, nome = "Valentina", idade = "4", paletaId = "tema"] = process.argv.slice(2);
+const palettes = {
+  vibrante: { primary: "#D93680", secondary: "#F2A900", background: "#FFF2D5", accent: "#159A9C" },
+  pastel: { primary: "#B85C8A", secondary: "#79BFAF", background: "#FFF5F8", accent: "#E7B84B" },
+  aventura: { primary: "#245F4F", secondary: "#E4A82B", background: "#E9F5EA", accent: "#C9533F" },
+  magica: { primary: "#4D62A8", secondary: "#D77DA5", background: "#ECF3FF", accent: "#E7B93F" },
+};
+const palette = palettes[paletaId];
 if (!slug || !moldeName || !outPath) {
   console.error("uso: node preview-kit.mjs <theme_slug> <molde_name> <saida.png> [nome] [idade]");
   process.exit(1);
@@ -45,15 +52,12 @@ async function trim(buf) {
   const cx = cv.getContext("2d");
   cx.drawImage(img, 0, 0);
   const d = cx.getImageData(0, 0, cv.width, cv.height).data;
-  let minX = cv.width, minY = cv.height, maxX = 0, maxY = 0;
-  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
-    if (d[(y * cv.width + x) * 4 + 3] > 12) {
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
-    }
+  const bounds = mod.findVisibleBounds(d, cv.width, cv.height);
+  if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) {
+    return { uri: toDataUri(buf), w: img.width, h: img.height };
   }
-  if (maxX <= minX) return { uri: toDataUri(buf), w: img.width, h: img.height };
-  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+  let { minX, minY, maxX, maxY } = bounds;
+  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.04);
   minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
   maxX = Math.min(cv.width - 1, maxX + pad); maxY = Math.min(cv.height - 1, maxY + pad);
   const w = maxX - minX + 1, h = maxY - minY + 1;
@@ -127,8 +131,10 @@ const svg = mod.montarSvgKit({
   placaMeta: placa?.meta ?? null,
   fonteFamily: fonte?.meta?.family || "sans-serif",
   fonteUri: null, // resvg usa fontFiles; o data-uri fica só no navegador
-  corNome: fonte?.meta?.cor || "#7A2FB0",
-  corIdade: fonte?.meta?.cor2 || "#1BA67C",
+  corNome: palette?.primary || fonte?.meta?.cor || "#7A2FB0",
+  corIdade: palette?.secondary || fonte?.meta?.cor2 || "#1BA67C",
+  corFundo: palette?.background,
+  corAcento: palette?.accent,
   nome, idade,
 });
 

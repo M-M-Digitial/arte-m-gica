@@ -45,6 +45,62 @@ interface Face { x: number; y: number; w: number; h: number; cx: number; cy: num
 
 export interface ClipartDados { uri: string; w: number; h: number }
 
+export interface PixelBounds { minX: number; minY: number; maxX: number; maxY: number }
+
+export function findVisibleBounds(
+  rgba: ArrayLike<number>,
+  width: number,
+  height: number,
+  alphaThreshold = 24,
+): PixelBounds | null {
+  const columns = new Uint32Array(width);
+  const rows = new Uint32Array(height);
+  let visiblePixels = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (rgba[(y * width + x) * 4 + 3] <= alphaThreshold) continue;
+      columns[x]++;
+      rows[y]++;
+      visiblePixels++;
+    }
+  }
+
+  if (visiblePixels === 0) return null;
+
+  const minColumnPixels = Math.max(2, Math.floor(height * 0.002));
+  const minRowPixels = Math.max(2, Math.floor(width * 0.002));
+  let minX = columns.findIndex((count) => count >= minColumnPixels);
+  let minY = rows.findIndex((count) => count >= minRowPixels);
+  let maxX = -1;
+  let maxY = -1;
+  for (let x = width - 1; x >= 0; x--) {
+    if (columns[x] >= minColumnPixels) { maxX = x; break; }
+  }
+  for (let y = height - 1; y >= 0; y--) {
+    if (rows[y] >= minRowPixels) { maxY = y; break; }
+  }
+
+  if (minX >= 0 && minY >= 0 && maxX >= minX && maxY >= minY) {
+    return { minX, minY, maxX, maxY };
+  }
+
+  minX = width;
+  minY = height;
+  maxX = 0;
+  maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (rgba[(y * width + x) * 4 + 3] <= alphaThreshold) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  return { minX, minY, maxX, maxY };
+}
+
 // análise do papel do corpo: estampas densas ("busy") viram destaque em faces
 // alternadas/abas (padrão Alice), nunca papel de parede do corpo inteiro
 export interface PapelInfo { busy: boolean; corMedia: string }
@@ -183,10 +239,12 @@ export function montarSvgKit(d: KitDados): string {
     defsPapel.push(
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
-    fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
+    fundoTopo = paletteTint
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corAcento}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="0.22"/>`
+      : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
   } else {
     // abas nunca ficam sem tratamento: cor sólida do tema
-    fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corIdade}" opacity="0.30"/>`;
+    fundoTopo = `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${paletteTint ? corAcento : corIdade}" opacity="${paletteTint ? 1 : 0.30}"/>`;
   }
   let destaqueEstampa = "";
   if (d.papelBodyUri && !estampaDensa) {
@@ -194,18 +252,22 @@ export function montarSvgKit(d: KitDados): string {
     defsPapel.push(
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
-    fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
+    fundoCorpo = paletteTint
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="0.20"/>`
+      : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else if (estampaDensa) {
     // estampa densa: o corpo vira cenário limpo (céu no tom do papel) e a
     // estampa aparece em destaque só na face de respiro (padrão CENA/ESTAMPA)
-    const base = d.papelBodyInfo?.corMedia || corIdade;
+    const base = paletteTint ? corFundo : d.papelBodyInfo?.corMedia || corIdade;
     defsPapel.push(
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`,
       `<linearGradient id="ceuTema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${clarear(base, 0.85)}"/><stop offset="1" stop-color="${clarear(base, 0.6)}"/></linearGradient>`
     );
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceuTema)"/>`;
     if (respiro) {
-      destaqueEstampa = `<rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
+      destaqueEstampa = paletteTint
+        ? `<rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="${corAcento}"/><rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="0.28"/>`
+        : `<rect x="${respiro.x}" y="${bodyTop}" width="${respiro.w}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
     }
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
@@ -260,7 +322,10 @@ export function montarSvgKit(d: KitDados): string {
     const ratio = img.w / img.h;
     let ah = f.h * alturaPct;
     let aw = ah * ratio;
-    if (aw > f.w * 0.92) { aw = f.w * 0.92; ah = aw / ratio; }
+    if (aw > f.w * qualityStandard.stickerMaxWidthToFace) {
+      aw = f.w * qualityStandard.stickerMaxWidthToFace;
+      ah = aw / ratio;
+    }
     const cx = f.cx;
     const base = baseOverride ?? bodyBot - chaoAltura * 0.12;
     const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
@@ -346,7 +411,7 @@ export function montarSvgKit(d: KitDados): string {
           const img = personagens[idx];
           idx++;
           const arteAcimaDoNome = img
-            ? personagemBlock(img, f, 0.42, false, f.y + f.h * 0.70)
+            ? personagemBlock(img, f, qualityStandard.nameFaceElementHeight.target / 100, false, f.y + f.h * 0.72)
             : themedAccentBlock(f, true);
           return arteAcimaDoNome + plateBlock(f);
         }
@@ -388,9 +453,7 @@ export function montarSvgKit(d: KitDados): string {
   <rect width="${W}" height="${H}" fill="#FFFFFF"/>
   <g mask="url(#interior)" clip-path="url(#paperShape)">
     ${fundoTopo}
-    ${paletteTint ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corAcento}" opacity="0.18"/>` : ""}
     ${fundoCorpo}
-    ${paletteTint ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}" opacity="0.24"/>` : ""}
     ${salpicos}
     ${faixaChao}
     ${destaqueEstampa}
@@ -463,15 +526,12 @@ async function trimTransparentUncached(dataUri: string): Promise<{ uri: string; 
   const cx = cv.getContext("2d")!;
   cx.drawImage(img, 0, 0);
   const d = cx.getImageData(0, 0, cv.width, cv.height).data;
-  let minX = cv.width, minY = cv.height, maxX = 0, maxY = 0;
-  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
-    if (d[(y * cv.width + x) * 4 + 3] > 12) {
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
-    }
+  const bounds = findVisibleBounds(d, cv.width, cv.height);
+  if (!bounds || bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) {
+    return { uri: dataUri, w: cv.width, h: cv.height };
   }
-  if (maxX <= minX) return { uri: dataUri, w: cv.width, h: cv.height };
-  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+  let { minX, minY, maxX, maxY } = bounds;
+  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.04);
   minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
   maxX = Math.min(cv.width - 1, maxX + pad); maxY = Math.min(cv.height - 1, maxY + pad);
   const w = maxX - minX + 1, h = maxY - minY + 1;

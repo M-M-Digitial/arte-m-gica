@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { montarSvgKit } from "./compose-kit";
+import { findVisibleBounds, montarSvgKit } from "./compose-kit";
 
 describe("composição SVG do kit", () => {
   it("preserva todas as linhas do molde e uma máscara por alpha", () => {
@@ -29,12 +29,49 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('clip-path="url(#paperShape)"');
     expect(svg).toContain('metadata id="alice-quality-standard"');
     expect(svg).toContain('stop-color="#F4F0FF"');
-    expect(svg).toContain('fill="#E15587" opacity="0.18"');
-    expect(svg).toContain('fill="#F4F0FF" opacity="0.24"');
+    expect(svg).toContain('fill="#E15587" opacity="1"');
     expect(svg).toContain('<metadata id="alice-composition-profile">cenario</metadata>');
     expect(svg).toContain("M0 0 H100");
     expect(svg).toContain("M0 80 H100");
     expect(svg).toContain('stroke-dasharray="4 3"');
+  });
+
+  it("aplica a paleta como base visivel sem perder a textura do tema", () => {
+    const svg = montarSvgKit({
+      moldSvg: `<svg viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100"/></svg>`,
+      facesJson: JSON.stringify({ faces: [{ x: 0, y: 20, w: 100, h: 70, cx: 50, cy: 55, area: 7000 }] }),
+      maskUri: "data:image/png;base64,MASK",
+      papelTopUri: "data:image/png;base64,TOP",
+      papelBodyUri: "data:image/png;base64,BODY",
+      papelBodyInfo: { busy: false, corMedia: "#F2C45A" },
+      personagens: [],
+      placaUri: null,
+      placaMeta: null,
+      fonteFamily: "sans-serif",
+      fonteUri: null,
+      corNome: "#245F4F",
+      corIdade: "#E4A82B",
+      corFundo: "#E9F5EA",
+      corAcento: "#C9533F",
+      nome: "Lia",
+    });
+
+    expect(svg).toContain('height="20" fill="#C9533F"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.22"');
+    expect(svg).toContain('height="70" fill="#E9F5EA"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.20"');
+  });
+
+  it("ignora pixels transparentes isolados ao calcular o recorte", () => {
+    const width = 10;
+    const height = 10;
+    const rgba = new Uint8ClampedArray(width * height * 4);
+    rgba[3] = 255;
+    for (let y = 2; y <= 7; y++) {
+      for (let x = 3; x <= 6; x++) rgba[(y * width + x) * 4 + 3] = 255;
+    }
+
+    expect(findVisibleBounds(rgba, width, height)).toEqual({ minX: 3, minY: 2, maxX: 6, maxY: 7 });
   });
 
   it("usa composicao modular quando o papel do corpo e uma estampa densa", () => {

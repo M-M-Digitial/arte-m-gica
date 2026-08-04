@@ -1,5 +1,5 @@
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-03-r6",
+  version: "alice-market-2026-08-04-r7",
   evidence: {
     aliceThemesReviewed: 30,
     marketLayoutReferencesReviewed: 1,
@@ -8,8 +8,9 @@ export const ALICE_QUALITY_STANDARD = {
   layout: {
     visibleSurfaceTreatmentPct: 100,
     floorBand: { min: 20, target: 25, max: 30 },
-    heroHeight: { min: 55, target: 60, max: 70 },
-    modularElementHeight: { min: 22, target: 32, max: 42 },
+    heroHeight: { min: 62, target: 68, max: 76 },
+    modularElementHeight: { min: 34, target: 40, max: 48 },
+    nameFaceElementHeight: { min: 46, target: 52, max: 58 },
     modularCalmArea: { min: 35, target: 55, max: 70 },
     modularLowerBand: { min: 14, target: 18, max: 22 },
     namePlateWidth: { min: 38, target: 50, max: 58 },
@@ -22,6 +23,7 @@ export const ALICE_QUALITY_STANDARD = {
     skyElementsPerFace: { min: 0, target: 2, max: 3 },
     breathingZones: 1,
     stickerOutlineToFaceHeight: 0.012,
+    stickerMaxWidthToFace: 0.98,
     directTextHaloToFontSize: 0.13,
   },
   score: {
@@ -69,8 +71,8 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
 - ${moldRule} Separe exterior, vazados, cola escondida, superficies visiveis calmas, superficies de destaque e area segura de personalizacao.
 - Trate 100% das superficies visiveis com cor, wash, textura, microestampa ou ilustracao coerente. Fundo claro tratado e espaco de respiro sao acabamento valido; papel branco cru sem intencao e falha.
 - Escolha UM perfil de composicao conforme a referencia e a geometria, sem misturar escalas:
-  CENARIO: mural continuo ou papel coordenado, faixa de chao de 20-30% (alvo 25%) e heroi de 55-70% (alvo 60%).
-  MODULAR: corpo claro tratado com 35-70% de area calma (alvo 55%); fechamento/tampa com estampa mais densa; lateral, fole ou uma face de destaque com microestampa; elementos ativos na faixa inferior com 22-42% da altura (alvo 32%).
+  CENARIO: mural continuo ou papel coordenado, faixa de chao de 20-30% (alvo 25%) e heroi de 62-76% (alvo 68%).
+  MODULAR: corpo claro tratado com 35-70% de area calma (alvo 55%); fechamento/tampa com estampa mais densa; lateral, fole ou uma face de destaque com microestampa; elementos ativos na faixa inferior com 34-48% da altura (alvo 40%).
 - No perfil modular, distribua funcoes entre faces: personagem, nome/idade, titulo visual do tema quando houver e face de estampa/respiro. Nao repita o mesmo bloco em todas as faces.
 - Use 2-4 papeis/cores da mesma familia e evite emendas perceptiveis nas dobras.
 - Maximo de 2-3 elementos de ceu por face, apenas no terco superior; o centro precisa respirar.
