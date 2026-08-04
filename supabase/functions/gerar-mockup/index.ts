@@ -183,51 +183,6 @@ async function reviewMockup(
   }
 }
 
-async function startQualityCorrection(
-  imageBase64: string,
-  review: QualityReview,
-  context: { moldeName: string; nome: string; idade: string; formato: string },
-  OPENAI_API_KEY: string,
-): Promise<string | null> {
-  const size = context.formato === "story" ? "1024x1536" : "1024x1024";
-  const geometry = getProductGeometry(context.moldeName);
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-5.4-mini",
-      background: true,
-      store: true,
-      input: [{
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: `Aprimore esta fotografia de produto sem trocar sua identidade visual. Corrija somente os defeitos apontados pelo curador: ${review.correction_prompt}. Garanta a geometria de ${context.moldeName}: ${geometry}. Preserve exatamente o nome "${context.nome}"${context.idade ? ` e a idade "${context.idade}"` : ""}. Produto inteiro, grande e em foco, acabamento premium, cenário de festa realista, sem texto sobreposto, marca d'água, mãos, linhas técnicas ou deformações.`,
-          },
-          { type: "input_image", image_url: `data:image/png;base64,${imageBase64}` },
-        ],
-      }],
-      tools: [{
-        type: "image_generation",
-        model: "gpt-image-2",
-        size,
-        quality: "high",
-        moderation: "low",
-        action: "edit",
-      }],
-      tool_choice: { type: "image_generation" },
-    }),
-  });
-
-  if (!response.ok) {
-    console.warn("Mockup correction failed to start:", response.status, await response.text().catch(() => ""));
-    return null;
-  }
-  const job = await response.json();
-  return typeof job?.id === "string" ? job.id : null;
-}
-
 async function storeMockup(bytes: Uint8Array) {
   const base64 = `data:image/png;base64,${bytesToBase64(bytes)}`;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -255,12 +210,14 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     idade,
     formato,
     quality: qualityRaw,
-    safeMode,
-    palette,
-    corDominante,
   } = body as Record<string, any>;
 
-  if (!arteImageUrl || !moldeName || !temaNome) {
+  if (
+    typeof arteImageUrl !== "string" ||
+    !/^(https?:|data:image)/.test(arteImageUrl) ||
+    !moldeName ||
+    !temaNome
+  ) {
     return jsonResponse({ error: "Campos obrigatórios: arteImageUrl, moldeName, temaNome" }, 400);
   }
 
@@ -274,28 +231,18 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     .filter(Boolean)
     .join(" e ");
 
-  const paletteValues = [
-    corDominante,
-    ...(Array.isArray(palette) ? palette : Object.values(palette ?? {})),
-  ].filter((value): value is string => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value));
-  const paletteDesc = [...new Set(paletteValues)].slice(0, 6).join(", ");
   const productGeometry = getProductGeometry(String(moldeName));
-
-  const referenciaDesc = safeMode
-    ? `Crie uma identidade visual original inspirada apenas na atmosfera geral do tema, sem reproduzir personagens, logos ou ilustrações licenciadas. Use ornamentos autorais com função visual equivalente e preserve a personalização${paletteDesc ? ` e a paleta ${paletteDesc}` : ""}. A composição deve ter acabamento rico, equilibrado e comercial.`
-    : `A imagem anexa é a arte final aprovada e deve ser aplicada como textura de impressão nas faces do produto. Esta é uma tarefa de composição de mockup, não de redesenho. Preserve a paleta, os padrões, as ilustrações, os ornamentos e a personalização do arquivo fornecido.`;
-
-  const temaDesc = safeMode
-    ? `uma interpretação autoral da atmosfera de "${temaNome}", sem personagens reconhecíveis`
-    : `o tema "${temaNome}"`;
 
   const prompt = `Crie uma fotografia publicitária realista de papelaria personalizada para redes sociais (${formatoDesc}).
 
-PRODUTO PRINCIPAL: ${moldeName} finalizado, montado e pronto para entrega, com ${temaDesc}${personalizacao ? `, com ${personalizacao}` : ""}.
+PRODUTO PRINCIPAL: ${moldeName} finalizado, montado e pronto para entrega, com o tema "${temaNome}"${personalizacao ? `, com ${personalizacao}` : ""}.
 
 REFERÊNCIA OBRIGATÓRIA:
-${referenciaDesc}
-${safeMode ? "Crie a estampa diretamente no produto montado, sem desenho técnico ou planificação." : "Trate a planificação como mapa de superfície."} O nome e a idade devem permanecer legíveis e escritos corretamente.
+- A imagem anexa é a arte final aprovada vinda do acervo do Drive e deve ser reutilizada como textura de impressão do produto.
+- Esta é uma tarefa de montagem de mockup, não de criação ou redesenho de arte.
+- Não crie outra estampa, não redesenhe personagens, não troque ilustrações ou ornamentos e não altere paleta, nome ou idade.
+- Trate a planificação fornecida como mapa de superfície. A IA deve criar somente o volume tridimensional, os materiais, a iluminação e o cenário.
+- O nome e a idade da referência devem permanecer legíveis e escritos exatamente como no arquivo aprovado.
 
 CONSTRUÇÃO DO PRODUTO:
 - Converta o molde planificado no ${moldeName} tridimensional correto, respeitando o padrão real de papelaria personalizada.
@@ -320,10 +267,10 @@ NÃO INCLUIR:
 
   const size = formato === "story" ? "1024x1536" : "1024x1024";
 
-  const content: Array<Record<string, unknown>> = [{ type: "input_text", text: prompt }];
-  if (!safeMode && typeof arteImageUrl === "string" && /^(https?:|data:image)/.test(arteImageUrl)) {
-    content.push({ type: "input_image", image_url: arteImageUrl });
-  }
+  const content: Array<Record<string, unknown>> = [
+    { type: "input_text", text: prompt },
+    { type: "input_image", image_url: arteImageUrl },
+  ];
 
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -339,7 +286,7 @@ NÃO INCLUIR:
         size,
         quality,
         moderation: "low",
-        action: safeMode ? "generate" : "edit",
+        action: "edit",
       }],
       tool_choice: { type: "image_generation" },
     }),
@@ -390,8 +337,8 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     if (isModerationError(errText)) {
       return jsonResponse({
         status: "error",
-        error: "A OpenAI bloqueou este mockup por segurança. Tente outro tema ou nome.",
-        code: "OPENAI_MODERATION_BLOCKED",
+        error: "A API não conseguiu montar o mockup preservando a arte original. Nenhuma arte substituta foi criada.",
+        code: "MOCKUP_SOURCE_PRESERVATION_FAILED",
       });
     }
     return jsonResponse({ status: "error", error: "A IA não conseguiu gerar o mockup. Tente novamente." });
@@ -412,8 +359,8 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     if (imageCallFailed && isImageRefusal(outputText)) {
       return jsonResponse({
         status: "error",
-        error: "A primeira composição foi bloqueada. Preparando uma versão visual compatível.",
-        code: "OPENAI_MODERATION_BLOCKED",
+        error: "A API não conseguiu montar o mockup preservando a arte original. Nenhuma arte substituta foi criada.",
+        code: "MOCKUP_SOURCE_PRESERVATION_FAILED",
       });
     }
     return jsonResponse({ status: "error", error: "A IA não retornou o mockup. Tente novamente." });
@@ -421,7 +368,6 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
 
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   const moldeName = typeof body.moldeName === "string" ? body.moldeName : "";
-  const qualityPass = typeof body.qualityPass === "number" ? body.qualityPass : 0;
   const qualityContext = {
     moldeName,
     nome: typeof body.nome === "string" ? body.nome : "",
@@ -433,26 +379,11 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     ? await reviewMockup(b64, qualityContext, OPENAI_API_KEY)
     : null;
 
-  if (qualityReview && !qualityReview.approved && qualityPass === 0) {
-    const fallback = await storeMockup(bytes);
-    const correctedJobId = await startQualityCorrection(b64, qualityReview, qualityContext, OPENAI_API_KEY);
-    if (correctedJobId) {
-      return jsonResponse({
-        status: "retrying",
-        jobId: correctedJobId,
-        qualityReview,
-        fallback,
-      });
-    }
-    return jsonResponse({ status: "done", ...fallback, qualityReview, qualityCorrected: false });
-  }
-
   const stored = await storeMockup(bytes);
   return jsonResponse({
     status: "done",
     ...stored,
     qualityReview,
-    qualityCorrected: qualityPass > 0,
   });
 }
 

@@ -67,45 +67,25 @@ export async function runImageGenerationJob(
 
   const moldeTemplateUrl = (body as Record<string, unknown>)?.["moldeTemplateUrl"];
   let safeRetried = false;
-  let qualityPass = 0;
-  let qualityFallback: JobMeta | null = null;
   let startedAt = Date.now();
-
-  const finishWithQualityFallback = () => {
-    if (!qualityFallback) return false;
-    handlers.onMeta?.(qualityFallback);
-    const dataUrl = qualityFallback.mockupBase64 ?? qualityFallback.mockupUrl;
-    if (typeof dataUrl === "string" && handlers.onFrame) {
-      handlers.onFrame({ dataUrl, isFinal: true });
-    }
-    return true;
-  };
 
   while (true) {
     if (Date.now() - startedAt > JOB_TIMEOUT_MS) {
-      if (finishWithQualityFallback()) return;
       throw new Error("A geração demorou demais. Tente novamente.");
     }
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
 
     const source = body as Record<string, unknown>;
-    let st: JobMeta;
-    try {
-      st = await callFunction(functionName, {
-        action: "status",
-        jobId,
-        moldeTemplateUrl,
-        moldeName: source.moldeName,
-        temaNome: source.temaNome,
-        nome: source.nome,
-        idade: source.idade,
-        formato: source.formato,
-        qualityPass,
-      });
-    } catch (error) {
-      if (finishWithQualityFallback()) return;
-      throw error;
-    }
+    const st: JobMeta = await callFunction(functionName, {
+      action: "status",
+      jobId,
+      moldeTemplateUrl,
+      moldeName: source.moldeName,
+      temaNome: source.temaNome,
+      nome: source.nome,
+      idade: source.idade,
+      formato: source.formato,
+    });
 
     if (st?.status === "done") {
       handlers.onMeta?.(st);
@@ -116,26 +96,7 @@ export async function runImageGenerationJob(
       return;
     }
 
-    if (st?.status === "retrying" && typeof st.jobId === "string") {
-      qualityPass += 1;
-      jobId = st.jobId;
-      startedAt = Date.now();
-      if (st.fallback?.mockupBase64 || st.fallback?.mockupUrl) {
-        qualityFallback = {
-          ...st.fallback,
-          qualityReview: st.qualityReview,
-          qualityCorrected: false,
-        };
-        const preview = st.fallback.mockupBase64 ?? st.fallback.mockupUrl;
-        if (typeof preview === "string" && handlers.onFrame) {
-          handlers.onFrame({ dataUrl: preview, isFinal: false });
-        }
-      }
-      continue;
-    }
-
     if (st?.status === "error") {
-      if (qualityFallback && finishWithQualityFallback()) return;
       if (st.code === "OPENAI_MODERATION_BLOCKED" && !safeRetried) {
         safeRetried = true;
         const retry = await startJob({ safeMode: true });

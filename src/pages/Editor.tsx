@@ -43,7 +43,6 @@ type MockupFormato = "feed" | "story";
 type MockupQuality = {
   score: number;
   approved: boolean;
-  corrected: boolean;
 };
 
 const isSelectableCharacter = (asset: ClipartOption) => {
@@ -191,12 +190,6 @@ export default function Editor() {
           temaNome: temaSel.name,
           nome: nome.trim(),
           idade: idade.trim() || undefined,
-          palette: paletaAtiva ?? {
-            primary: temaSel.cor || "#D93680",
-            secondary: "#F2A900",
-            background: "#FFFFFF",
-            accent: "#159A9C",
-          },
           formato,
           quality: "high",
         },
@@ -211,7 +204,6 @@ export default function Editor() {
               setMockupQuality({
                 score: meta.qualityReview.score,
                 approved: Boolean(meta.qualityReview.approved),
-                corrected: Boolean(meta.qualityCorrected),
               });
             }
           },
@@ -228,7 +220,7 @@ export default function Editor() {
     } finally {
       setMockupBusy(false);
     }
-  }, [idade, molde, nome, paletaAtiva, temaSel]);
+  }, [idade, molde, nome, temaSel]);
 
   const gerar = useCallback(async (previewOnly = false) => {
     if (!themeSlug || !molde || !nome.trim()) {
@@ -719,7 +711,6 @@ export default function Editor() {
                         {mockupQuality && (
                           <Badge variant="secondary" className="text-[11px]">
                             Curadoria {mockupQuality.approved ? "aprovada" : "revisar"} · {mockupQuality.score}/100
-                            {mockupQuality.corrected ? " · corrigida" : ""}
                           </Badge>
                         )}
                       </div>

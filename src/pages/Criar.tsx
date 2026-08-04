@@ -545,8 +545,6 @@ export default function Criar() {
           temaNome: selectedTema.name,
           nome: nome.trim(),
           idade: idade.trim() || undefined,
-          palette: selectedTema.colors,
-          corDominante: corDominante || undefined,
           formato,
           quality: qualidade,
         },
