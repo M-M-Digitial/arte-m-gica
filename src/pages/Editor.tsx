@@ -68,6 +68,27 @@ const PALETA_PERSONALIZADA: KitPalette = {
   accent: "#159A9C",
 };
 
+const BABY_SHARK_VARIANTS: Record<string, { heroRole: string; palette: KitPalette }> = {
+  "baby-shark-azul": {
+    heroRole: "amigo",
+    palette: {
+      primary: "#1E64B7",
+      secondary: "#58B9E8",
+      background: "#DDF3FF",
+      accent: "#FFD21F",
+    },
+  },
+  "baby-shark-rosa": {
+    heroRole: "amigo2",
+    palette: {
+      primary: "#F23E9D",
+      secondary: "#F78FC4",
+      background: "#FFE2F1",
+      accent: "#FFD21F",
+    },
+  },
+};
+
 // Compositor "padrão Alice": biblioteca de 100 temas + molde vetorial + nome → arte editável na hora.
 export default function Editor() {
   const [themeSlug, setThemeSlug] = useState<string>("");
@@ -106,8 +127,14 @@ export default function Editor() {
         .eq("kind", "clipart");
       // a placa é elemento decorativo (medalhão/plaquinha), não personagem — fora do seletor
       const list = ((data ?? []) as ClipartOption[]).filter(isSelectableCharacter);
+      const preferredRole = BABY_SHARK_VARIANTS[themeSlug]?.heroRole ?? "principal";
       setCliparts(list);
-      setPrincipalUrl(list.find((c) => c.role === "principal")?.url ?? list[0]?.url ?? "");
+      setPrincipalUrl(
+        list.find((c) => c.role === preferredRole)?.url ??
+        list.find((c) => c.role === "principal")?.url ??
+        list[0]?.url ??
+        "",
+      );
     })();
   }, [themeSlug]);
 
@@ -124,19 +151,21 @@ export default function Editor() {
       const nameBySlug = new Map((nomes ?? []).map((t: any) => [t.slug, t.name]));
       const bySlug = new Map<string, TemaCard>();
       for (const a of assets ?? []) {
+        const variant = BABY_SHARK_VARIANTS[a.theme_slug];
         if (!bySlug.has(a.theme_slug)) {
           bySlug.set(a.theme_slug, {
             slug: a.theme_slug,
             name: nameBySlug.get(a.theme_slug) ?? a.theme_slug.replace(/-/g, " "),
             capa: null,
             papel: null,
-            cor: "#E91E90",
+            cor: variant?.palette.background ?? "#E91E90",
           });
         }
         const t = bySlug.get(a.theme_slug)!;
-        if (a.kind === "clipart" && a.role === "principal") t.capa = a.url;
+        const coverRole = variant?.heroRole ?? "principal";
+        if (a.kind === "clipart" && a.role === coverRole) t.capa = a.url;
         if (a.kind === "papel" && a.role === "top") t.papel = a.url;
-        if (a.kind === "fonte" && a.meta?.cor) t.cor = a.meta.cor;
+        if (!variant && a.kind === "fonte" && a.meta?.cor) t.cor = a.meta.cor;
       }
       return [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
@@ -165,10 +194,10 @@ export default function Editor() {
   const temaSel = useMemo(() => (temas ?? []).find((t) => t.slug === themeSlug), [temas, themeSlug]);
   const molde = useMemo(() => (moldes ?? []).find((m: any) => m.id === moldeId), [moldes, moldeId]);
   const paletaAtiva = useMemo<KitPalette | undefined>(() => {
-    if (paletaId === "tema") return undefined;
+    if (paletaId === "tema") return BABY_SHARK_VARIANTS[themeSlug]?.palette;
     if (paletaId === "personalizada") return paletaPersonalizada;
     return PALETAS.find((paleta) => paleta.id === paletaId);
-  }, [paletaId, paletaPersonalizada]);
+  }, [paletaId, paletaPersonalizada, themeSlug]);
 
   const gerarMockup = useCallback(async (sourceSvg: string, formato: MockupFormato = "feed") => {
     if (!molde || !temaSel) return;
@@ -324,7 +353,7 @@ export default function Editor() {
   );
 
   return (
-    <div className="animate-fade-in space-y-6 max-w-4xl">
+    <div className="animate-fade-in w-full max-w-none space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">
@@ -379,40 +408,50 @@ export default function Editor() {
             </div>
           </div>
           {loadingTemas ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
               {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-2xl" />)}
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-              {temasFiltrados.map((t) => (
-                <button
-                  key={t.slug}
-                  onClick={() => { setThemeSlug(t.slug); setEtapa(2); }}
-                  title={t.name}
-                  className={`group relative rounded-2xl overflow-hidden border-2 transition-all text-left ${
-                    themeSlug === t.slug
-                      ? "border-primary shadow-soft scale-[1.02]"
-                      : "border-transparent hover:border-primary/40 hover:-translate-y-0.5"
-                  }`}
-                >
-                  <div className="aspect-square bg-secondary relative">
-                    {t.papel && (
-                      <Thumb src={t.papel} size={320} alt=""
-                        className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                    )}
-                    {t.capa && (
-                      <Thumb src={t.capa} size={320} alt={t.name}
-                        className="absolute inset-0 w-full h-full object-contain p-2 drop-shadow-md group-hover:scale-105 transition-transform" />
-                    )}
-                    {themeSlug === t.slug && (
-                      <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full gradient-hero text-white text-xs flex items-center justify-center shadow">✓</span>
-                    )}
-                  </div>
-                  <div className="px-2 py-1.5 bg-card">
-                    <p className="text-[11px] font-semibold leading-tight truncate">{t.name}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+              {temasFiltrados.map((t) => {
+                const variant = BABY_SHARK_VARIANTS[t.slug];
+                return (
+                  <button
+                    key={t.slug}
+                    onClick={() => { setThemeSlug(t.slug); setEtapa(2); }}
+                    title={t.name}
+                    className={`group relative rounded-2xl overflow-hidden border-2 transition-all text-left ${
+                      themeSlug === t.slug
+                        ? "border-primary shadow-soft scale-[1.02]"
+                        : "border-transparent hover:border-primary/40 hover:-translate-y-0.5"
+                    }`}
+                  >
+                    <div
+                      className="aspect-square bg-secondary relative"
+                      style={variant ? { backgroundColor: variant.palette.background } : undefined}
+                    >
+                      {t.papel && (
+                        <Thumb
+                          src={t.papel}
+                          size={320}
+                          alt=""
+                          className={`absolute inset-0 h-full w-full object-cover ${variant ? "opacity-20" : "opacity-60"}`}
+                        />
+                      )}
+                      {t.capa && (
+                        <Thumb src={t.capa} size={320} alt={t.name}
+                          className="absolute inset-0 w-full h-full object-contain p-2 drop-shadow-md group-hover:scale-105 transition-transform" />
+                      )}
+                      {themeSlug === t.slug && (
+                        <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full gradient-hero text-white text-xs flex items-center justify-center shadow">✓</span>
+                      )}
+                    </div>
+                    <div className="px-2 py-1.5 bg-card">
+                      <p className="text-[11px] font-semibold leading-tight truncate">{t.name}</p>
+                    </div>
+                  </button>
+                );
+              })}
               {temasFiltrados.length === 0 && (
                 <p className="col-span-full text-sm text-muted-foreground py-6 text-center">
                   Nenhum tema encontrado pra "{busca}" 🥺 — tenta outro nome!
@@ -430,7 +469,7 @@ export default function Editor() {
           {loadingMoldes ? (
             <Skeleton className="h-40 rounded-xl" />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">
               {(moldes ?? []).map((m: any) => (
                 <button
                   key={m.id}
