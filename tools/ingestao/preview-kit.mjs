@@ -11,7 +11,7 @@ import { Resvg } from "@resvg/resvg-js";
 
 const [slug, moldeName, outPath, nome = "Valentina", idade = "4", paletaId = "tema"] = process.argv.slice(2);
 const palettes = {
-  vibrante: { primary: "#D93680", secondary: "#F2A900", background: "#FFF2D5", accent: "#159A9C" },
+  vibrante: { primary: "#E6005C", secondary: "#FFD000", background: "#29C7D8", accent: "#35B84A", appearance: "vibrant" },
   pastel: { primary: "#B85C8A", secondary: "#79BFAF", background: "#FFF5F8", accent: "#E7B84B" },
   aventura: { primary: "#245F4F", secondary: "#E4A82B", background: "#E9F5EA", accent: "#C9533F" },
   magica: { primary: "#4D62A8", secondary: "#D77DA5", background: "#ECF3FF", accent: "#E7B93F" },
@@ -161,6 +161,7 @@ const svg = mod.montarSvgKit({
   corIdade: palette?.secondary || fonte?.meta?.cor2 || "#1BA67C",
   corFundo: palette?.background,
   corAcento: palette?.accent,
+  paletteAppearance: palette?.appearance,
   nome, idade,
 });
 

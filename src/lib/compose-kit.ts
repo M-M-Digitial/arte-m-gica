@@ -36,6 +36,7 @@ export interface KitPalette {
   secondary: string;
   background: string;
   accent: string;
+  appearance?: "balanced" | "vibrant";
 }
 
 export interface KitTypography {
@@ -161,6 +162,7 @@ export interface KitDados {
   corIdade: string;
   corFundo?: string;
   corAcento?: string;
+  paletteAppearance?: "balanced" | "vibrant";
   nome: string;
   idade?: string;
 }
@@ -282,6 +284,8 @@ export function montarSvgKit(d: KitDados): string {
   const corFundo = d.corFundo || "#CDEFFB";
   const corAcento = d.corAcento || corNome;
   const paletteTint = Boolean(d.corFundo || d.corAcento);
+  const paletteAppearance = d.paletteAppearance ?? "balanced";
+  const isVibrant = paletteAppearance === "vibrant";
   const qualityStandard = ALICE_QUALITY_STANDARD.layout;
   const family = d.fonteFamily || "sans-serif";
   const familyAttr = escAttr(family);
@@ -380,10 +384,10 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = paletteTint
-      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${estampaDensa ? "0.22" : "0.30"}"/>`
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${isVibrant ? "0.16" : estampaDensa ? "0.22" : "0.30"}"/>`
       : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
     fundoBase = paletteTint
-      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${estampaDensa ? 0.20 : 0.28}"/>`
+      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${isVibrant ? 0.14 : estampaDensa ? 0.20 : 0.28}"/>`
       : `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)"/>`;
   } else {
     const fechamento = paletteTint ? corNome : clarear(corIdade, 0.18);
@@ -395,7 +399,7 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = paletteTint
-      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${estampaDensa ? 0.22 : 0.40}"/>`
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${isVibrant ? 0.14 : estampaDensa ? 0.22 : 0.40}"/>`
       : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
@@ -408,7 +412,14 @@ export function montarSvgKit(d: KitDados): string {
     ? lastBodyFace.x + lastBodyFace.w - firstBodyFace.x
     : W;
   const panoramicScene = panelAssets[0]
-    ? `<image data-theme-scene="panoramic" data-scene-continuity="licensed-panel" href="${panelAssets[0].uri}" xlink:href="${panelAssets[0].uri}" x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" preserveAspectRatio="xMidYMax slice" opacity="0.72"/>`
+    ? `<image data-theme-scene="panoramic" data-scene-continuity="licensed-panel" href="${panelAssets[0].uri}" xlink:href="${panelAssets[0].uri}" x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" preserveAspectRatio="xMidYMax slice" opacity="${isVibrant ? 0.50 : 0.72}"/>`
+    : "";
+  const vibrantColorLayer = isVibrant
+    ? `<g data-vibrant-color-wash="true" data-scene-continuity="party-color-rhythm">
+        <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.10} Q ${bodyRowX + bodyRowW * 0.25} ${bodyTop - avgFaceH * 0.04} ${bodyRowX + bodyRowW * 0.50} ${bodyTop + avgFaceH * 0.11} T ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.10} L ${bodyRowX + bodyRowW} ${bodyTop} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.34"/>
+        <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.30} Q ${bodyRowX + bodyRowW * 0.18} ${bodyBot - avgFaceH * 0.42} ${bodyRowX + bodyRowW * 0.38} ${bodyBot - avgFaceH * 0.27} T ${bodyRowX + bodyRowW * 0.76} ${bodyBot - avgFaceH * 0.29} T ${bodyRowX + bodyRowW} ${bodyBot - avgFaceH * 0.25} L ${bodyRowX + bodyRowW} ${bodyBot} H ${bodyRowX} Z" fill="${corAcento}" fill-opacity="0.30"/>
+        ${big.map((face, index) => `<ellipse cx="${face.cx}" cy="${face.y + face.h * 0.47}" rx="${face.w * 0.41}" ry="${face.h * 0.34}" fill="${index % 2 === 0 ? corIdade : corNome}" fill-opacity="${index % 2 === 0 ? 0.10 : 0.08}"/>`).join("")}
+      </g>`
     : "";
   const sceneFamily = getThemeSceneFamily(d.themeSlug);
   const sceneLayer = (() => {
@@ -488,6 +499,7 @@ export function montarSvgKit(d: KitDados): string {
     : "";
   const closureBands = `<g data-scene-continuity="closure-bands">
       <rect x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${Math.max(5, avgFaceH * 0.025)}" fill="${corIdade}" fill-opacity="0.88"/>
+      ${isVibrant ? `<rect x="${bodyRowX}" y="${bodyTop + Math.max(5, avgFaceH * 0.025)}" width="${bodyRowW}" height="${Math.max(3, avgFaceH * 0.014)}" fill="${corAcento}" fill-opacity="0.92"/>` : ""}
       <rect x="${bodyRowX}" y="${bodyBot - Math.max(5, avgFaceH * 0.025)}" width="${bodyRowW}" height="${Math.max(5, avgFaceH * 0.025)}" fill="${corNome}" fill-opacity="0.78"/>
     </g>`;
 
@@ -516,7 +528,7 @@ export function montarSvgKit(d: KitDados): string {
     const base = Math.min(requestedBase, safeBase);
     const y = Math.max(f.y + f.h * safe.top, base - ah);
     const backdrop = compositionProfile === "modular"
-      ? `<ellipse data-commercial-depth="midground" cx="${cx}" cy="${y + ah * 0.47}" rx="${Math.min(f.w * 0.39, aw * 0.58)}" ry="${Math.min(f.h * 0.37, ah * 0.50)}" fill="${clarear(corAcento, 0.72)}" fill-opacity="0.82" stroke="#FFFFFF" stroke-opacity="0.88" stroke-width="${Math.max(4, f.w * 0.012)}"/>`
+      ? `<ellipse data-commercial-depth="midground" cx="${cx}" cy="${y + ah * 0.47}" rx="${Math.min(f.w * 0.39, aw * 0.58)}" ry="${Math.min(f.h * 0.37, ah * 0.50)}" fill="${clarear(corAcento, isVibrant ? 0.46 : 0.72)}" fill-opacity="${isVibrant ? 0.90 : 0.82}" stroke="#FFFFFF" stroke-opacity="0.88" stroke-width="${Math.max(4, f.w * 0.012)}"/>`
       : "";
     const groundShadow = `<ellipse data-commercial-depth="contact-shadow" cx="${cx}" cy="${Math.min(safeBase, base + f.h * 0.006)}" rx="${Math.min(f.w * 0.32, aw * 0.38)}" ry="${Math.max(f.h * 0.018, ah * 0.025)}" fill="${escurecer(corAcento, 0.42)}" fill-opacity="0.24" filter="url(#softShadow)"/>`;
     const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
@@ -730,6 +742,7 @@ export function montarSvgKit(d: KitDados): string {
   <title>Kit personalizado de ${esc(nome)}</title>
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
+  <metadata id="color-appearance">${paletteAppearance}</metadata>
   <metadata id="printable-face-count">${big.length}</metadata>
   <metadata id="technical-mold-instance-count">1</metadata>
   ${frontFace ? `<metadata id="front-face-index">${big.indexOf(frontFace)}</metadata>` : ""}
@@ -770,6 +783,7 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoBase}
     ${fundoCorpo}
     ${panoramicScene}
+    ${vibrantColorLayer}
     ${sceneLayer}
     ${closureBands}
     ${faixaTema}
@@ -960,6 +974,7 @@ export async function composeKit({ molde, assets, themeSlug, nome, idade, palett
     corIdade: palette?.secondary || fonteTema?.meta?.cor2 || "#1BA67C",
     corFundo: palette?.background,
     corAcento: palette?.accent,
+    paletteAppearance: palette?.appearance,
     nome,
     idade,
   });

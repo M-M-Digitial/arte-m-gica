@@ -314,4 +314,42 @@ describe("composição SVG do kit", () => {
     expect(svg).toMatch(/data-name-plate="true"[^>]*data-face-y="77[78]"/);
     expect(svg.lastIndexOf('data-name-plate="true"')).toBeGreaterThan(svg.lastIndexOf('data-theme-hero="true"'));
   });
+
+  it("aplica uma composicao realmente saturada na paleta vibrante", () => {
+    const faces = Array.from({ length: 4 }, (_, index) => ({
+      x: index * 100,
+      y: 40,
+      w: 100,
+      h: 120,
+      cx: index * 100 + 50,
+      cy: 100,
+      area: 12000,
+    }));
+    const svg = montarSvgKit({
+      moldName: "Caixa Milk",
+      moldSvg: `<svg viewBox="0 0 400 200"><rect x="0" y="0" width="400" height="200"/></svg>`,
+      facesJson: JSON.stringify({ faces }),
+      maskUri: "data:image/png;base64,MASK",
+      papelTopUri: "data:image/png;base64,TOP",
+      papelBodyUri: "data:image/png;base64,BODY",
+      personagens: [{ uri: "data:image/png;base64,HERO", w: 100, h: 100, role: "principal" }],
+      placaUri: null,
+      placaMeta: null,
+      fonteFamily: "sans-serif",
+      fonteUri: null,
+      corNome: "#E6005C",
+      corIdade: "#FFD000",
+      corFundo: "#29C7D8",
+      corAcento: "#35B84A",
+      paletteAppearance: "vibrant",
+      nome: "Lia",
+      idade: "4",
+    });
+
+    expect(svg).toContain('<metadata id="color-appearance">vibrant</metadata>');
+    expect(svg).toContain('data-vibrant-color-wash="true"');
+    expect(svg).toContain('fill="#29C7D8"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.14"');
+    expect(svg).toContain('fill="#35B84A" fill-opacity="0.92"');
+  });
 });

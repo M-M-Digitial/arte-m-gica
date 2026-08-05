@@ -57,7 +57,7 @@ const isSelectableCharacter = (asset: ClipartOption) =>
   isThemeHeroAsset({ ...asset, kind: "clipart" });
 
 const PALETAS: Array<KitPalette & { id: string; label: string }> = [
-  { id: "vibrante", label: "Festa vibrante", primary: "#D93680", secondary: "#F2A900", background: "#FFF2D5", accent: "#159A9C" },
+  { id: "vibrante", label: "Festa bem colorida", primary: "#E6005C", secondary: "#FFD000", background: "#29C7D8", accent: "#35B84A", appearance: "vibrant" },
   { id: "pastel", label: "Pastel delicado", primary: "#B85C8A", secondary: "#79BFAF", background: "#FFF5F8", accent: "#E7B84B" },
   { id: "aventura", label: "Aventura", primary: "#245F4F", secondary: "#E4A82B", background: "#E9F5EA", accent: "#C9533F" },
   { id: "magica", label: "Ceu magico", primary: "#4D62A8", secondary: "#D77DA5", background: "#ECF3FF", accent: "#E7B93F" },
