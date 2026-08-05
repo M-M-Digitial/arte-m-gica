@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useThemeLibrary } from "@/hooks/use-theme-library";
+import { getThemeCoverScale } from "@/lib/theme-palettes";
 
 export default function Temas() {
   const [search, setSearch] = useState("");
@@ -71,6 +72,7 @@ export default function Temas() {
                       src={theme.cover}
                       size={512}
                       alt={theme.name}
+                      minimumScale={getThemeCoverScale(theme.slug)}
                     />
                   </div>
                   <div className="space-y-3 p-3">

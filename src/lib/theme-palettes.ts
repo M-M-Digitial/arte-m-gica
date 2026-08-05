@@ -31,10 +31,18 @@ const THEME_HERO_ROLE_OVERRIDES: Record<string, string> = {
   "baby-shark-rosa": "amigo2",
 };
 
+const THEME_COVER_SCALE_OVERRIDES: Record<string, number> = {
+  "arca-de-noe": 1.65,
+};
+
 export function getDefaultThemePalette(themeSlug: string): ThemePalette | undefined {
   return DEFAULT_THEME_PALETTES[themeSlug];
 }
 
 export function getThemeHeroRole(themeSlug: string): string {
   return THEME_HERO_ROLE_OVERRIDES[themeSlug] ?? "principal";
+}
+
+export function getThemeCoverScale(themeSlug: string): number {
+  return THEME_COVER_SCALE_OVERRIDES[themeSlug] ?? 1;
 }

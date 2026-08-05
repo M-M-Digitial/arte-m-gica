@@ -22,7 +22,7 @@ import { Thumb } from "@/components/Thumb";
 import { ThemeCover } from "@/components/ThemeCover";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { getThemeReadiness, isThemeHeroAsset } from "@/lib/theme-curation";
-import { getDefaultThemePalette, getThemeHeroRole } from "@/lib/theme-palettes";
+import { getDefaultThemePalette, getThemeCoverScale, getThemeHeroRole } from "@/lib/theme-palettes";
 import { useThemeLibrary } from "@/hooks/use-theme-library";
 
 interface ClipartOption {
@@ -402,7 +402,13 @@ export default function Editor() {
                         />
                       )}
                       {t.cover && (
-                        <ThemeCover src={t.cover} size={320} alt={t.name} className="p-2" />
+                        <ThemeCover
+                          src={t.cover}
+                          size={320}
+                          alt={t.name}
+                          className="p-2"
+                          minimumScale={getThemeCoverScale(t.slug)}
+                        />
                       )}
                       {themeSlug === t.slug && (
                         <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full gradient-hero text-white text-xs flex items-center justify-center shadow">✓</span>

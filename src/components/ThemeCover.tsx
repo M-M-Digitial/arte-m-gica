@@ -9,10 +9,11 @@ interface ThemeCoverProps {
   alt: string;
   size?: number;
   className?: string;
+  minimumScale?: number;
 }
 
-export function ThemeCover({ src, alt, size = 512, className = "" }: ThemeCoverProps) {
-  const [scale, setScale] = useState(() => scaleCache.get(src) ?? 1);
+export function ThemeCover({ src, alt, size = 512, className = "", minimumScale = 1 }: ThemeCoverProps) {
+  const [scale, setScale] = useState(() => Math.max(scaleCache.get(src) ?? 1, minimumScale));
 
   const frameVisiblePixels = (event: SyntheticEvent<HTMLImageElement>) => {
     if (scaleCache.has(src)) return;
@@ -25,7 +26,7 @@ export function ThemeCover({ src, alt, size = 512, className = "" }: ThemeCoverP
       context.drawImage(event.currentTarget, 0, 0, 64, 64);
       const nextScale = calculateVisibleCoverScale(context.getImageData(0, 0, 64, 64).data, 64, 64);
       scaleCache.set(src, nextScale);
-      setScale(nextScale);
+      setScale(Math.max(nextScale, minimumScale));
     } catch {
       scaleCache.set(src, 1);
     }
