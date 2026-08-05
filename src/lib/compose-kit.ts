@@ -756,6 +756,9 @@ export function montarSvgKit(d: KitDados): string {
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
   <metadata id="market-research-version">${MARKET_VISUAL_RESEARCH.version}</metadata>
   <metadata id="market-reference-sample-size">${MARKET_VISUAL_RESEARCH.sampleSize}</metadata>
+  <metadata id="google-image-validation-size">${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize}</metadata>
+  <metadata id="shopee-indexed-validation-size">${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeIndexedSampleSize}</metadata>
+  <metadata id="shopee-direct-access">${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeDirectAccess}</metadata>
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
   <metadata id="color-appearance">${paletteAppearance}</metadata>
   <metadata id="printable-face-count">${big.length}</metadata>

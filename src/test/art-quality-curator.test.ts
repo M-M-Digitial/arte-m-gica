@@ -46,12 +46,17 @@ describe("curadoria comercial da arte gerada", () => {
     expect(source).toContain("CRITICA VISUAL DA TENTATIVA ANTERIOR");
   });
 
-  it("usa a auditoria de 236 anuncios sem atribuir dados nao verificados a Shopee", () => {
-    expect(standardSource).toContain('version: "market-ml-2026-08-05-r1"');
+  it("separa a auditoria comercial da validacao visual do Google e da Shopee indexada", () => {
+    expect(standardSource).toContain('version: "market-multi-2026-08-05-r2"');
     expect(standardSource).toContain("sampleSize: 236");
+    expect(standardSource).toContain("generalSampleSize: 200");
+    expect(standardSource).toContain("shopeeIndexedSampleSize: 150");
+    expect(standardSource).toContain("salesVerified: false");
     expect(standardSource).toContain("paletteRecoloredAreaMin: 35");
-    expect(standardSource).toContain("Shopee: login necessario durante a coleta");
+    expect(standardSource).toContain("Shopee direta: login necessario durante a coleta anonima");
     expect(composerSource).toContain('id="market-research-version"');
     expect(composerSource).toContain('id="market-reference-sample-size"');
+    expect(composerSource).toContain('id="google-image-validation-size"');
+    expect(composerSource).toContain('id="shopee-indexed-validation-size"');
   });
 });

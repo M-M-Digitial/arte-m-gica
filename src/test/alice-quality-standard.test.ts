@@ -11,6 +11,7 @@ describe("padrão Alice e mercado", () => {
     expect(ALICE_QUALITY_STANDARD.evidence.aliceLibraryThemesMapped).toBe(100);
     expect(ALICE_QUALITY_STANDARD.evidence.aliceStudioSourcesMapped).toBe(490);
     expect(ALICE_QUALITY_STANDARD.evidence.marketReferencesReviewed).toBeGreaterThanOrEqual(16);
+    expect(ALICE_QUALITY_STANDARD.evidence.marketReferencesReviewed).toBe(586);
     expect(ALICE_QUALITY_STANDARD.layout.floorBand.target).toBe(25);
     expect(ALICE_QUALITY_STANDARD.layout.heroHeight.target).toBe(78);
     expect(ALICE_QUALITY_STANDARD.layout.modularElementHeight.target).toBe(72);
@@ -58,6 +59,8 @@ describe("padrão Alice e mercado", () => {
     expect(prompt).toContain("TESTE DE MINIATURA");
     expect(prompt).toContain("exatamente um lacinho grafico refinado");
     expect(prompt).toContain("nunca cobrir nome, idade, personagem, recorte ou linha tecnica");
+    expect(prompt).toContain("350 referencias visuais adicionais");
+    expect(prompt).toContain("saturacao isolada nunca aprova beleza");
   });
 
   it("fornece uma rubrica de 100 pontos para a curadora", () => {
@@ -77,5 +80,7 @@ describe("padrão Alice e mercado", () => {
     expect(rubric).toContain("exatamente um molde");
     expect(rubric).toContain("sem personagem repartido entre faces");
     expect(rubric).toContain("confete generico usado para simular acabamento");
+    expect(rubric).toContain("resultados da Shopee apenas indexados");
+    expect(rubric).toContain("Nao aprove ou reprove por saturacao isolada");
   });
 });
