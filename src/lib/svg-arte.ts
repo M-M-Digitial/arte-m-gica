@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { baixarArquivoSvg } from "./svg-file";
 
 export interface SvgArteOptions {
   imagem: string;
@@ -96,9 +97,6 @@ async function asDataUri(value: string) {
   });
 }
 
-const safeFileName = (value: string) =>
-  value.replace(/[<>:"/\\|?*\u0000-\u001F]+/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-");
-
 // SVG híbrido — a arte é uma imagem incorporada e as linhas de corte/dobra
 // continuam vetoriais para manter escala perfeita na impressão e edição no Canva.
 export async function baixarSvgDaArte(opts: SvgArteOptions): Promise<void> {
@@ -114,15 +112,7 @@ export async function baixarSvgDaArte(opts: SvgArteOptions): Promise<void> {
     }
 
     const svg = montarSvgHibrido({ ...opts, imagem, moldeSvg });
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${safeFileName(opts.nomeArquivo)}.svg`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    baixarArquivoSvg(opts.nomeArquivo, svg);
   } catch (error) {
     console.error("Erro ao montar SVG:", error);
     toast.error("Erro ao montar o SVG.");

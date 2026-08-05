@@ -13,11 +13,11 @@ import { toast } from "sonner";
 import {
   composeKit,
   svgToPngDataUrl,
-  downloadText,
   downloadDataUrl,
   type KitPalette,
   type TemaAsset,
 } from "@/lib/compose-kit";
+import { baixarArquivoSvg } from "@/lib/svg-file";
 import { Thumb } from "@/components/Thumb";
 import { ThemeCover } from "@/components/ThemeCover";
 import { runImageGenerationJob } from "@/lib/image-job";
@@ -259,8 +259,7 @@ export default function Editor() {
       if (!previewOnly) {
         toast.success(`Kit ${temaSel?.name} da ${nome.trim()} pronto!`);
         setBusy(false);
-        setResultadoTab("mockup");
-        await gerarMockup(out, "feed");
+        setResultadoTab("arte");
       }
     } catch (e: any) {
       console.error(e);
@@ -270,7 +269,7 @@ export default function Editor() {
         if (requestId === previewRequestRef.current) setPreviewing(false);
       } else setBusy(false);
     }
-  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, fonteAtiva, fonteEscala, temaSel?.name, gerarMockup]);
+  }, [themeSlug, molde, nome, principalUrl, idade, paletaAtiva, fonteAtiva, fonteEscala, temaSel?.name]);
 
   useEffect(() => {
     if (etapa !== 4 || !themeSlug || !molde || !nome.trim()) return;
@@ -281,7 +280,7 @@ export default function Editor() {
     };
   }, [etapa, themeSlug, molde, nome, gerar]);
 
-  const baixarSvg = () => svg && downloadText(`kit-${nome || "arte"}.svg`, svg);
+  const baixarSvg = () => svg && baixarArquivoSvg(`kit-${nome || "arte"}`, svg);
   const baixarPng = async () => {
     if (!svg) return;
     setBusy(true);
@@ -719,7 +718,7 @@ export default function Editor() {
                     resultadoTab === "mockup" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Camera className="h-4 w-4" /> Mockup de divulgação
+                  <Camera className="h-4 w-4" /> Divulgação opcional
                 </button>
               </div>
 
@@ -745,7 +744,7 @@ export default function Editor() {
                   {svg && !busy && (
                     <div className="flex flex-wrap gap-2 items-center">
                       <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
-                        <Download className="h-4 w-4 mr-1.5" /> SVG editável (Canva)
+                        <Download className="h-4 w-4 mr-1.5" /> Baixar SVG importável
                       </Button>
                       <Button onClick={baixarPng} variant="outline" className="rounded-full" size="sm" disabled={busy}>
                         <Download className="h-4 w-4 mr-1.5" /> PNG
@@ -764,14 +763,14 @@ export default function Editor() {
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-base font-semibold text-foreground">Produto montado em uma festa fictícia</h2>
+                        <h2 className="text-base font-semibold text-foreground">Foto de divulgação opcional</h2>
                         {mockupQuality && (
                           <Badge variant="secondary" className="text-[11px]">
                             Curadoria {mockupQuality.approved ? "aprovada" : "revisar"} · {mockupQuality.score}/100
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">Imagem pronta para divulgar o produto nas redes sociais.</p>
+                      <p className="text-xs text-muted-foreground">Produto montado em um cenário coerente com o tema e a idade.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1" aria-label="Formato do mockup">
                       {(["feed", "story"] as const).map((formato) => (
@@ -780,7 +779,7 @@ export default function Editor() {
                           type="button"
                           aria-pressed={mockupFormato === formato}
                           disabled={mockupBusy || !svg}
-                          onClick={() => svg && void gerarMockup(svg, formato)}
+                          onClick={() => setMockupFormato(formato)}
                           className={`h-8 rounded-md px-3 text-xs font-semibold transition-colors disabled:opacity-40 ${
                             mockupFormato === formato ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                           }`}
@@ -821,10 +820,10 @@ export default function Editor() {
                     ) : (
                       <div className="max-w-sm space-y-3 px-6 text-center">
                         <Camera className="mx-auto h-8 w-8 text-primary/70" />
-                        <p className="text-sm text-muted-foreground">{mockupError ?? "O mockup será criado depois da arte."}</p>
+                        <p className="text-sm text-muted-foreground">{mockupError ?? "A arte final já está pronta. Gere a divulgação somente quando precisar."}</p>
                         {svg && (
                           <Button onClick={() => void gerarMockup(svg, mockupFormato)} size="sm" className="rounded-full" disabled={mockupBusy}>
-                            <RefreshCw className="mr-1.5 h-4 w-4" /> Gerar novamente
+                            <Camera className="mr-1.5 h-4 w-4" /> Gerar foto de divulgação
                           </Button>
                         )}
                       </div>

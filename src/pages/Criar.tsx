@@ -1394,7 +1394,7 @@ export default function Criar() {
                         className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Baixar SVG (arquivo da artesã)
+                        Baixar SVG importável
                       </Button>
                       <Button
                         onClick={() => handleDownload(generatedImageBase64, "arte")}
@@ -1430,7 +1430,7 @@ export default function Criar() {
 
                     <div className="space-y-3">
                       <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Mockup para Instagram
+                        Foto de divulgação (opcional)
                       </h3>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
@@ -1438,14 +1438,14 @@ export default function Criar() {
                           className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                         >
                           <ImageIcon className="h-4 w-4 mr-1.5" />
-                          Feed
+                          Criar Feed
                         </Button>
                         <Button
                           onClick={() => handleGenerateMockup("story")}
                           className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
                         >
                           <Camera className="h-4 w-4 mr-1.5" />
-                          Story
+                          Criar Story
                         </Button>
                       </div>
                     </div>

@@ -22,4 +22,13 @@ describe("preservação da arte no mockup", () => {
     expect(source).not.toContain("qualityCorrected");
     expect(source).not.toContain('status: "retrying"');
   });
+
+  it("adapta e revisa o cenário conforme o público final da festa", () => {
+    expect(source).toContain("resolveMockupPersona");
+    expect(source).toContain("Público e linguagem visual obrigatórios");
+    expect(source).toContain("Regra de público");
+    expect(source).toContain("adequação ao público da festa");
+    expect(source).toContain("MOCKUP_QUALITY_REJECTED");
+    expect(source).toContain("Nenhuma versão inadequada foi entregue");
+  });
 });

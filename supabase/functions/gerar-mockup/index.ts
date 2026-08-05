@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { resolveMockupPersona, type PartyAudience } from "../_shared/mockup-persona.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,10 +103,11 @@ function responseOutputText(response: Record<string, any>): string {
 
 async function reviewMockup(
   imageBase64: string,
-  context: { moldeName: string; nome: string; idade: string; formato: string },
+  context: { moldeName: string; temaNome: string; nome: string; idade: string; formato: string; partyAudience?: PartyAudience },
   OPENAI_API_KEY: string,
 ): Promise<QualityReview | null> {
   const geometry = getProductGeometry(context.moldeName);
+  const persona = resolveMockupPersona(context.temaNome, context.idade, context.partyAudience ?? "auto");
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
@@ -114,13 +116,13 @@ async function reviewMockup(
       store: false,
       reasoning: { effort: "low" },
       max_output_tokens: 900,
-      instructions: `Você é o curador final de um estúdio brasileiro de papelaria personalizada. Avalie com rigor de fotografia publicitária profissional. Reprove erros pequenos de geometria, texto, recorte, material, iluminação ou composição. Aprove somente com nota mínima 90 e todos os critérios booleanos verdadeiros.`,
+      instructions: `Você é o curador final de um estúdio brasileiro de papelaria personalizada. Avalie com rigor de fotografia publicitária profissional. Reprove erros pequenos de geometria, texto, recorte, material, iluminação, composição ou adequação ao público da festa. Aprove somente com nota mínima 90 e todos os critérios booleanos verdadeiros.`,
       input: [{
         role: "user",
         content: [
           {
             type: "input_text",
-            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nO produto deve estar inteiro, em foco e ser inequivocamente o elemento principal. A maior dimensão visível do produto deve ocupar aproximadamente 65% a 90% do quadro, com margem suficiente para não cortar nenhuma parte; avalie a proporção conforme a geometria, sem exigir que produtos altos e estreitos ocupem a mesma área de produtos largos. O cenário deve parecer uma festa real e elegante, sem linhas técnicas, textos sobrepostos, marcas d'água, mãos ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
+            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nTema: ${context.temaNome}.\nPúblico obrigatório: ${persona.label}.\nRegra de público: ${persona.reviewRule}\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nO produto deve estar inteiro, em foco e ser inequivocamente o elemento principal. A maior dimensão visível do produto deve ocupar aproximadamente 65% a 90% do quadro, com margem suficiente para não cortar nenhuma parte; avalie a proporção conforme a geometria, sem exigir que produtos altos e estreitos ocupem a mesma área de produtos largos. O cenário deve parecer uma festa real, sem linhas técnicas, textos sobrepostos, marcas d'água, mãos ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
           },
           { type: "input_image", image_url: `data:image/png;base64,${imageBase64}`, detail: "high" },
         ],
@@ -208,6 +210,8 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     formato,
     quality: qualityRaw,
     safeMode,
+    partyAudience,
+    qualityRetry,
   } = body as Record<string, any>;
 
   if (
@@ -230,6 +234,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     .join(" e ");
 
   const productGeometry = getProductGeometry(String(moldeName));
+  const persona = resolveMockupPersona(String(temaNome), typeof idade === "string" ? idade : "", partyAudience ?? "auto");
 
   const themeDescription = safeMode
     ? "com a identidade visual exata da imagem anexa"
@@ -237,6 +242,9 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
   const safeModeRule = safeMode
     ? "- Nao identifique, descreva ou recrie personagens da referencia. Preserve os pixels da arte anexa e limite a geracao ao volume de papel, iluminacao e cenario generico coordenado."
     : "- Preserve todos os personagens e elementos tematicos exatamente como aparecem na referencia.";
+  const qualityRetryRule = qualityRetry
+    ? `- Esta é uma segunda tentativa porque a curadoria rejeitou o cenário anterior. Priorize rigorosamente a linguagem de ${persona.label}, aumente os sinais visuais de festa e elimine qualquer elemento proibido para esse público.`
+    : "";
 
   const prompt = `Crie uma fotografia publicitária realista de papelaria personalizada para redes sociais (${formatoDesc}).
 
@@ -249,6 +257,7 @@ REFERÊNCIA OBRIGATÓRIA:
 - Trate a planificação fornecida como mapa de superfície. A IA deve criar somente o volume tridimensional, os materiais, a iluminação e o cenário.
 - O nome e a idade da referência devem permanecer legíveis e escritos exatamente como no arquivo aprovado.
 ${safeModeRule}
+${qualityRetryRule}
 
 CONSTRUÇÃO DO PRODUTO:
 - Converta o molde planificado no ${moldeName} tridimensional correto, respeitando o padrão real de papelaria personalizada.
@@ -259,7 +268,10 @@ CONSTRUÇÃO DO PRODUTO:
 - O produto deve ser o ponto de maior contraste e nitidez, sem ficar escondido por doces, balões ou outros objetos.
 
 CENÁRIO FICTÍCIO:
-- Monte uma mesa de aniversário elegante e verossímil inspirada no tema, sem reproduzir uma festa existente.
+- Público e linguagem visual obrigatórios: ${persona.label}.
+- ${persona.sceneDirection}
+- ${persona.forbiddenDirection}
+- Monte uma mesa de aniversário verossímil inspirada no tema, sem reproduzir uma festa existente.
 - Use bolo, bandejas, doces, balões e pequenos elementos de decoração coordenados com a paleta da arte.
 - Fundo com profundidade suave e decoração reconhecível; produto principal totalmente em foco.
 - Fotografia editorial premium, iluminação natural difusa, materiais de papel reais, acabamento limpo e sombras coerentes.
@@ -370,20 +382,35 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   const moldeName = typeof body.moldeName === "string" ? body.moldeName : "";
   const qualityContext = {
     moldeName,
+    temaNome: typeof body.temaNome === "string" ? body.temaNome : "",
     nome: typeof body.nome === "string" ? body.nome : "",
     idade: typeof body.idade === "string" ? body.idade : "",
     formato: body.formato === "story" ? "story" : "feed",
+    partyAudience: body.partyAudience === "infantil" || body.partyAudience === "teen" || body.partyAudience === "adulto"
+      ? body.partyAudience
+      : "auto",
   };
 
   const qualityReview = moldeName
     ? await reviewMockup(b64, qualityContext, OPENAI_API_KEY)
     : null;
 
+  if (qualityReview && !qualityReview.approved) {
+    console.warn("Mockup rejeitado pela curadoria:", qualityReview.score, qualityReview.issues.join(" | "));
+    return jsonResponse({
+      status: "error",
+      error: "A foto não atingiu o padrão de cenário, montagem e público da festa. Nenhuma versão inadequada foi entregue.",
+      code: "MOCKUP_QUALITY_REJECTED",
+      qualityReview,
+    });
+  }
+
   const stored = await storeMockup(bytes);
   return jsonResponse({
     status: "done",
     ...stored,
     qualityReview,
+    partyPersona: resolveMockupPersona(qualityContext.temaNome, qualityContext.idade, qualityContext.partyAudience).key,
   });
 }
 
