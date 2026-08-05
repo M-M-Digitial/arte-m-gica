@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -35,7 +35,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "${{ secrets.VPS_PORT || '22' }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          for attempt in 1 2 3 4 5 6; do
+            if timeout 15 ssh-keyscan -p "${{ secrets.VPS_PORT || '22' }}" -H "${{ secrets.VPS_HOST }}" > /tmp/vps_host_key 2>/dev/null; then
+              cat /tmp/vps_host_key >> ~/.ssh/known_hosts
+              break
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "Servidor SSH indisponivel apos 6 tentativas."
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
 
       - name: Deploy dist/ para a raiz (preservando o slug da escola)
         run: |
