@@ -9,8 +9,9 @@ import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { Thumb } from "@/components/Thumb";
-import { baixarSvgDaArte } from "@/lib/svg-arte";
+import { baixarSvgDaArte, criarSvgDaArte } from "@/lib/svg-arte";
 import { baixarFotoDivulgacao, type FormatoDivulgacao } from "@/lib/raster-file";
+import { baixarMoldePdf, baixarMoldePng } from "@/lib/mold-export";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -24,6 +25,7 @@ import {
   Box,
   Palette,
   Type,
+  FileText,
   ArrowRight,
   Zap,
 } from "lucide-react";
@@ -597,6 +599,27 @@ export default function Criar() {
       mockupImageBase64,
       formato,
     );
+  };
+
+  const criarSvgFinal = async () => {
+    if (!generatedImageBase64) throw new Error("A arte final ainda não está pronta.");
+    return criarSvgDaArte({
+      imagem: generatedImageBase64,
+      moldeSvgUrl: (selectedMolde as any)?.svg_url,
+      nomeArquivo: `arte-${nome.trim() || "molde"}`,
+    });
+  };
+
+  const baixarMoldeOpcional = async (formato: "png" | "pdf") => {
+    try {
+      const svg = await criarSvgFinal();
+      const filename = `molde-${selectedTema?.name}-${selectedMolde?.name}-${nome}`;
+      if (formato === "png") await baixarMoldePng(filename, svg);
+      else await baixarMoldePdf(filename, svg);
+    } catch (error) {
+      console.error("Erro ao exportar molde:", error);
+      toast.error("Não foi possível exportar o molde.");
+    }
   };
 
   const handleReset = () => {
@@ -1234,6 +1257,24 @@ export default function Criar() {
                         <Download className="h-4 w-4 mr-2" />
                         Baixar SVG importável
                       </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => void baixarMoldeOpcional("png")}
+                          variant="outline"
+                          className="rounded-full text-xs font-medium h-10"
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1" />
+                          Molde PNG
+                        </Button>
+                        <Button
+                          onClick={() => void baixarMoldeOpcional("pdf")}
+                          variant="outline"
+                          className="rounded-full text-xs font-medium h-10"
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" />
+                          Molde PDF
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="border-t border-border/60" />

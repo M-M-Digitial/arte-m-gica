@@ -20,7 +20,7 @@ const generatorSteps = [
   { number: "01", title: "Escolha o molde", description: "Caixinha, sacolinha, cone e mais", icon: Box },
   { number: "02", title: "Escolha o tema", description: "Safari, unicornio, princesas e datas", icon: Palette },
   { number: "03", title: "Personalize", description: "Nome, idade, cores e estilos", icon: PenTool },
-  { number: "04", title: "Exporte", description: "Molde em SVG e divulgação opcional em PNG ou JPG", icon: Image },
+  { number: "04", title: "Exporte", description: "Molde em SVG, PNG ou PDF e divulgação opcional em PNG ou JPG", icon: Image },
 ];
 
 const schoolSteps = [

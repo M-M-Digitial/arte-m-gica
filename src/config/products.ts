@@ -76,7 +76,7 @@ export const productProfiles: Record<ProductMode, ProductProfile> = {
     headline: "Artes no molde certo,",
     headlineAccent: "prontas para imprimir.",
     description:
-      "Escolha o molde, aplique o tema, personalize nome e detalhes, baixe o molde em SVG e, se precisar, gere a divulgação em PNG ou JPG.",
+      "Escolha o molde, aplique o tema, personalize nome e detalhes, baixe o molde em SVG, PNG ou PDF e, se precisar, gere a divulgação em PNG ou JPG.",
     primaryCta: {
       label: "Gerar molde agora",
       path: "/editor",

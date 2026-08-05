@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Sparkles, Download, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/compose-kit";
 import { baixarArquivoSvg } from "@/lib/svg-file";
 import { baixarFotoDivulgacao, type FormatoDivulgacao } from "@/lib/raster-file";
+import { baixarMoldePdf, baixarMoldePng } from "@/lib/mold-export";
 import { Thumb } from "@/components/Thumb";
 import { ThemeCover } from "@/components/ThemeCover";
 import { runImageGenerationJob } from "@/lib/image-job";
@@ -281,6 +282,18 @@ export default function Editor() {
   }, [etapa, themeSlug, molde, nome, gerar]);
 
   const baixarSvg = () => svg && baixarArquivoSvg(`kit-${nome || "arte"}`, svg);
+  const baixarPng = async () => {
+    if (!svg) return;
+    setBusy(true);
+    try { await baixarMoldePng(`kit-${nome || "arte"}`, svg); }
+    finally { setBusy(false); }
+  };
+  const baixarPdf = async () => {
+    if (!svg) return;
+    setBusy(true);
+    try { await baixarMoldePdf(`kit-${nome || "arte"}`, svg); }
+    finally { setBusy(false); }
+  };
   const baixarMockup = async (formato: FormatoDivulgacao) => {
     const source = mockupImageBase64 ?? mockupImage;
     if (!source) return;
@@ -722,6 +735,12 @@ export default function Editor() {
                     <div className="flex flex-wrap gap-2 items-center">
                       <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
                         <Download className="h-4 w-4 mr-1.5" /> Baixar SVG importável
+                      </Button>
+                      <Button onClick={() => void baixarPng()} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                        <Download className="h-4 w-4 mr-1.5" /> Molde PNG
+                      </Button>
+                      <Button onClick={() => void baixarPdf()} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                        <FileText className="h-4 w-4 mr-1.5" /> Molde PDF
                       </Button>
                       <Button onClick={() => gerar()} variant="ghost" className="rounded-full" size="sm" disabled={busy || mockupBusy}>
                         <RefreshCw className="h-4 w-4 mr-1.5" /> Recompor

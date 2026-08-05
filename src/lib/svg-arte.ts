@@ -99,19 +99,23 @@ async function asDataUri(value: string) {
 
 // SVG híbrido — a arte é uma imagem incorporada e as linhas de corte/dobra
 // continuam vetoriais para manter escala perfeita na impressão e edição no Canva.
+export async function criarSvgDaArte(opts: SvgArteOptions): Promise<string> {
+  const imagem = await asDataUri(opts.imagem);
+  let moldeSvg = opts.moldeSvg ?? null;
+
+  if (!moldeSvg && opts.moldeSvgUrl) {
+    const url = opts.moldeSvgUrl;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("não consegui baixar o molde vetorial");
+    moldeSvg = await response.text();
+  }
+
+  return montarSvgHibrido({ ...opts, imagem, moldeSvg });
+}
+
 export async function baixarSvgDaArte(opts: SvgArteOptions): Promise<void> {
   try {
-    const imagem = await asDataUri(opts.imagem);
-    let moldeSvg = opts.moldeSvg ?? null;
-
-    if (!moldeSvg && opts.moldeSvgUrl) {
-      const url = opts.moldeSvgUrl;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("não consegui baixar o molde vetorial");
-      moldeSvg = await response.text();
-    }
-
-    const svg = montarSvgHibrido({ ...opts, imagem, moldeSvg });
+    const svg = await criarSvgDaArte(opts);
     baixarArquivoSvg(opts.nomeArquivo, svg);
   } catch (error) {
     console.error("Erro ao montar SVG:", error);
