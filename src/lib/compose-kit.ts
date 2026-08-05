@@ -170,12 +170,50 @@ const esc = (s: string) =>
 
 const escAttr = (s: string) => esc(s).replace(/'/g, "&apos;");
 
-// Os moldes gerados pelo pipeline podem conter mais de um path. Manter todas
-// as geometrias evita perder abas, linhas de dobra ou recortes no SVG final.
-const extractMoldGeometry = (moldSvg: string) =>
-  Array.from(moldSvg.matchAll(/<(?:path|line|polyline|polygon|rect|circle|ellipse)\b[^>]*?(?:\/>|>)/gi))
-    .map(([markup]) => markup)
+const technicalGeometrySelector = "path,line,polyline,polygon,rect,circle,ellipse";
+
+// O SVG de origem pode repetir o contorno dentro de defs, máscaras e clipPaths.
+// Essas cópias são auxiliares e não podem reaparecer como um segundo molde.
+export function extractMoldGeometry(moldSvg: string): string {
+  if (typeof DOMParser !== "undefined") {
+    try {
+      const document = new DOMParser().parseFromString(moldSvg, "image/svg+xml");
+      const seen = new Set<string>();
+      return Array.from(document.querySelectorAll(technicalGeometrySelector))
+        .filter((node) => !node.closest("defs,clipPath,mask,symbol"))
+        .map((node) => {
+          const clone = node.cloneNode(true) as Element;
+          clone.removeAttribute("id");
+          clone.removeAttribute("class");
+          for (const attribute of Array.from(clone.attributes)) {
+            if (/^on/i.test(attribute.name) || /href/i.test(attribute.name)) clone.removeAttribute(attribute.name);
+          }
+          return clone.outerHTML;
+        })
+        .filter((markup) => {
+          const key = markup.replace(/\s+/g, " ").trim();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .join("\n");
+    } catch {
+      // Usa a extração textual sanitizada em ambientes sem DOM completo.
+    }
+  }
+
+  const visibleSvg = moldSvg.replace(/<(defs|clipPath|mask|symbol)\b[\s\S]*?<\/\1>/gi, "");
+  const seen = new Set<string>();
+  return Array.from(visibleSvg.matchAll(/<(?:path|line|polyline|polygon|rect|circle|ellipse)\b[^>]*?(?:\/>|>)/gi))
+    .map(([markup]) => markup.replace(/\s(?:id|class)=("[^"]*"|'[^']*')/gi, ""))
+    .filter((markup) => {
+      const key = markup.replace(/\s+/g, " ").trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .join("\n");
+}
 
 // escurece uma cor hex por um fator (0.12 = 12% mais escura) — tons da faixa de chão
 const escurecer = (hex: string, fator: number) => {
@@ -263,7 +301,10 @@ export function montarSvgKit(d: KitDados): string {
   const defaultNameFace = big
     .slice()
     .sort((a, b) => Math.abs(a.cx - W / 2) - Math.abs(b.cx - W / 2))[0];
-  const milkNameFaces = isMilk && big.length >= 4 ? [big[1], big[3]] : [];
+  const hasMilkPanels = isMilk && big.length >= 4;
+  const milkNameFaces = hasMilkPanels ? [big[0], big[big.length - 1]] : [];
+  const frontFace = hasMilkPanels ? big[1] : undefined;
+  const backFace = hasMilkPanels ? big[2] : undefined;
   const nameFace = milkNameFaces[0] ?? defaultNameFace;
   const avgFaceW = big.reduce((s, f) => s + f.w, 0) / big.length;
   const avgFaceH = big.reduce((s, f) => s + f.h, 0) / big.length;
@@ -295,6 +336,34 @@ export function montarSvgKit(d: KitDados): string {
         ...alternateHeroes.slice(0, alternateOffset),
       ]
     : [];
+  const faceRole = (face: Face) => {
+    if (face === frontFace) return "front";
+    if (milkNameFaces.includes(face)) return "side";
+    if (face === backFace) return "back";
+    if (face === nameFace) return "personalization";
+    return "standard";
+  };
+  const milkHeroes = new Map<Face, ClipartDados>();
+  if (hasMilkPanels && orderedHeroes.length) {
+    const heroAt = (index: number) => orderedHeroes[index % orderedHeroes.length];
+    milkHeroes.set(big[0], heroAt(1));
+    milkHeroes.set(big[1], heroAt(0));
+    milkHeroes.set(big[2], heroAt(2));
+    milkHeroes.set(big[big.length - 1], heroAt(3));
+  }
+
+  const safe = qualityStandard.stickerSafeInset;
+  const faceSafeClipPaths = big.map((face, index) => {
+    const x = face.x + face.w * safe.horizontal;
+    const y = face.y + face.h * safe.top;
+    const width = face.w * (1 - safe.horizontal * 2);
+    const height = face.h * (1 - safe.top - safe.bottom);
+    return `<clipPath id="face-safe-${index}"><rect x="${x}" y="${y}" width="${width}" height="${height}"/></clipPath>`;
+  }).join("\n    ");
+  const faceSafeClip = (face: Face) => {
+    const index = big.indexOf(face);
+    return index >= 0 ? ` clip-path="url(#face-safe-${index})"` : "";
+  };
 
   // ---- fundo: papel em ESCALA DE MOTIVO (pattern), não imagem esticada ----
   // o spec fala do MOTIVO interno (~8% da face); cada arquivo de papel já traz
@@ -429,14 +498,14 @@ export function montarSvgKit(d: KitDados): string {
     alturaPct: number,
     espelhar = false,
     baseOverride?: number,
+    widthPct: number = qualityStandard.stickerMaxWidthToFace,
   ) => {
     const ratio = img.w / img.h;
-    const safe = qualityStandard.stickerSafeInset;
     const maxSafeWidth = f.w * (1 - safe.horizontal * 2);
     const maxSafeHeight = f.h * (1 - safe.top - safe.bottom);
     let ah = Math.min(f.h * alturaPct, maxSafeHeight);
     let aw = ah * ratio;
-    const widthLimit = Math.min(maxSafeWidth, f.w * qualityStandard.stickerMaxWidthToFace);
+    const widthLimit = Math.min(maxSafeWidth, f.w * widthPct);
     if (aw > widthLimit) {
       aw = widthLimit;
       ah = aw / ratio;
@@ -451,7 +520,10 @@ export function montarSvgKit(d: KitDados): string {
       : "";
     const groundShadow = `<ellipse data-commercial-depth="contact-shadow" cx="${cx}" cy="${Math.min(safeBase, base + f.h * 0.006)}" rx="${Math.min(f.w * 0.32, aw * 0.38)}" ry="${Math.max(f.h * 0.018, ah * 0.025)}" fill="${escurecer(corAcento, 0.42)}" fill-opacity="0.24" filter="url(#softShadow)"/>`;
     const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
-    const layeredHero = `<g data-commercial-layering="hero">${backdrop}${groundShadow}${imagem}</g>`;
+    const role = faceRole(f);
+    const faceIndex = big.indexOf(f);
+    const priority = role === "front" ? "primary" : role === "side" ? "supporting" : "secondary";
+    const layeredHero = `<g data-commercial-layering="hero" data-face-role="${role}" data-face-index="${faceIndex}" data-visual-priority="${priority}" data-crease-safe="true"${faceSafeClip(f)}>${backdrop}${groundShadow}${imagem}</g>`;
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${layeredHero}</g>` : layeredHero;
   };
 
@@ -505,13 +577,14 @@ export function montarSvgKit(d: KitDados): string {
       aw = ah * ratio;
     }
     const onRight = index % 2 === 0;
+    const safeX = f.w * safe.horizontal;
     const x = onRight
-      ? f.x + f.w - aw - f.w * 0.025
-      : f.x + f.w * 0.025;
+      ? f.x + f.w - aw - safeX
+      : f.x + safeX;
     const y = compact
       ? f.y + f.h * 0.07
       : f.y + f.h - ah * 0.90 - f.h * 0.025;
-    return `<image data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"/>`;
+    return `<image data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-crease-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"${faceSafeClip(f)}/>`;
   };
 
   const plateBlock = (f: Face) => {
@@ -563,7 +636,7 @@ export function montarSvgKit(d: KitDados): string {
       <ellipse cx="0" cy="0" rx="${bowW * 0.105}" ry="${bowH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(2, bowW * 0.018)}"/>
       <path d="M -${bowW * 0.36} -${bowH * 0.15} Q -${bowW * 0.25} -${bowH * 0.31} -${bowW * 0.13} -${bowH * 0.12} M ${bowW * 0.13} -${bowH * 0.12} Q ${bowW * 0.25} -${bowH * 0.31} ${bowW * 0.36} -${bowH * 0.15}" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="${Math.max(2, bowW * 0.014)}" stroke-linecap="round"/>
     </g>`;
-    return `<g data-name-plate="true" data-protected-zone="name" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}">
+    return `<g data-name-plate="true" data-protected-zone="name" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}">
       ${fundoPlaca}
       ${bow}
       <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.08}" paint-order="stroke">${esc(nome)}</text>
@@ -575,10 +648,15 @@ export function montarSvgKit(d: KitDados): string {
   const heroTarget = compositionProfile === "modular"
     ? qualityStandard.modularElementHeight.target / 100
     : qualityStandard.heroHeight.target / 100;
-  const heroHeightFor = (img: ClipartDados) => {
+  const heroHeightFor = (img: ClipartDados, role = "standard") => {
     const ratio = img.h > 0 ? img.w / img.h : 1;
-    return ratio >= 1.1 ? Math.max(heroTarget, 0.86) : Math.max(heroTarget, 0.90);
+    const naturalTarget = ratio >= 1.1 ? Math.max(heroTarget, 0.86) : Math.max(heroTarget, 0.90);
+    if (role === "side") return Math.min(naturalTarget, 0.74);
+    if (role === "back") return Math.min(naturalTarget, 0.82);
+    return naturalTarget;
   };
+  const heroWidthFor = (role: string) => role === "side" ? 0.70 : role === "back" ? 0.82 : 0.94;
+  const heroBaseFor = (face: Face, role: string) => role === "side" ? face.y + face.h * 0.78 : undefined;
   let visualContent = "";
   let protectedNameContent = "";
   if (big.length === 1) {
@@ -599,8 +677,10 @@ export function montarSvgKit(d: KitDados): string {
     const nameParts: string[] = [];
     visualContent = big
       .map((f) => {
+        const role = faceRole(f);
+        const assignedHero = milkHeroes.get(f) ?? nextHero();
         if (milkNameFaces.includes(f) || f === nameFace) {
-          const supportingCharacter = nextHero();
+          const supportingCharacter = assignedHero;
           const ornament = !supportingCharacter && ornamentAssets.length
             ? ornamentBlock(f, ornamentAssets[nameIndex % ornamentAssets.length])
             : "";
@@ -610,16 +690,19 @@ export function montarSvgKit(d: KitDados): string {
                 f,
                 Math.max(
                   qualityStandard.nameFaceElementHeight.target / 100,
-                  heroHeightFor(supportingCharacter),
+                  heroHeightFor(supportingCharacter, role),
                 ),
+                false,
+                heroBaseFor(f, role),
+                heroWidthFor(role),
               )
             : ornament;
           nameIndex++;
           nameParts.push(plateBlock(f));
           return upperArt;
         }
-        const img = nextHero();
-        if (img) return personagemBlock(img, f, heroHeightFor(img));
+        const img = assignedHero;
+        if (img) return personagemBlock(img, f, heroHeightFor(img, role), false, heroBaseFor(f, role), heroWidthFor(role));
         if (!panelUsed && panelAssets[0]) {
           panelUsed = true;
           return panelBlock(f, panelAssets[0]);
@@ -648,9 +731,13 @@ export function montarSvgKit(d: KitDados): string {
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
   <metadata id="printable-face-count">${big.length}</metadata>
+  <metadata id="technical-mold-instance-count">1</metadata>
+  ${frontFace ? `<metadata id="front-face-index">${big.indexOf(frontFace)}</metadata>` : ""}
+  ${milkNameFaces.length ? `<metadata id="side-face-indices">${milkNameFaces.map((face) => big.indexOf(face)).join(",")}</metadata>` : ""}
   <defs>
     ${fontFace}
     ${defsPapel.join("\n    ")}
+    ${faceSafeClipPaths}
     <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${clarear(corFundo, 0.28)}"/><stop offset="1" stop-color="${corFundo}"/>
     </linearGradient>

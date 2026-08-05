@@ -25,6 +25,7 @@ Uma arte tem beleza comercial quando:
 7. Funciona no papel: nada importante corta, dobra, cai em aba escondida ou perde leitura na montagem.
 8. E original: aprende o nivel de qualidade da referencia, mas altera pelo menos tres decisoes estruturais.
 9. Tem continuidade: cada face funciona sozinha, mas fundo, linha de chao e paleta formam uma unica cena quando a caixa e montada.
+10. Respeita os vincos: o cenario pode atravessar dobras, mas personagem, rosto, nome e placa permanecem inteiros dentro de uma unica face.
 
 ## Sistema visual mensuravel
 
@@ -99,6 +100,8 @@ Paleta suave, textura fina, floral ou brilho contido e foco muito claro. Poucos 
 - Arte tecnicamente correta, mas vazia ou generica.
 - Personagem pequeno diante de uma grande area sem funcao.
 - Personagem cortado, espremido ou encostando em dobra.
+- Molde ou camada tecnica duplicada no mesmo arquivo.
+- Perna, orelha, cabeca ou outro fragmento do personagem isolado do outro lado de um vinco.
 - Nome pequeno, errado, sem contraste ou escondido.
 - Mesmo personagem repetido ou apenas espelhado.
 - Fundo de uma cor com tres confetes genericos como unico acabamento.
@@ -116,6 +119,7 @@ Paleta suave, textura fina, floral ou brilho contido e foco muito claro. Poucos 
 - Quatro URLs heroicas distintas sao o alvo comercial para moldes de quatro faces. Com duas ou tres, o tema permanece funcional por repeticao controlada, mas recebe alerta de cobertura incompleta no curador.
 - Assets do mesmo tema precisam compartilhar linguagem visual, acabamento, temperatura de cor e nivel de detalhe.
 - A referencia da Alice define o piso de qualidade e o repertorio autorizado; o compositor deve criar enquadramento, hierarquia e distribuicao novos.
+- Na Caixa Milk de quatro paineis, primeiro e quarto paineis sao laterais com nome; o segundo e a frente com heroi principal maior; o terceiro funciona como verso coordenado.
 
 ## Porta de aprovacao
 

@@ -1,5 +1,5 @@
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-05-r13",
+  version: "alice-market-2026-08-05-r14",
   evidence: {
     aliceThemesReviewed: 30,
     aliceLibraryThemesMapped: 100,
@@ -70,6 +70,7 @@ export const ALICE_QUALITY_STANDARD = {
     printFinish: 5,
   },
   criticalFailures: [
+    "molde, contorno, camada tecnica ou produto duplicado no mesmo arquivo",
     "contorno, linha de corte ou linha de dobra alterados",
     "alca, tampa ou face visivel sem cor, wash, textura ou outro tratamento intencional",
     "furo ou recorte vazado coberto pela arte",
@@ -79,6 +80,8 @@ export const ALICE_QUALITY_STANDARD = {
     "personagem ou texto em aba de cola escondida",
     "arte fora do contorno do molde",
     "personagem principal cortado ou sem margem de seguranca",
+    "personagem repartido por um vinco, deixando perna, orelha ou outro fragmento isolado na face adjacente",
+    "Caixa Milk com personalizacao na frente ou no verso, ou sem personagem principal maior na face frontal",
     "composicao plana que parece colagem aleatoria de adesivos",
     "face do nome vazia ou composta apenas por placa e ornamento pequeno",
     "sequencia esparsa de personagens isolados sem cenario, primeiro plano ou continuidade entre faces",
@@ -107,7 +110,7 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
     : "Classifique primeiro as zonas funcionais do molde.";
   const isMilk = normalizeForRule(context.moldName).includes("caixa milk");
   const personalizationRule = isMilk
-    ? "REGRA CAIXA MILK: coloque nome e idade em duas faces laterais alternadas, na parte inferior da area visivel do corpo. Use placa de 54-72% da largura da face e fonte delicada e menor. Personagem ou elemento tematico pode ocupar a parte superior, sem atravessar nem ficar atras do texto. Nunca posicione a personalizacao nas abas superiores, telhado, fundo, cola ou area escondida depois da montagem."
+    ? "REGRA CAIXA MILK: no molde de quatro paineis, classifique o primeiro e o quarto paineis como laterais, o segundo como frente e o terceiro como verso. Coloque nome e idade nas duas laterais externas, na parte inferior da area visivel do corpo; nunca na frente ou no verso. Use placa de 54-72% da largura da face e fonte delicada e menor. A frente recebe o personagem principal, maior e mais vistoso; laterais e verso usam coadjuvantes menores. Personagem lateral pode ocupar a parte superior, sem atravessar nem ficar atras do texto. Nunca posicione a personalizacao nas abas superiores, telhado, fundo, cola ou area escondida depois da montagem."
     : "REGRA GLOBAL DE PERSONALIZACAO: reserve a faixa inferior de uma face visivel sem personagem atras ou atravessando o texto; arte menor pode ocupar a parte superior. Use 68-82% da largura da face (alvo 76%) e tipografia proporcional. Em fundo calmo, prefira lettering com halo; em fundo movimentado, use placa solida simples ou a placa propria do tema.";
 
   return `PADRAO ALICE + MERCADO (obrigatorio):
@@ -122,6 +125,7 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
 - HIERARQUIA: use um unico foco dominante por face; personagem principal > nome > personagem secundario/cenario > microdetalhes. Heroi com 68-90% da altura util. Coadjuvante com 32-58% da escala do heroi. Nunca deixe todos os elementos do mesmo tamanho.
 - PROFUNDIDADE EM TRES PLANOS: fundo (cor, textura ou paisagem), meio (moldura, vegetacao, arquitetura, nuvem ou elemento tematico) e frente (personagem, placa ou aplique). Use pelo menos uma sobreposicao intencional e sombra de contato suave; nao espalhe PNGs como adesivos soltos.
 - CENA CONTINUA ENTRE FACES: trate a fileira principal como uma unica narrativa visual. Repita horizonte, faixa de chao, folhagem, rosas, ondas, nuvens ou arquitetura de forma coordenada nas dobras. Cada face recebe personagem ou motivo relevante, mas nao pode parecer um cartao independente colado sobre o mesmo papel.
+- VINCOS SEPARAM ELEMENTOS FOCAIS: cenario e papel podem continuar pelas dobras, mas personagem, rosto, nome, placa, monograma e ornamento focal ficam integralmente dentro de uma unica face e de sua margem segura. Nunca deixe perna, orelha, cabeca ou fragmento isolado do outro lado do vinco.
 - FACE DO NOME TAMBEM E ARTE: mantenha personagem ou cena com 68-84% da altura util atras/acima da placa. A placa entra como primeiro plano no terco inferior; nunca substitua toda a composicao por uma flor pequena, monograma ou espaco vazio.
 - PALETA ARQUITETADA: use 3-5 cores com funcoes claras. Dominante 50-65%, apoio 22-35% e acento 8-15%, mais neutro quando necessario. O acento deve conduzir olhos ao foco e ao nome, nao disputar com eles. Evite mistura suja, excesso de arco-iris e monocromia acidental.
 - RITMO E COMPLEXIDADE: riqueza visual vem de variacao de escala, repeticao controlada, sobreposicao e materiais sugeridos, nao de lotacao uniforme. Na face heroica, mantenha 58-78% de cobertura ativa e 18-35% de respiro. Alterne faces densas e calmas sem deixar nenhuma face esquecida. Proibido usar tres confetes, pontos ou losangos genericos como substituto de cenario e ornamento tematico.
@@ -149,16 +153,16 @@ const normalizeForRule = (value?: string) =>
 export function buildAliceCuratorStandard() {
   const weights = ALICE_QUALITY_STANDARD.score;
   return `RUBRICA DE CURADORIA ALICE + MERCADO:
-- Estrutura tecnica (${weights.technicalStructure}): contorno, corte, dobra, sangria, abas de cola, furos e proporcoes intactos.
+- Estrutura tecnica (${weights.technicalStructure}): existe exatamente um molde; contorno, corte, dobra, sangria, abas de cola, furos e proporcoes ficam intactos, sem camada tecnica duplicada.
 - Tratamento visivel (${weights.visibleCoverage}): todas as faces, tampas e alcas expostas recebem cor, wash, textura ou arte intencional; exterior, furos e cola escondida ficam preservados. Fundo claro tratado nao e falha.
 - Hierarquia focal (${weights.focalHierarchy}): tema, heroi e personalizacao sao reconhecidos em ate 2 segundos na miniatura; existe um foco dominante e variacao clara de escala.
 - Sistema de cor (${weights.colorSystem}): 3-5 cores harmonicas com dominante, apoio, acento e neutro; contraste de leitura forte e ausencia de mistura suja ou arco-iris sem funcao.
 - Profundidade e camadas (${weights.depthLayering}): fundo, meio e frente perceptiveis, com sobreposicao, ancoragem, sombra de contato e continuidade entre faces; nao parece uma colecao plana de PNGs soltos.
 - Narrativa do tema (${weights.themeStorytelling}): personagens, cenario, papeis, icones e acabamento contam a mesma historia e cada face tem papel coordenado.
-- Personalizacao (${weights.personalization}): nome exato, legivel e proporcional, area reservada sem personagem, largura de 68-82% da face, idade com 35-45% do nome e contraste alto. Na Milk, duas faces laterais inferiores usam 54-72%.
+- Personalizacao (${weights.personalization}): nome exato, legivel e proporcional, area reservada sem personagem, largura de 68-82% da face, idade com 35-45% do nome e contraste alto. Na Milk, primeiro e quarto paineis sao laterais com nome; o segundo e a frente e recebe o personagem principal maior.
 - Impacto comercial (${weights.commercialImpact}): a arte chama atencao em miniatura, parece produto premium pronto para venda e oferece detalhes que recompensam a aproximacao sem ficar caotica.
 - Originalidade (${weights.originality}): a referencia orienta estilo e qualidade, mas o resultado muda pelo menos tres decisoes estruturais e nao repete fundo, bordas, ordem das faces ou enquadramento de um kit pronto.
-- Acabamento para impressao (${weights.printFinish}): nitidez, ausencia de artefatos/texto indevido, recortes seguros, linhas tecnicas limpas e lacinho grafico vetorial bem integrado a cada placa de nome, sem colisao.
+- Acabamento para impressao (${weights.printFinish}): nitidez, ausencia de artefatos/texto indevido, recortes seguros entre vincos, linhas tecnicas limpas e unicas, sem personagem repartido entre faces, e lacinho grafico vetorial bem integrado a cada placa de nome, sem colisao.
 - Variedade visual: personagens e poses distintos sao usados antes de qualquer repeticao. Repetir ou apenas espelhar o mesmo recorte em faces diferentes reduz a nota; havendo poucos assets, prefira um elemento tematico coordenado. Reprove face do nome vazia, personagem pequeno sobre papel repetido ou confete generico usado para simular acabamento.
 
 PORTAS CRITICAS: ${ALICE_QUALITY_STANDARD.criticalFailures.join("; ")}.

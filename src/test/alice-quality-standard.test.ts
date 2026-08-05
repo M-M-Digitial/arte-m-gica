@@ -30,7 +30,9 @@ describe("padrão Alice e mercado", () => {
 
   it("aplica a orientacao gravada para a Caixa Milk", () => {
     const prompt = buildAliceGenerationStandard({ moldName: "Caixa Milk", name: "Flora", age: "3" });
-    expect(prompt).toContain("duas faces laterais alternadas");
+    expect(prompt).toContain("primeiro e o quarto paineis como laterais");
+    expect(prompt).toContain("segundo como frente");
+    expect(prompt).toContain("A frente recebe o personagem principal, maior e mais vistoso");
     expect(prompt).toContain("parte inferior da area visivel");
     expect(prompt).toContain("fonte delicada e menor");
     expect(prompt).toContain("nao deixe uma segunda face inteira vazia");
@@ -49,6 +51,8 @@ describe("padrão Alice e mercado", () => {
     expect(prompt).toContain("DIRECAO DE ARTE COMERCIAL");
     expect(prompt).toContain("PROFUNDIDADE EM TRES PLANOS");
     expect(prompt).toContain("CENA CONTINUA ENTRE FACES");
+    expect(prompt).toContain("VINCOS SEPARAM ELEMENTOS FOCAIS");
+    expect(prompt).toContain("fragmento isolado do outro lado do vinco");
     expect(prompt).toContain("FACE DO NOME TAMBEM E ARTE");
     expect(prompt).toContain("Proibido usar tres confetes");
     expect(prompt).toContain("TESTE DE MINIATURA");
@@ -70,6 +74,8 @@ describe("padrão Alice e mercado", () => {
     expect(rubric).toContain("simples, plana ou generica");
     expect(rubric).toContain("lacinho grafico vetorial bem integrado");
     expect(rubric).toContain("continuidade entre faces");
+    expect(rubric).toContain("exatamente um molde");
+    expect(rubric).toContain("sem personagem repartido entre faces");
     expect(rubric).toContain("confete generico usado para simular acabamento");
   });
 });

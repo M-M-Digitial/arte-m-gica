@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { classifyClipartUsage, findVisibleBounds, montarSvgKit } from "./compose-kit";
+import { classifyClipartUsage, extractMoldGeometry, findVisibleBounds, montarSvgKit } from "./compose-kit";
 
 describe("composição SVG do kit", () => {
   it("preserva todas as linhas do molde e uma máscara por alpha", () => {
+    const moldSvg = `<svg viewBox="0 0 100 80"><defs><clipPath id="duplicate"><path d="M0 0 H100"/></clipPath></defs><path d="M0 0 H100"/><path d="M0 80 H100" stroke-dasharray="4 3"/></svg>`;
     const svg = montarSvgKit({
-      moldSvg: `<svg viewBox="0 0 100 80"><path d="M0 0 H100"/><path d="M0 80 H100" stroke-dasharray="4 3"/></svg>`,
+      moldSvg,
       facesJson: JSON.stringify({ faces: [{ x: 0, y: 0, w: 100, h: 80, cx: 50, cy: 40, area: 8000 }] }),
       maskUri: "data:image/png;base64,AAAA",
       papelTopUri: null,
@@ -34,6 +35,9 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain("M0 0 H100");
     expect(svg).toContain("M0 80 H100");
     expect(svg).toContain('stroke-dasharray="4 3"');
+    expect(extractMoldGeometry(moldSvg).match(/d="M0 0 H100"/g)).toHaveLength(1);
+    expect(svg.match(/id="molde-tecnico"/g)).toHaveLength(1);
+    expect(svg).toContain('<metadata id="technical-mold-instance-count">1</metadata>');
   });
 
   it("aplica a paleta como base visivel sem perder a textura do tema", () => {
@@ -157,6 +161,12 @@ describe("composição SVG do kit", () => {
 
     expect(svg.match(/>Flora<\/text>/g)).toHaveLength(2);
     expect(svg.match(/data-name-plate="true"/g)).toHaveLength(2);
+    expect(Array.from(svg.matchAll(/data-name-plate="true"[^>]*data-face-x="([^"]+)"/g), (match) => match[1])).toEqual(["0", "300"]);
+    expect(svg).toContain('<metadata id="front-face-index">1</metadata>');
+    expect(svg).toContain('<metadata id="side-face-indices">0,3</metadata>');
+    expect(svg.match(/data-face-role="front"/g)).toHaveLength(1);
+    expect(svg.match(/data-face-role="side"/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(svg).toContain('data-visual-priority="primary" data-crease-safe="true"');
     expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(4);
     expect(svg.match(/data-theme-monogram="true"/g)).toBeNull();
     expect(svg).toContain('width="64"');
