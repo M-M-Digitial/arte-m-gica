@@ -45,4 +45,12 @@ describe("preservação da arte no mockup", () => {
     expect(source).toContain("40% a 65% do quadro");
     expect(source).not.toContain("65% a 88% do quadro");
   });
+
+  it("exige laço físico premium sem cobrir a personalização", () => {
+    expect(source).toContain("exatamente um laço físico bem-feito de fita de cetim ou gorgurão");
+    expect(source).toContain("duas alças simétricas, nó central definido, caudas curtas");
+    expect(source).toContain("sem cobrir nome, idade, personagem, abertura, recorte ou estrutura");
+    expect(source).toContain("bow_finish_ok");
+    expect(source).toContain("se faltar o laço físico na unidade principal");
+  });
 });

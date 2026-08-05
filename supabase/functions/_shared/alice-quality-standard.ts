@@ -1,5 +1,5 @@
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-05-r11",
+  version: "alice-market-2026-08-05-r12",
   evidence: {
     aliceThemesReviewed: 30,
     aliceLibraryThemesMapped: 100,
@@ -36,6 +36,11 @@ export const ALICE_QUALITY_STANDARD = {
     directTextHaloToFontSize: 0.08,
     printableFacesOnly: true,
     protectedNameLayer: true,
+    premiumBow: {
+      countPerNamePlate: 1,
+      widthToPlate: { min: 22, target: 28, max: 34 },
+      maximumPlateOverlap: 24,
+    },
   },
   commercialArt: {
     thumbnailReadSeconds: 2,
@@ -70,6 +75,7 @@ export const ALICE_QUALITY_STANDARD = {
     "furo ou recorte vazado coberto pela arte",
     "nome incorreto, ilegivel ou fora da area segura",
     "personagem, monograma ou ornamento sobrepondo a personalizacao",
+    "laco cobrindo nome, idade, personagem, recorte ou linha tecnica",
     "personagem ou texto em aba de cola escondida",
     "arte fora do contorno do molde",
     "personagem principal cortado ou sem margem de seguranca",
@@ -114,7 +120,7 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
 - PROFUNDIDADE EM TRES PLANOS: fundo (cor, textura ou paisagem), meio (moldura, vegetacao, arquitetura, nuvem ou elemento tematico) e frente (personagem, placa ou aplique). Use pelo menos uma sobreposicao intencional e sombra de contato suave; nao espalhe PNGs como adesivos soltos.
 - PALETA ARQUITETADA: use 3-5 cores com funcoes claras. Dominante 50-65%, apoio 22-35% e acento 8-15%, mais neutro quando necessario. O acento deve conduzir olhos ao foco e ao nome, nao disputar com eles. Evite mistura suja, excesso de arco-iris e monocromia acidental.
 - RITMO E COMPLEXIDADE: riqueza visual vem de variacao de escala, repeticao controlada, sobreposicao e materiais sugeridos, nao de lotacao uniforme. Na face heroica, mantenha 58-78% de cobertura ativa e 18-35% de respiro. Alterne faces densas e calmas sem deixar nenhuma face esquecida.
-- ACABAMENTO PREMIUM IMPRESSO: use contorno branco de aplique, moldura dupla, recorte especial, faixa coordenada, lacinho grafico ou brilho localizado apenas quando coerentes com o tema e imprimiveis. Nao simule pedraria, cetim ou acetato como se fossem fornecidos fisicamente no SVG plano.
+- ACABAMENTO PREMIUM IMPRESSO: use contorno branco de aplique, moldura dupla, recorte especial, faixa coordenada e brilho localizado apenas quando coerentes com o tema e imprimiveis. Integre exatamente um lacinho grafico refinado a cada plaquinha de personalizacao, com largura de 22-34% da placa (alvo 28%), no topo da moldura e com no maximo 24% de sobreposicao. O laco deve ter volume visual por luz e sombra, mas permanecer vetorial e nunca cobrir nome, idade, personagem, recorte ou linha tecnica. Nao simule pedraria, cetim ou acetato como se fossem fornecidos fisicamente no SVG plano.
 - No perfil modular, distribua funcoes entre faces: personagem, nome/idade, titulo visual do tema quando houver e face de estampa/respiro. Nao repita o mesmo bloco em todas as faces.
 - Use 2-4 papeis/cores da mesma familia e evite emendas perceptiveis nas dobras.
 - Maximo de 2-3 elementos de ceu por face, apenas no terco superior; o centro precisa respirar.
@@ -147,7 +153,7 @@ export function buildAliceCuratorStandard() {
 - Personalizacao (${weights.personalization}): nome exato, legivel e proporcional, area reservada sem personagem, largura de 68-82% da face, idade com 35-45% do nome e contraste alto. Na Milk, duas faces laterais inferiores usam 54-72%.
 - Impacto comercial (${weights.commercialImpact}): a arte chama atencao em miniatura, parece produto premium pronto para venda e oferece detalhes que recompensam a aproximacao sem ficar caotica.
 - Originalidade (${weights.originality}): a referencia orienta estilo e qualidade, mas o resultado muda pelo menos tres decisoes estruturais e nao repete fundo, bordas, ordem das faces ou enquadramento de um kit pronto.
-- Acabamento para impressao (${weights.printFinish}): nitidez, ausencia de artefatos/texto indevido, recortes seguros e linhas tecnicas limpas.
+- Acabamento para impressao (${weights.printFinish}): nitidez, ausencia de artefatos/texto indevido, recortes seguros, linhas tecnicas limpas e lacinho grafico vetorial bem integrado a cada placa de nome, sem colisao.
 - Variedade visual: personagens e poses distintos sao usados antes de qualquer repeticao. Repetir ou apenas espelhar o mesmo recorte em faces diferentes reduz a nota; havendo poucos assets, prefira um elemento tematico coordenado.
 
 PORTAS CRITICAS: ${ALICE_QUALITY_STANDARD.criticalFailures.join("; ")}.

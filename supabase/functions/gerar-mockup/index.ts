@@ -93,6 +93,7 @@ interface QualityReview {
   theme_cohesion_ok: boolean;
   scene_ok: boolean;
   finish_ok: boolean;
+  bow_finish_ok: boolean;
   issues: string[];
   correction_prompt: string;
 }
@@ -127,7 +128,7 @@ async function reviewMockup(
         content: [
           {
             type: "input_text",
-            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nTema: ${context.temaNome}.\nPúblico obrigatório: ${persona.label}.\nRegra de público: ${persona.reviewRule}\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nA imagem precisa mostrar uma mesa de festa completa e chamativa, e não apenas uma foto fechada do produto. Exija simultaneamente: mesa decorada visível; arco ou arranjo volumoso de balões atrás da mesa; bolo temático inteiro e reconhecível; uma lembrancinha principal inteira, nítida e personalizada em primeiro plano; e de três a sete lembrancinhas adicionais organizadas sobre a mesa com a mesma identidade temática. A maior dimensão da lembrancinha principal deve ocupar aproximadamente 40% a 65% do quadro, preservando margem e leitura do cenário. As unidades de apoio podem aparecer menores, mas precisam parecer parte do mesmo kit; não exija leitura de microtexto nelas. O nome e a idade exatos precisam estar legíveis na unidade principal. Reprove se faltar qualquer um dos quatro sinais de festa (mesa, balões, bolo e conjunto de lembrancinhas), se o tema não estiver evidente, ou se houver linhas técnicas, textos sobrepostos, marcas d'água, mãos, cortes ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
+            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nTema: ${context.temaNome}.\nPúblico obrigatório: ${persona.label}.\nRegra de público: ${persona.reviewRule}\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nA imagem precisa mostrar uma mesa de festa completa e chamativa, e não apenas uma foto fechada do produto. Exija simultaneamente: mesa decorada visível; arco ou arranjo volumoso de balões atrás da mesa; bolo temático inteiro e reconhecível; uma lembrancinha principal inteira, nítida e personalizada em primeiro plano; e de três a sete lembrancinhas adicionais organizadas sobre a mesa com a mesma identidade temática. A unidade principal precisa ter exatamente um laço físico de fita de cetim ou gorgurão, coordenado à paleta e preso em posição construtivamente plausível no fechamento, tampa, alça, topo ou gargalo do produto. O laço deve ser simétrico, proporcional, nítido e refinado, sem cobrir nome, idade, personagem, abertura ou estrutura. A maior dimensão da lembrancinha principal deve ocupar aproximadamente 40% a 65% do quadro, preservando margem e leitura do cenário. As unidades de apoio podem aparecer menores, mas precisam parecer parte do mesmo kit; não exija leitura de microtexto nelas. O nome e a idade exatos precisam estar legíveis na unidade principal. Reprove se faltar qualquer um dos quatro sinais de festa (mesa, balões, bolo e conjunto de lembrancinhas), se faltar o laço físico na unidade principal, se o laço estiver deformado ou cobrindo conteúdo, se o tema não estiver evidente, ou se houver linhas técnicas, textos sobrepostos, marcas d'água, mãos, cortes ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
           },
           { type: "input_image", image_url: `data:image/png;base64,${imageBase64}`, detail: "high" },
         ],
@@ -153,6 +154,7 @@ async function reviewMockup(
               theme_cohesion_ok: { type: "boolean" },
               scene_ok: { type: "boolean" },
               finish_ok: { type: "boolean" },
+              bow_finish_ok: { type: "boolean" },
               issues: { type: "array", items: { type: "string" }, maxItems: 8 },
               correction_prompt: { type: "string" },
             },
@@ -169,6 +171,7 @@ async function reviewMockup(
               "theme_cohesion_ok",
               "scene_ok",
               "finish_ok",
+              "bow_finish_ok",
               "issues",
               "correction_prompt",
             ],
@@ -194,7 +197,8 @@ async function reviewMockup(
       && parsed.souvenir_display_ok
       && parsed.theme_cohesion_ok
       && parsed.scene_ok
-      && parsed.finish_ok;
+      && parsed.finish_ok
+      && parsed.bow_finish_ok;
     return {
       ...parsed,
       approved: parsed.approved && parsed.score >= 90 && allCriteria,
@@ -267,7 +271,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     ? "- Nao identifique, descreva ou recrie personagens da referencia. Preserve os pixels da arte anexa e limite a geracao ao volume de papel, iluminacao e cenario generico coordenado."
     : "- Preserve todos os personagens e elementos tematicos exatamente como aparecem na referencia.";
   const qualityRetryRule = qualityRetry
-    ? `- Esta é uma segunda tentativa porque a curadoria rejeitou o cenário anterior. Priorize rigorosamente a linguagem de ${persona.label}; mostre claramente a mesa completa, o arco de balões, o bolo temático e o conjunto de lembrancinhas, e elimine qualquer elemento proibido para esse público.`
+    ? `- Esta é uma segunda tentativa porque a curadoria rejeitou o cenário anterior. Priorize rigorosamente a linguagem de ${persona.label}; mostre claramente a mesa completa, o arco de balões, o bolo temático, o conjunto de lembrancinhas e o laço físico premium na unidade principal, e elimine qualquer elemento proibido para esse público.`
     : "";
 
   const prompt = `Crie uma fotografia publicitária realista de papelaria personalizada para redes sociais (${formatoDesc}).
@@ -288,6 +292,8 @@ CONSTRUÇÃO DO PRODUTO:
 - Geometria obrigatória: ${productGeometry}.
 - Mostre apenas dobras, tampas, abas ou alças que realmente pertençam a esse modelo; não misture estruturas de outros moldes.
 - Aplique cada parte da arte nas faces correspondentes, sem linhas de corte ou vinco visíveis no produto montado.
+- ACABAMENTO COMERCIAL OBRIGATÓRIO: adicione exatamente um laço físico bem-feito de fita de cetim ou gorgurão na unidade principal. Use uma cor de acento presente na arte e prenda o laço em posição plausível para o modelo: fechamento, tampa, alça, topo ou gargalo. Ele deve ter duas alças simétricas, nó central definido, caudas curtas e volume realista, sem parecer impresso, plástico ou deformado.
+- O laço é um acessório físico da montagem e não autoriza redesenhar a estampa. Deve valorizar o produto sem cobrir nome, idade, personagem, abertura, recorte ou estrutura. Nas unidades de apoio, repita o mesmo acabamento de forma discreta e coerente.
 - Mostre uma unidade principal grande, inteira e nítida, em ângulo de três quartos; a maior dimensão do produto deve ocupar cerca de 40% a 65% do quadro, respeitando a proporção real do molde e sem cortes.
 - O produto deve ser o ponto de maior contraste e nitidez, sem ficar escondido por doces, balões ou outros objetos.
 
@@ -408,15 +414,18 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
 
   const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   const moldeName = typeof body.moldeName === "string" ? body.moldeName : "";
+  const partyAudience: PartyAudience = body.partyAudience === "infantil"
+      || body.partyAudience === "teen"
+      || body.partyAudience === "adulto"
+    ? body.partyAudience
+    : "auto";
   const qualityContext = {
     moldeName,
     temaNome: typeof body.temaNome === "string" ? body.temaNome : "",
     nome: typeof body.nome === "string" ? body.nome : "",
     idade: typeof body.idade === "string" ? body.idade : "",
     formato: body.formato === "story" ? "story" : "feed",
-    partyAudience: body.partyAudience === "infantil" || body.partyAudience === "teen" || body.partyAudience === "adulto"
-      ? body.partyAudience
-      : "auto",
+    partyAudience,
   };
 
   const qualityReview = moldeName

@@ -25,6 +25,7 @@ describe("padrão Alice e mercado", () => {
     expect(ALICE_QUALITY_STANDARD.commercialArt.visualLayers.target).toBe(3);
     expect(ALICE_QUALITY_STANDARD.commercialArt.paletteColors.target).toBe(4);
     expect(ALICE_QUALITY_STANDARD.commercialArt.minimumApprovalScore).toBe(86);
+    expect(ALICE_QUALITY_STANDARD.layout.premiumBow.widthToPlate.target).toBe(28);
   });
 
   it("aplica a orientacao gravada para a Caixa Milk", () => {
@@ -48,6 +49,8 @@ describe("padrão Alice e mercado", () => {
     expect(prompt).toContain("DIRECAO DE ARTE COMERCIAL");
     expect(prompt).toContain("PROFUNDIDADE EM TRES PLANOS");
     expect(prompt).toContain("TESTE DE MINIATURA");
+    expect(prompt).toContain("exatamente um lacinho grafico refinado");
+    expect(prompt).toContain("nunca cobrir nome, idade, personagem, recorte ou linha tecnica");
   });
 
   it("fornece uma rubrica de 100 pontos para a curadora", () => {
@@ -62,5 +65,6 @@ describe("padrão Alice e mercado", () => {
     expect(rubric).toContain("personagens e poses distintos");
     expect(rubric).toContain("Qualquer porta critica falha impede APROVADO");
     expect(rubric).toContain("simples, plana ou generica");
+    expect(rubric).toContain("lacinho grafico vetorial bem integrado");
   });
 });

@@ -438,8 +438,20 @@ export function montarSvgKit(d: KitDados): string {
       ? `<text x="${cx}" y="${plY + plH * 0.75}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsIdade}" fill="${corTexto}">${esc(idadeLimpa)} ${/^\d+$/.test(idadeLimpa) ? "anos" : ""}</text>`
       : "";
     const nomeY = plY + plH * (idadeLimpa ? 0.43 : 0.52);
+    const bowW = plW * (qualityStandard.premiumBow.widthToPlate.target / 100);
+    const bowH = bowW * 0.48;
+    const bowCy = plY + plH * 0.07;
+    const bowStroke = escurecer(corAcento, 0.28);
+    const bow = `<g data-premium-bow="true" data-protected-zone="decorative-bow" transform="translate(${cx} ${bowCy})" filter="url(#bowShadow)">
+      <path d="M -${bowW * 0.06} 0 C -${bowW * 0.18} -${bowH * 0.44}, -${bowW * 0.50} -${bowH * 0.50}, -${bowW * 0.47} -${bowH * 0.04} C -${bowW * 0.44} ${bowH * 0.32}, -${bowW * 0.18} ${bowH * 0.25}, -${bowW * 0.06} 0 Z" fill="url(#bowSilk)" stroke="${bowStroke}" stroke-width="${Math.max(2, bowW * 0.018)}"/>
+      <path d="M ${bowW * 0.06} 0 C ${bowW * 0.18} -${bowH * 0.44}, ${bowW * 0.50} -${bowH * 0.50}, ${bowW * 0.47} -${bowH * 0.04} C ${bowW * 0.44} ${bowH * 0.32}, ${bowW * 0.18} ${bowH * 0.25}, ${bowW * 0.06} 0 Z" fill="url(#bowSilk)" stroke="${bowStroke}" stroke-width="${Math.max(2, bowW * 0.018)}"/>
+      <path d="M -${bowW * 0.07} ${bowH * 0.10} L -${bowW * 0.27} ${bowH * 0.58} L -${bowW * 0.10} ${bowH * 0.48} L 0 ${bowH * 0.18} Z M ${bowW * 0.07} ${bowH * 0.10} L ${bowW * 0.27} ${bowH * 0.58} L ${bowW * 0.10} ${bowH * 0.48} L 0 ${bowH * 0.18} Z" fill="${escurecer(corAcento, 0.08)}" stroke="${bowStroke}" stroke-width="${Math.max(2, bowW * 0.014)}"/>
+      <ellipse cx="0" cy="0" rx="${bowW * 0.105}" ry="${bowH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(2, bowW * 0.018)}"/>
+      <path d="M -${bowW * 0.36} -${bowH * 0.15} Q -${bowW * 0.25} -${bowH * 0.31} -${bowW * 0.13} -${bowH * 0.12} M ${bowW * 0.13} -${bowH * 0.12} Q ${bowW * 0.25} -${bowH * 0.31} ${bowW * 0.36} -${bowH * 0.15}" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="${Math.max(2, bowW * 0.014)}" stroke-linecap="round"/>
+    </g>`;
     return `<g data-name-plate="true" data-protected-zone="name" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}">
       ${fundoPlaca}
+      ${bow}
       <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.08}" paint-order="stroke">${esc(nome)}</text>
       ${idadeTxt}
     </g>`;
@@ -539,6 +551,14 @@ export function montarSvgKit(d: KitDados): string {
     <filter id="softShadow" x="-25%" y="-80%" width="150%" height="260%">
       <feGaussianBlur stdDeviation="${Math.max(3, avgFaceH * 0.012)}"/>
     </filter>
+    <filter id="bowShadow" x="-25%" y="-35%" width="150%" height="185%">
+      <feDropShadow dx="0" dy="${Math.max(2, avgFaceH * 0.006)}" stdDeviation="${Math.max(1.5, avgFaceH * 0.004)}" flood-color="#32152A" flood-opacity="0.28"/>
+    </filter>
+    <linearGradient id="bowSilk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${clarear(corAcento, 0.30)}"/>
+      <stop offset="0.48" stop-color="${corAcento}"/>
+      <stop offset="1" stop-color="${escurecer(corAcento, 0.22)}"/>
+    </linearGradient>
     <clipPath id="paperShape" clipPathUnits="userSpaceOnUse">${moldGeometry}</clipPath>
     <mask id="interior" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}" mask-type="alpha" style="mask-type:alpha"><image href="${d.maskUri}" xlink:href="${d.maskUri}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></mask>
   </defs>

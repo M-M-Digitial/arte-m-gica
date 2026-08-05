@@ -68,7 +68,9 @@ Uma arte tem beleza comercial quando:
 
 ### 6. Acabamento premium
 
-- Aplicar de forma seletiva: contorno branco de recorte, moldura dupla, scallop, faixa coordenada, lacinho grafico, brilho localizado, textura de papel ou borda tematica.
+- Aplicar de forma seletiva: contorno branco de recorte, moldura dupla, scallop, faixa coordenada, brilho localizado, textura de papel ou borda tematica.
+- Cada plaquinha de personalizacao recebe um unico lacinho grafico vetorial, com 22-34% da largura da placa e no maximo 24% de sobreposicao. O laco usa luz, sombra e cor de acento, mas nunca invade nome, idade, personagem ou linha tecnica.
+- No mockup montado, a unidade principal recebe um unico laco fisico de cetim ou gorgurao em posicao plausivel para o modelo. A curadoria reprova laco ausente, deformado, desproporcional ou cobrindo a personalizacao.
 - O SVG plano nao pode prometer material fisico inexistente. Cetim, pedraria, acetato e aplique fisico devem ser apresentados como instrucao opcional ou camada imprimivel, nunca como item entregue.
 - Nitidez, bordas limpas, ausencia de texto falso e continuidade nas dobras sao obrigatorias.
 
