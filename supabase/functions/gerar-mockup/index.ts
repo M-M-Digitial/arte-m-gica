@@ -86,6 +86,11 @@ interface QualityReview {
   geometry_ok: boolean;
   personalization_ok: boolean;
   product_prominence_ok: boolean;
+  party_table_ok: boolean;
+  balloon_arch_ok: boolean;
+  themed_cake_ok: boolean;
+  souvenir_display_ok: boolean;
+  theme_cohesion_ok: boolean;
   scene_ok: boolean;
   finish_ok: boolean;
   issues: string[];
@@ -115,14 +120,14 @@ async function reviewMockup(
       model: "gpt-5.4-mini",
       store: false,
       reasoning: { effort: "low" },
-      max_output_tokens: 900,
+      max_output_tokens: 1100,
       instructions: `Você é o curador final de um estúdio brasileiro de papelaria personalizada. Avalie com rigor de fotografia publicitária profissional. Reprove erros pequenos de geometria, texto, recorte, material, iluminação, composição ou adequação ao público da festa. Aprove somente com nota mínima 90 e todos os critérios booleanos verdadeiros.`,
       input: [{
         role: "user",
         content: [
           {
             type: "input_text",
-            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nTema: ${context.temaNome}.\nPúblico obrigatório: ${persona.label}.\nRegra de público: ${persona.reviewRule}\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nO produto deve estar inteiro, em foco e ser inequivocamente o elemento principal. A maior dimensão visível do produto deve ocupar aproximadamente 65% a 90% do quadro, com margem suficiente para não cortar nenhuma parte; avalie a proporção conforme a geometria, sem exigir que produtos altos e estreitos ocupem a mesma área de produtos largos. O cenário deve parecer uma festa real, sem linhas técnicas, textos sobrepostos, marcas d'água, mãos ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
+            text: `Avalie este mockup de divulgação.\nProduto: ${context.moldeName}.\nTema: ${context.temaNome}.\nPúblico obrigatório: ${persona.label}.\nRegra de público: ${persona.reviewRule}\nGeometria obrigatória: ${geometry}.\nNome exato: ${context.nome || "sem nome"}.\nIdade exata: ${context.idade || "sem idade"}.\nFormato: ${context.formato === "story" ? "vertical 9:16" : "quadrado 1:1"}.\nA imagem precisa mostrar uma mesa de festa completa e chamativa, e não apenas uma foto fechada do produto. Exija simultaneamente: mesa decorada visível; arco ou arranjo volumoso de balões atrás da mesa; bolo temático inteiro e reconhecível; uma lembrancinha principal inteira, nítida e personalizada em primeiro plano; e de três a sete lembrancinhas adicionais organizadas sobre a mesa com a mesma identidade temática. A maior dimensão da lembrancinha principal deve ocupar aproximadamente 40% a 65% do quadro, preservando margem e leitura do cenário. As unidades de apoio podem aparecer menores, mas precisam parecer parte do mesmo kit; não exija leitura de microtexto nelas. O nome e a idade exatos precisam estar legíveis na unidade principal. Reprove se faltar qualquer um dos quatro sinais de festa (mesa, balões, bolo e conjunto de lembrancinhas), se o tema não estiver evidente, ou se houver linhas técnicas, textos sobrepostos, marcas d'água, mãos, cortes ou deformações. Gere um correction_prompt curto e acionável mesmo quando aprovado.`,
           },
           { type: "input_image", image_url: `data:image/png;base64,${imageBase64}`, detail: "high" },
         ],
@@ -141,9 +146,14 @@ async function reviewMockup(
               geometry_ok: { type: "boolean" },
               personalization_ok: { type: "boolean" },
               product_prominence_ok: { type: "boolean" },
+              party_table_ok: { type: "boolean" },
+              balloon_arch_ok: { type: "boolean" },
+              themed_cake_ok: { type: "boolean" },
+              souvenir_display_ok: { type: "boolean" },
+              theme_cohesion_ok: { type: "boolean" },
               scene_ok: { type: "boolean" },
               finish_ok: { type: "boolean" },
-              issues: { type: "array", items: { type: "string" }, maxItems: 6 },
+              issues: { type: "array", items: { type: "string" }, maxItems: 8 },
               correction_prompt: { type: "string" },
             },
             required: [
@@ -152,6 +162,11 @@ async function reviewMockup(
               "geometry_ok",
               "personalization_ok",
               "product_prominence_ok",
+              "party_table_ok",
+              "balloon_arch_ok",
+              "themed_cake_ok",
+              "souvenir_display_ok",
+              "theme_cohesion_ok",
               "scene_ok",
               "finish_ok",
               "issues",
@@ -170,11 +185,20 @@ async function reviewMockup(
 
   try {
     const parsed = JSON.parse(responseOutputText(await response.json())) as QualityReview;
-    const allCriteria = parsed.geometry_ok && parsed.personalization_ok && parsed.product_prominence_ok && parsed.scene_ok && parsed.finish_ok;
+    const allCriteria = parsed.geometry_ok
+      && parsed.personalization_ok
+      && parsed.product_prominence_ok
+      && parsed.party_table_ok
+      && parsed.balloon_arch_ok
+      && parsed.themed_cake_ok
+      && parsed.souvenir_display_ok
+      && parsed.theme_cohesion_ok
+      && parsed.scene_ok
+      && parsed.finish_ok;
     return {
       ...parsed,
       approved: parsed.approved && parsed.score >= 90 && allCriteria,
-      issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 6) : [],
+      issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 8) : [],
     };
   } catch (error) {
     console.warn("Mockup quality review parse failed:", error);
@@ -243,7 +267,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     ? "- Nao identifique, descreva ou recrie personagens da referencia. Preserve os pixels da arte anexa e limite a geracao ao volume de papel, iluminacao e cenario generico coordenado."
     : "- Preserve todos os personagens e elementos tematicos exatamente como aparecem na referencia.";
   const qualityRetryRule = qualityRetry
-    ? `- Esta é uma segunda tentativa porque a curadoria rejeitou o cenário anterior. Priorize rigorosamente a linguagem de ${persona.label}, aumente os sinais visuais de festa e elimine qualquer elemento proibido para esse público.`
+    ? `- Esta é uma segunda tentativa porque a curadoria rejeitou o cenário anterior. Priorize rigorosamente a linguagem de ${persona.label}; mostre claramente a mesa completa, o arco de balões, o bolo temático e o conjunto de lembrancinhas, e elimine qualquer elemento proibido para esse público.`
     : "";
 
   const prompt = `Crie uma fotografia publicitária realista de papelaria personalizada para redes sociais (${formatoDesc}).
@@ -264,24 +288,28 @@ CONSTRUÇÃO DO PRODUTO:
 - Geometria obrigatória: ${productGeometry}.
 - Mostre apenas dobras, tampas, abas ou alças que realmente pertençam a esse modelo; não misture estruturas de outros moldes.
 - Aplique cada parte da arte nas faces correspondentes, sem linhas de corte ou vinco visíveis no produto montado.
-- Mostre uma unidade principal grande, inteira e nítida, em ângulo de três quartos; a maior dimensão do produto deve ocupar cerca de 65% a 88% do quadro, respeitando a proporção real do molde e sem cortes.
+- Mostre uma unidade principal grande, inteira e nítida, em ângulo de três quartos; a maior dimensão do produto deve ocupar cerca de 40% a 65% do quadro, respeitando a proporção real do molde e sem cortes.
 - O produto deve ser o ponto de maior contraste e nitidez, sem ficar escondido por doces, balões ou outros objetos.
 
 CENÁRIO FICTÍCIO:
 - Público e linguagem visual obrigatórios: ${persona.label}.
 - ${persona.sceneDirection}
 - ${persona.forbiddenDirection}
-- Monte uma mesa de aniversário verossímil inspirada no tema, sem reproduzir uma festa existente.
-- Use bolo, bandejas, doces, balões e pequenos elementos de decoração coordenados com a paleta da arte.
+- Enquadre uma mesa principal de aniversário completa e verossímil, ocupando a parte inferior da composição, sem reproduzir uma festa existente.
+- Atrás da mesa, mostre um arco ou arranjo volumoso de balões e um painel temático coordenado; os balões precisam estar claramente visíveis, não apenas desfocados no canto.
+- Posicione um bolo temático inteiro e reconhecível na região central ou traseira da mesa, acompanhado de bandejas e doces coordenados.
+- Monte uma exposição comercial com a unidade principal em primeiro plano e de três a sete lembrancinhas adicionais sobre a mesa. As unidades de apoio devem repetir o mesmo ${moldeName} montado, em escala menor e ângulos variados, com a mesma identidade da arte anexa.
+- Pelo menos três lembrancinhas precisam exibir personagens, cores ou grafismos reconhecíveis do tema; preserve a personalização exata na unidade principal e não invente outros nomes ou idades nas unidades de apoio.
+- Distribua bolo, doces e lembrancinhas em alturas diferentes, com suportes e bandejas, criando abundância organizada e aparência de kit pronto para venda.
 - Fundo com profundidade suave e decoração reconhecível; produto principal totalmente em foco.
 - Fotografia editorial premium, iluminação natural difusa, materiais de papel reais, acabamento limpo e sombras coerentes.
-- Composição pronta para anúncio: margem visual adequada, sem cortar o produto e sem áreas vazias excessivas.
+- Composição pronta para anúncio: leitura imediata de festa, preenchimento visual equilibrado, margem adequada, sem cortar o produto e sem áreas vazias excessivas.
 
 NÃO INCLUIR:
 - textos sobrepostos, legendas, marcas d'água, molduras ou logos;
 - mãos, pessoas em destaque ou objetos cobrindo a caixa;
 - molde aberto/planificado, linhas técnicas, deformações, texto ilegível ou personalização diferente da referência;
-- várias cópias competindo com o produto principal.`;
+- lembrancinhas de apoio maiores, mais nítidas ou mais contrastantes que a unidade principal.`;
 
   const size = formato === "story" ? "1024x1536" : "1024x1024";
 

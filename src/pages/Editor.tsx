@@ -794,7 +794,7 @@ export default function Editor() {
                       <div className="max-w-xs space-y-3 px-6 text-center">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                         <p className="text-sm font-medium text-foreground">Montando a cena da festa…</p>
-                        <p className="text-xs text-muted-foreground">Aplicando a arte na caixa e preparando a fotografia de divulgação.</p>
+                        <p className="text-xs text-muted-foreground">Montando a mesa com bolo, balões e lembrancinhas personalizadas.</p>
                       </div>
                     ) : mockupImage ? (
                       <img src={mockupImage} alt={`Mockup da ${molde?.name} no tema ${temaSel?.name}`} className="h-full w-full object-contain" />

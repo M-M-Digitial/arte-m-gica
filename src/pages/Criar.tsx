@@ -1333,8 +1333,8 @@ export default function Criar() {
           <section className="animate-fade-in">
             {isGeneratingMockup ? (
               <LoadingState
-                title="Criando mockup"
-                subtitle={`${selectedMolde?.name} · ${selectedTema?.name}`}
+                title="Montando a festa"
+                subtitle={`Mesa, bolo, balões e lembrancinhas · ${selectedTema?.name}`}
                 previewSrc={mockupPreview}
                 isFinal={mockupPreviewIsFinal}
               />

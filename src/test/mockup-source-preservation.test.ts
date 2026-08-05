@@ -31,4 +31,18 @@ describe("preservação da arte no mockup", () => {
     expect(source).toContain("MOCKUP_QUALITY_REJECTED");
     expect(source).toContain("Nenhuma versão inadequada foi entregue");
   });
+
+  it("exige uma mesa de festa completa com bolo, balões e conjunto de lembrancinhas", () => {
+    expect(source).toContain("mesa principal de aniversário completa");
+    expect(source).toContain("arco ou arranjo volumoso de balões");
+    expect(source).toContain("bolo temático inteiro e reconhecível");
+    expect(source).toContain("de três a sete lembrancinhas adicionais");
+    expect(source).toContain("party_table_ok");
+    expect(source).toContain("balloon_arch_ok");
+    expect(source).toContain("themed_cake_ok");
+    expect(source).toContain("souvenir_display_ok");
+    expect(source).toContain("theme_cohesion_ok");
+    expect(source).toContain("40% a 65% do quadro");
+    expect(source).not.toContain("65% a 88% do quadro");
+  });
 });
