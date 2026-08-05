@@ -120,8 +120,8 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('fill="url(#papelBody)"');
     expect(svg).toContain('fill="url(#papelBody)" opacity="0.22"');
     expect(svg).toContain("Sofia");
-    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
-    expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(2);
+    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(4);
+    expect(svg.match(/data-theme-monogram="true"/g)).toBeNull();
     expect(svg).toContain('data-name-plate="true"');
   });
 
@@ -157,8 +157,8 @@ describe("composição SVG do kit", () => {
 
     expect(svg.match(/>Flora<\/text>/g)).toHaveLength(2);
     expect(svg.match(/data-name-plate="true"/g)).toHaveLength(2);
-    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
-    expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(1);
+    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(4);
+    expect(svg.match(/data-theme-monogram="true"/g)).toBeNull();
     expect(svg).toContain('width="64"');
   });
 

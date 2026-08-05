@@ -4,10 +4,10 @@ import { getDefaultThemePalette, getThemeCoverScale, getThemeHeroRole } from "./
 describe("default theme palettes", () => {
   it("usa cores infantis coordenadas na Bela e a Fera", () => {
     expect(getDefaultThemePalette("a-bela-e-a-fera")).toEqual({
-      primary: "#2563B8",
-      secondary: "#F2C94C",
-      background: "#FFF0B8",
-      accent: "#F04E7A",
+      primary: "#214A96",
+      secondary: "#F2C84B",
+      background: "#FFF2B8",
+      accent: "#C92F43",
     });
   });
 

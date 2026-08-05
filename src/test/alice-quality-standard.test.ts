@@ -14,7 +14,7 @@ describe("padrão Alice e mercado", () => {
     expect(ALICE_QUALITY_STANDARD.layout.floorBand.target).toBe(25);
     expect(ALICE_QUALITY_STANDARD.layout.heroHeight.target).toBe(78);
     expect(ALICE_QUALITY_STANDARD.layout.modularElementHeight.target).toBe(72);
-    expect(ALICE_QUALITY_STANDARD.layout.nameFaceElementHeight.target).toBe(56);
+    expect(ALICE_QUALITY_STANDARD.layout.nameFaceElementHeight.target).toBe(76);
     expect(ALICE_QUALITY_STANDARD.layout.modularCalmArea.target).toBe(55);
     expect(ALICE_QUALITY_STANDARD.layout.namePlateWidth.target).toBe(76);
     expect(ALICE_QUALITY_STANDARD.layout.milkNamePlateWidth.target).toBe(64);
@@ -48,6 +48,9 @@ describe("padrão Alice e mercado", () => {
     expect(prompt).toContain("MODULAR");
     expect(prompt).toContain("DIRECAO DE ARTE COMERCIAL");
     expect(prompt).toContain("PROFUNDIDADE EM TRES PLANOS");
+    expect(prompt).toContain("CENA CONTINUA ENTRE FACES");
+    expect(prompt).toContain("FACE DO NOME TAMBEM E ARTE");
+    expect(prompt).toContain("Proibido usar tres confetes");
     expect(prompt).toContain("TESTE DE MINIATURA");
     expect(prompt).toContain("exatamente um lacinho grafico refinado");
     expect(prompt).toContain("nunca cobrir nome, idade, personagem, recorte ou linha tecnica");
@@ -66,5 +69,7 @@ describe("padrão Alice e mercado", () => {
     expect(rubric).toContain("Qualquer porta critica falha impede APROVADO");
     expect(rubric).toContain("simples, plana ou generica");
     expect(rubric).toContain("lacinho grafico vetorial bem integrado");
+    expect(rubric).toContain("continuidade entre faces");
+    expect(rubric).toContain("confete generico usado para simular acabamento");
   });
 });

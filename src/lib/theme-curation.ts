@@ -13,7 +13,9 @@ export interface CuratableThemeAsset {
 
 export interface ThemeReadiness {
   ready: boolean;
+  commercialReady: boolean;
   reasons: string[];
+  warnings: string[];
   counts: {
     heroes: number;
     papers: number;
@@ -45,16 +47,20 @@ export function getThemeReadiness(assets: CuratableThemeAsset[]): ThemeReadiness
   );
   const fonts = active.filter((asset) => asset.kind === "fonte");
   const reasons: string[] = [];
+  const warnings: string[] = [];
 
   if (!heroes.some((asset) => asset.role === "principal")) reasons.push("personagem principal ausente");
   if (heroUrls.size < 2) reasons.push("menos de dois personagens distintos");
+  if (heroUrls.size >= 2 && heroUrls.size < 4) warnings.push("menos de quatro personagens distintos para as quatro faces");
   if (!papers.has("top")) reasons.push("papel superior ausente");
   if (!papers.has("body")) reasons.push("papel do corpo ausente");
   if (fonts.length === 0) reasons.push("fonte do tema ausente");
 
   return {
     ready: reasons.length === 0,
+    commercialReady: reasons.length === 0 && warnings.length === 0,
     reasons,
+    warnings,
     counts: { heroes: heroUrls.size, papers: papers.size, fonts: fonts.length },
   };
 }

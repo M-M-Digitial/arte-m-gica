@@ -45,7 +45,7 @@ function themeIssues(assets) {
   const heroes = active.filter(isHero);
   const issues = [];
   if (!heroes.some((asset) => asset.role === "principal")) issues.push("sem principal");
-  if (new Set(heroes.map((asset) => asset.url)).size < 2) issues.push("menos de 2 heróis");
+  if (new Set(heroes.map((asset) => asset.url)).size < 2) issues.push("menos de 2 herois");
   if (!active.some((asset) => asset.kind === "papel" && asset.role === "top")) issues.push("sem papel top");
   if (!active.some((asset) => asset.kind === "papel" && asset.role === "body")) issues.push("sem papel body");
   if (!active.some((asset) => asset.kind === "fonte")) issues.push("sem fonte");
@@ -94,6 +94,12 @@ for (const asset of assets) {
 const incompleteThemes = [...assetsByTheme]
   .map(([slug, list]) => ({ slug, issues: themeIssues(list) }))
   .filter((theme) => theme.issues.length > 0);
+const commercialCoverageWarnings = [...assetsByTheme]
+  .map(([slug, list]) => ({
+    slug,
+    heroes: new Set(list.filter(isHero).map((asset) => asset.url)).size,
+  }))
+  .filter((theme) => theme.heroes >= 2 && theme.heroes < 4);
 const catalogSlugs = new Set(catalog.map((theme) => theme.slug));
 const assetSlugs = new Set(assetsByTheme.keys());
 const catalogWithoutAssets = [...catalogSlugs].filter((slug) => !assetSlugs.has(slug));
@@ -136,7 +142,9 @@ console.log(JSON.stringify({
     catalogThemes: catalog.length,
     readyFiles: readyFiles.length,
     checkedUrls: urls.size,
+    commercialCoverageWarnings: commercialCoverageWarnings.length,
   },
+  warnings: { commercialCoverageWarnings },
   failures,
 }, null, 2));
 

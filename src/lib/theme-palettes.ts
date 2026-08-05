@@ -7,10 +7,10 @@ export interface ThemePalette {
 
 const DEFAULT_THEME_PALETTES: Record<string, ThemePalette> = {
   "a-bela-e-a-fera": {
-    primary: "#2563B8",
-    secondary: "#F2C94C",
-    background: "#FFF0B8",
-    accent: "#F04E7A",
+    primary: "#214A96",
+    secondary: "#F2C84B",
+    background: "#FFF2B8",
+    accent: "#C92F43",
   },
   "baby-shark-azul": {
     primary: "#1E64B7",

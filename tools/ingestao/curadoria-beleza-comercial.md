@@ -24,6 +24,7 @@ Uma arte tem beleza comercial quando:
 6. Valoriza a crianca ou homenageado: nome e idade fazem parte da composicao, nao parecem etiqueta adicionada depois.
 7. Funciona no papel: nada importante corta, dobra, cai em aba escondida ou perde leitura na montagem.
 8. E original: aprende o nivel de qualidade da referencia, mas altera pelo menos tres decisoes estruturais.
+9. Tem continuidade: cada face funciona sozinha, mas fundo, linha de chao e paleta formam uma unica cena quando a caixa e montada.
 
 ## Sistema visual mensuravel
 
@@ -41,6 +42,7 @@ Uma arte tem beleza comercial quando:
 - Pelo menos uma sobreposicao intencional.
 - Personagem recebe ancoragem: sombra de contato, faixa de chao, moldura ou cenario.
 - Proibido o efeito "pasta de adesivos": PNGs isolados, sem relacao de escala, chao ou narrativa.
+- O fundo narrativo atravessa as faces como cenario continuo; placa de nome e ornamento entram sobre essa cena, nunca no lugar dela.
 
 ### 3. Paleta
 
@@ -104,6 +106,16 @@ Paleta suave, textura fina, floral ou brilho contido e foco muito claro. Poucos 
 - Todas as faces igualmente carregadas ou igualmente vazias.
 - PNGs soltos sem chao, moldura, sombra, sobreposicao ou narrativa.
 - Copia perceptivel do fundo, ordem de faces ou enquadramento de um kit Alice.
+- Plaquinha vazia, painel panoramico ou ornamento classificado como personagem para completar artificialmente a cobertura.
+- Menos de quatro personagens ou variacoes coerentes para moldes de quatro faces. Repeticao e aceita apenas como contingencia e nunca pode produzir face vazia.
+
+## Curadoria de assets
+
+- Cada PNG recebe uso explicito: `hero`, `panel`, `ornament` ou `border`.
+- `hero` exige personagem recortado, legivel em miniatura e com alpha limpo; painel, placa e paisagem nunca contam nessa categoria.
+- Quatro URLs heroicas distintas sao o alvo comercial para moldes de quatro faces. Com duas ou tres, o tema permanece funcional por repeticao controlada, mas recebe alerta de cobertura incompleta no curador.
+- Assets do mesmo tema precisam compartilhar linguagem visual, acabamento, temperatura de cor e nivel de detalhe.
+- A referencia da Alice define o piso de qualidade e o repertorio autorizado; o compositor deve criar enquadramento, hierarquia e distribuicao novos.
 
 ## Porta de aprovacao
 

@@ -137,6 +137,7 @@ if (bodyInfo) console.log(`papel body: ${bodyInfo.busy ? "estampa DENSA (vira de
 
 const svg = mod.montarSvgKit({
   moldName: moldeName,
+  themeSlug: slug,
   moldSvg, facesJson,
   maskUri: toDataUri(maskBuf),
   papelTopUri: top?.uri ?? null,

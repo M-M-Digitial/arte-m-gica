@@ -248,6 +248,7 @@ export default function Editor() {
       const out = await composeKit({
         molde: molde as any,
         assets: lista,
+        themeSlug,
         nome: nome.trim(),
         idade: idade.trim() || undefined,
         palette: paletaAtiva,

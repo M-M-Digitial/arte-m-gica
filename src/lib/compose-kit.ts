@@ -47,6 +47,7 @@ export interface KitTypography {
 export interface ComposeInput {
   molde: MoldeCompose;
   assets: TemaAsset[];
+  themeSlug?: string;
   nome: string;
   idade?: string;
   palette?: KitPalette;
@@ -140,6 +141,7 @@ export interface PapelInfo { busy: boolean; corMedia: string }
 
 export interface KitDados {
   moldName?: string;
+  themeSlug?: string;
   moldSvg: string;
   facesJson: string;
   maskUri: string;
@@ -206,6 +208,32 @@ const normalizarId = (value?: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+
+export type ThemeSceneFamily =
+  | "fairytale"
+  | "safari"
+  | "ocean"
+  | "ice"
+  | "space"
+  | "vehicles"
+  | "garden"
+  | "circus"
+  | "heroic"
+  | "generic";
+
+export function getThemeSceneFamily(themeSlug?: string): ThemeSceneFamily {
+  const slug = normalizarId(themeSlug);
+  if (/bela.*fera|princes|sofia|rapunzel|cinderela|branca.*neve|encanto|fada|castelo|barbie/.test(slug)) return "fairytale";
+  if (/safari|floresta|selva|bichinhos|arca.*noe|fazendinha|dinossaur/.test(slug)) return "safari";
+  if (/sereia|moana|fundo.*mar|baby.*shark|oceano|peixe/.test(slug)) return "ocean";
+  if (/era.*gelo|frozen|neve/.test(slug)) return "ice";
+  if (/astronauta|espaco|universo|foguete/.test(slug)) return "space";
+  if (/carro|hot.*wheel|blaze|corrida/.test(slug)) return "vehicles";
+  if (/jardim|floral|borboleta|abelh|unicornio|bosque|moranguinho/.test(slug)) return "garden";
+  if (/circo|arraial|festa.*junina|mundo.*bita/.test(slug)) return "circus";
+  if (/heroi|vingador|batman|aranha|dragon|naruto|minecraft|angry/.test(slug)) return "heroic";
+  return "generic";
+}
 
 // ---------------------------------------------------------------------------
 // LAYOUT PURO — "Padrão Alice": papel na escala certa, personagem grande
@@ -310,10 +338,73 @@ export function montarSvgKit(d: KitDados): string {
   const bodyRowW = firstBodyFace && lastBodyFace
     ? lastBodyFace.x + lastBodyFace.w - firstBodyFace.x
     : W;
+  const panoramicScene = panelAssets[0]
+    ? `<image data-theme-scene="panoramic" data-scene-continuity="licensed-panel" href="${panelAssets[0].uri}" xlink:href="${panelAssets[0].uri}" x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" preserveAspectRatio="xMidYMax slice" opacity="0.72"/>`
+    : "";
+  const sceneFamily = getThemeSceneFamily(d.themeSlug);
+  const sceneLayer = (() => {
+    const top = bodyTop;
+    const height = bodyBot - bodyTop;
+    const bottom = bodyBot;
+    if (sceneFamily === "fairytale") {
+      const arches = big.map((f, index) => {
+        const inset = f.w * 0.11;
+        const archTop = f.y + f.h * (index % 2 === 0 ? 0.16 : 0.12);
+        const shoulder = f.y + f.h * 0.43;
+        return `<path d="M ${f.x + inset} ${bottom} L ${f.x + inset} ${shoulder} A ${f.w * 0.39} ${f.h * 0.31} 0 0 1 ${f.x + f.w - inset} ${shoulder} L ${f.x + f.w - inset} ${bottom} Z" fill="#FFFDF5" fill-opacity="0.13" stroke="${corNome}" stroke-opacity="0.16" stroke-width="${Math.max(3, f.w * 0.012)}"/>
+          <path d="M ${f.cx} ${archTop} V ${bottom - f.h * 0.18}" stroke="${corIdade}" stroke-opacity="0.16" stroke-width="${Math.max(2, f.w * 0.008)}"/>`;
+      }).join("");
+      return `<g data-scene-continuity="true" data-scene-template="fairytale-ballroom">
+        <rect x="${bodyRowX}" y="${top}" width="${bodyRowW}" height="${height}" fill="${corIdade}" fill-opacity="0.055"/>
+        ${arches}
+        <path d="M ${bodyRowX} ${bottom - height * 0.16} H ${bodyRowX + bodyRowW}" stroke="${corNome}" stroke-opacity="0.17" stroke-width="${Math.max(4, avgFaceH * 0.018)}"/>
+      </g>`;
+    }
+    if (sceneFamily === "safari") {
+      const trees = big.filter((_, index) => index % 2 === 0).map((f) => `<g fill="${corNome}" fill-opacity="0.10">
+        <path d="M ${f.x + f.w * 0.17} ${bottom - height * 0.17} L ${f.x + f.w * 0.20} ${top + height * 0.43} L ${f.x + f.w * 0.23} ${bottom - height * 0.17} Z"/>
+        <ellipse cx="${f.x + f.w * 0.20}" cy="${top + height * 0.40}" rx="${f.w * 0.23}" ry="${height * 0.075}"/>
+      </g>`).join("");
+      return `<g data-scene-continuity="true" data-scene-template="savanna">
+        <path d="M ${bodyRowX} ${top + height * 0.62} C ${bodyRowX + bodyRowW * 0.18} ${top + height * 0.48}, ${bodyRowX + bodyRowW * 0.32} ${top + height * 0.71}, ${bodyRowX + bodyRowW * 0.50} ${top + height * 0.58} S ${bodyRowX + bodyRowW * 0.82} ${top + height * 0.48}, ${bodyRowX + bodyRowW} ${top + height * 0.64} L ${bodyRowX + bodyRowW} ${bottom} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.11"/>
+        ${trees}
+      </g>`;
+    }
+    if (sceneFamily === "ocean") {
+      return `<g data-scene-continuity="true" data-scene-template="ocean-waves">
+        <path d="M ${bodyRowX} ${bottom - height * 0.27} Q ${bodyRowX + bodyRowW * 0.125} ${bottom - height * 0.38} ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.27} T ${bodyRowX + bodyRowW * 0.50} ${bottom - height * 0.27} T ${bodyRowX + bodyRowW * 0.75} ${bottom - height * 0.27} T ${bodyRowX + bodyRowW} ${bottom - height * 0.27} V ${bottom} H ${bodyRowX} Z" fill="${corNome}" fill-opacity="0.10"/>
+        <path d="M ${bodyRowX} ${bottom - height * 0.19} Q ${bodyRowX + bodyRowW * 0.10} ${bottom - height * 0.27} ${bodyRowX + bodyRowW * 0.20} ${bottom - height * 0.19} T ${bodyRowX + bodyRowW * 0.40} ${bottom - height * 0.19} T ${bodyRowX + bodyRowW * 0.60} ${bottom - height * 0.19} T ${bodyRowX + bodyRowW * 0.80} ${bottom - height * 0.19} T ${bodyRowX + bodyRowW} ${bottom - height * 0.19}" fill="none" stroke="#FFFFFF" stroke-opacity="0.54" stroke-width="${Math.max(3, avgFaceH * 0.014)}"/>
+      </g>`;
+    }
+    if (sceneFamily === "ice") {
+      const mountains = big.map((f, index) => `<path d="M ${f.x - f.w * 0.06} ${bottom - height * 0.13} L ${f.x + f.w * 0.28} ${top + height * (index % 2 === 0 ? 0.22 : 0.30)} L ${f.x + f.w * 0.53} ${bottom - height * 0.17} L ${f.x + f.w * 0.76} ${top + height * 0.34} L ${f.x + f.w * 1.05} ${bottom - height * 0.13} Z" fill="#FFFFFF" fill-opacity="0.22" stroke="${corNome}" stroke-opacity="0.10" stroke-width="${Math.max(2, f.w * 0.008)}"/>`).join("");
+      return `<g data-scene-continuity="true" data-scene-template="ice-valley">${mountains}<path d="M ${bodyRowX} ${bottom - height * 0.16} Q ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.25} ${bodyRowX + bodyRowW * 0.50} ${bottom - height * 0.16} T ${bodyRowX + bodyRowW} ${bottom - height * 0.16} V ${bottom} H ${bodyRowX} Z" fill="#FFFFFF" fill-opacity="0.30"/></g>`;
+    }
+    if (sceneFamily === "space") {
+      const planets = big.map((f, index) => `<circle cx="${f.x + f.w * (index % 2 === 0 ? 0.22 : 0.78)}" cy="${top + height * (index % 2 === 0 ? 0.22 : 0.30)}" r="${Math.min(f.w, f.h) * (index % 3 === 0 ? 0.10 : 0.06)}" fill="${index % 2 === 0 ? corIdade : corAcento}" fill-opacity="0.22" stroke="#FFFFFF" stroke-opacity="0.46" stroke-width="${Math.max(2, f.w * 0.008)}"/>`).join("");
+      return `<g data-scene-continuity="true" data-scene-template="space-orbit">${planets}<path d="M ${bodyRowX} ${bottom - height * 0.13} C ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.22}, ${bodyRowX + bodyRowW * 0.75} ${bottom - height * 0.22}, ${bodyRowX + bodyRowW} ${bottom - height * 0.13}" fill="none" stroke="#FFFFFF" stroke-opacity="0.32" stroke-width="${Math.max(3, avgFaceH * 0.014)}"/></g>`;
+    }
+    if (sceneFamily === "vehicles") {
+      return `<g data-scene-continuity="true" data-scene-template="race-track"><path d="M ${bodyRowX} ${bottom - height * 0.28} H ${bodyRowX + bodyRowW} V ${bottom} H ${bodyRowX} Z" fill="${escurecer(corNome, 0.32)}" fill-opacity="0.18"/><path d="M ${bodyRowX} ${bottom - height * 0.14} H ${bodyRowX + bodyRowW}" stroke="#FFFFFF" stroke-opacity="0.66" stroke-width="${Math.max(4, avgFaceH * 0.02)}" stroke-dasharray="${avgFaceW * 0.16} ${avgFaceW * 0.10}"/></g>`;
+    }
+    if (sceneFamily === "garden") {
+      const leaves = big.map((f, index) => `<g fill="${corNome}" fill-opacity="0.10" transform="translate(${f.x + f.w * (index % 2 === 0 ? 0.12 : 0.88)} ${top + height * 0.14}) rotate(${index % 2 === 0 ? -24 : 24})"><ellipse cx="0" cy="0" rx="${f.w * 0.10}" ry="${height * 0.035}"/><ellipse cx="${f.w * 0.09}" cy="${height * 0.05}" rx="${f.w * 0.09}" ry="${height * 0.032}"/></g>`).join("");
+      return `<g data-scene-continuity="true" data-scene-template="enchanted-garden">${leaves}<path d="M ${bodyRowX} ${bottom - height * 0.13} Q ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.23} ${bodyRowX + bodyRowW * 0.50} ${bottom - height * 0.13} T ${bodyRowX + bodyRowW} ${bottom - height * 0.13}" fill="none" stroke="${corNome}" stroke-opacity="0.16" stroke-width="${Math.max(4, avgFaceH * 0.018)}"/></g>`;
+    }
+    if (sceneFamily === "circus") {
+      const rays = big.map((f, index) => `<path d="M ${f.cx} ${top + height * 0.16} L ${f.x} ${bottom} H ${f.x + f.w} Z" fill="${index % 2 === 0 ? corIdade : corAcento}" fill-opacity="0.055"/>`).join("");
+      return `<g data-scene-continuity="true" data-scene-template="celebration-tent">${rays}<path d="M ${bodyRowX} ${top + height * 0.13} Q ${bodyRowX + bodyRowW * 0.125} ${top + height * 0.23} ${bodyRowX + bodyRowW * 0.25} ${top + height * 0.13} T ${bodyRowX + bodyRowW * 0.50} ${top + height * 0.13} T ${bodyRowX + bodyRowW * 0.75} ${top + height * 0.13} T ${bodyRowX + bodyRowW} ${top + height * 0.13}" fill="none" stroke="${corNome}" stroke-opacity="0.18" stroke-width="${Math.max(3, avgFaceH * 0.014)}"/></g>`;
+    }
+    if (sceneFamily === "heroic") {
+      const panels = big.map((f, index) => `<path d="M ${f.x} ${bottom} L ${f.cx} ${top + height * 0.12} L ${f.x + f.w} ${bottom} Z" fill="${index % 2 === 0 ? corNome : corAcento}" fill-opacity="0.07"/>`).join("");
+      return `<g data-scene-continuity="true" data-scene-template="heroic-rays">${panels}<path d="M ${bodyRowX} ${bottom - height * 0.12} H ${bodyRowX + bodyRowW}" stroke="${corIdade}" stroke-opacity="0.42" stroke-width="${Math.max(4, avgFaceH * 0.02)}"/></g>`;
+    }
+    return `<g data-scene-continuity="true" data-scene-template="layered-stage"><rect x="${bodyRowX}" y="${top}" width="${bodyRowW}" height="${height}" fill="${corAcento}" fill-opacity="0.025"/><path d="M ${bodyRowX} ${bottom - height * 0.14} Q ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.21} ${bodyRowX + bodyRowW * 0.50} ${bottom - height * 0.14} T ${bodyRowX + bodyRowW} ${bottom - height * 0.14} V ${bottom} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.08"/></g>`;
+  })();
   const borderAsset = borderAssets[0];
   const borderRatio = borderAsset && borderAsset.h > 0 ? borderAsset.w / borderAsset.h : 1;
   const borderHeight = borderAsset
-    ? Math.min(avgFaceH * 0.24, bodyRowW / Math.max(1, borderRatio))
+    ? Math.min(avgFaceH * 0.32, bodyRowW / Math.max(1, borderRatio))
     : 0;
   const faixaTema = borderAsset
     ? `<image data-theme-border="true" href="${borderAsset.uri}" xlink:href="${borderAsset.uri}" x="${bodyRowX}" y="${bodyBot - borderHeight * 0.92}" width="${bodyRowW}" height="${borderHeight}" preserveAspectRatio="xMidYMid meet"/>`
@@ -326,6 +417,10 @@ export function montarSvgKit(d: KitDados): string {
         <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.19} H ${bodyRowX + bodyRowW}" stroke="#FFFFFF" stroke-width="${Math.max(3, avgFaceH * 0.012)}" opacity="0.72"/>
       </g>`
     : "";
+  const closureBands = `<g data-scene-continuity="closure-bands">
+      <rect x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${Math.max(5, avgFaceH * 0.025)}" fill="${corIdade}" fill-opacity="0.88"/>
+      <rect x="${bodyRowX}" y="${bodyBot - Math.max(5, avgFaceH * 0.025)}" width="${bodyRowW}" height="${Math.max(5, avgFaceH * 0.025)}" fill="${corNome}" fill-opacity="0.78"/>
+    </g>`;
 
   // ---- personagem grande ancorado na base da face ----
   const personagemBlock = (
@@ -400,6 +495,25 @@ export function montarSvgKit(d: KitDados): string {
     return `<image data-theme-ornament="true" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/>`;
   };
 
+  const ornamentAccentBlock = (f: Face, asset: ClipartDados, index: number, compact: boolean) => {
+    const ratio = asset.h > 0 ? asset.w / asset.h : 1;
+    let aw = f.w * (compact ? 0.30 : 0.46);
+    let ah = aw / Math.max(0.1, ratio);
+    const heightLimit = f.h * (compact ? 0.22 : 0.34);
+    if (ah > heightLimit) {
+      ah = heightLimit;
+      aw = ah * ratio;
+    }
+    const onRight = index % 2 === 0;
+    const x = onRight
+      ? f.x + f.w - aw - f.w * 0.025
+      : f.x + f.w * 0.025;
+    const y = compact
+      ? f.y + f.h * 0.07
+      : f.y + f.h - ah * 0.90 - f.h * 0.025;
+    return `<image data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"/>`;
+  };
+
   const plateBlock = (f: Face) => {
     // texto sempre legível: cores de tema claras são escurecidas na plaquinha
     const corTexto = luminancia(corNome) > 0.6 ? escurecer(corNome, 0.45) : corNome;
@@ -465,20 +579,6 @@ export function montarSvgKit(d: KitDados): string {
     const ratio = img.h > 0 ? img.w / img.h : 1;
     return ratio >= 1.1 ? Math.max(heroTarget, 0.86) : Math.max(heroTarget, 0.90);
   };
-  const festiveAccents = paletteTint
-    ? big.map((f, index) => {
-        const unit = Math.min(f.w, f.h);
-        const dot = Math.max(4, unit * 0.018);
-        const starX = f.x + f.w * (index % 2 === 0 ? 0.82 : 0.16);
-        const starY = f.y + f.h * 0.18;
-        const diamond = `${starX},${starY - dot * 1.7} ${starX + dot},${starY} ${starX},${starY + dot * 1.7} ${starX - dot},${starY}`;
-        return `<g data-festive-accents="true" opacity="0.78">
-          <circle cx="${f.x + f.w * 0.13}" cy="${f.y + f.h * 0.29}" r="${dot}" fill="${index % 2 === 0 ? corAcento : corIdade}"/>
-          <polygon points="${diamond}" fill="${index % 2 === 0 ? corIdade : corAcento}"/>
-          <circle cx="${f.x + f.w * 0.74}" cy="${f.y + f.h * 0.11}" r="${dot * 0.62}" fill="${corNome}"/>
-        </g>`;
-      }).join("")
-    : "";
   let visualContent = "";
   let protectedNameContent = "";
   if (big.length === 1) {
@@ -491,30 +591,34 @@ export function montarSvgKit(d: KitDados): string {
     protectedNameContent = plateBlock(plateFace);
   } else {
     let heroIndex = 0;
+    const nextHero = () => orderedHeroes.length
+      ? orderedHeroes[heroIndex++ % orderedHeroes.length]
+      : undefined;
     let panelUsed = false;
     let nameIndex = 0;
     const nameParts: string[] = [];
     visualContent = big
       .map((f) => {
         if (milkNameFaces.includes(f) || f === nameFace) {
-          const ornament = ornamentAssets.length
+          const supportingCharacter = nextHero();
+          const ornament = !supportingCharacter && ornamentAssets.length
             ? ornamentBlock(f, ornamentAssets[nameIndex % ornamentAssets.length])
             : "";
-          const supportingCharacter = !ornament ? orderedHeroes[heroIndex++] : undefined;
           const upperArt = supportingCharacter
             ? personagemBlock(
                 supportingCharacter,
                 f,
-                qualityStandard.nameFaceElementHeight.target / 100,
-                false,
-                f.y + f.h * 0.60,
+                Math.max(
+                  qualityStandard.nameFaceElementHeight.target / 100,
+                  heroHeightFor(supportingCharacter),
+                ),
               )
             : ornament;
           nameIndex++;
           nameParts.push(plateBlock(f));
           return upperArt;
         }
-        const img = orderedHeroes[heroIndex++];
+        const img = nextHero();
         if (img) return personagemBlock(img, f, heroHeightFor(img));
         if (!panelUsed && panelAssets[0]) {
           panelUsed = true;
@@ -525,6 +629,14 @@ export function montarSvgKit(d: KitDados): string {
       .join("");
     protectedNameContent = nameParts.join("");
   }
+  const foregroundAccents = ornamentAssets.length
+    ? big.map((f, index) => ornamentAccentBlock(
+        f,
+        ornamentAssets[index % ornamentAssets.length],
+        index,
+        milkNameFaces.includes(f) || f === nameFace,
+      )).join("")
+    : "";
 
   const fontFace = d.fonteUri
     ? `<style>@font-face{font-family:'${family}';src:url('${d.fonteUri}');}</style>`
@@ -554,6 +666,9 @@ export function montarSvgKit(d: KitDados): string {
     <filter id="bowShadow" x="-25%" y="-35%" width="150%" height="185%">
       <feDropShadow dx="0" dy="${Math.max(2, avgFaceH * 0.006)}" stdDeviation="${Math.max(1.5, avgFaceH * 0.004)}" flood-color="#32152A" flood-opacity="0.28"/>
     </filter>
+    <filter id="ornamentShadow" x="-20%" y="-25%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="${Math.max(2, avgFaceH * 0.005)}" stdDeviation="${Math.max(1.5, avgFaceH * 0.004)}" flood-color="#2E1725" flood-opacity="0.24"/>
+    </filter>
     <linearGradient id="bowSilk" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${clarear(corAcento, 0.30)}"/>
       <stop offset="0.48" stop-color="${corAcento}"/>
@@ -567,10 +682,13 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoTopo}
     ${fundoBase}
     ${fundoCorpo}
+    ${panoramicScene}
+    ${sceneLayer}
+    ${closureBands}
     ${faixaTema}
     ${depthBand}
-    ${festiveAccents}
     ${visualContent}
+    ${foregroundAccents}
     ${protectedNameContent}
   </g>
   <g id="molde-tecnico" fill="#111111" stroke="#111111">${moldGeometry}</g>
@@ -686,7 +804,7 @@ async function analisarPapel(dataUri: string): Promise<PapelInfo> {
   return { busy: desvio > 26, corMedia: `#${hex(sr)}${hex(sg)}${hex(sb)}` };
 }
 
-export async function composeKit({ molde, assets, nome, idade, palette, typography }: ComposeInput): Promise<string> {
+export async function composeKit({ molde, assets, themeSlug, nome, idade, palette, typography }: ComposeInput): Promise<string> {
   if (!molde.svg_url || !molde.mask_url || !molde.faces_url) {
     throw new Error("Molde incompleto: geometria, máscara ou faces ausentes.");
   }
@@ -728,6 +846,7 @@ export async function composeKit({ molde, assets, nome, idade, palette, typograp
   return montarSvgKit({
     moldSvg,
     moldName: molde.name,
+    themeSlug,
     facesJson,
     maskUri,
     papelTopUri: topUri,
