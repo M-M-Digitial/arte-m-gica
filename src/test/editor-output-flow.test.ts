@@ -15,6 +15,10 @@ describe("fluxo final do compositor", () => {
   it("entrega o resultado pelo exportador SVG dedicado", () => {
     expect(editor).toContain("baixarArquivoSvg");
     expect(editor).not.toContain("downloadText(`kit-");
+    expect(editor).not.toContain("baixarPng");
+    expect(editor).not.toContain("baixarPdf");
+    expect(editor).toContain('baixarMockup("png")');
+    expect(editor).toContain('baixarMockup("jpg")');
   });
 
   it("retenta uma foto rejeitada pela curadoria sem substituir a arte", () => {

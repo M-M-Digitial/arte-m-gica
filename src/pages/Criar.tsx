@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { Thumb } from "@/components/Thumb";
 import { baixarSvgDaArte } from "@/lib/svg-arte";
+import { baixarFotoDivulgacao, type FormatoDivulgacao } from "@/lib/raster-file";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -23,7 +24,6 @@ import {
   Box,
   Palette,
   Type,
-  FileText,
   ArrowRight,
   Zap,
 } from "lucide-react";
@@ -590,175 +590,13 @@ export default function Criar() {
   };
 
 
-  const handleDownload = (base64: string | null, prefix: string) => {
-    if (!base64) return;
-    const link = document.createElement("a");
-    link.href = base64;
-    link.download = `${prefix}-${selectedTema?.name}-${selectedMolde?.name}-${nome}.png`;
-    link.click();
-  };
-
-  const handleDownloadPDF = async (orientation: "portrait" | "landscape" = "landscape") => {
-    if (!generatedImageBase64) return;
-    try {
-      const { default: jsPDF } = await import("jspdf");
-      const isLandscape = orientation === "landscape";
-      const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
-      const pageW = isLandscape ? 297 : 210;
-      const pageH = isLandscape ? 210 : 297;
-      const margin = 12;
-      const contentW = pageW - margin * 2;
-      const contentH = pageH - margin * 2 - 28;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.setTextColor(60, 60, 60);
-      doc.text("MoldePronto", margin, margin + 5);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(130, 130, 130);
-      doc.text(
-        `${selectedTema?.name} · ${selectedMolde?.name} · ${nome}${idade ? ` (${idade} anos)` : ""}`,
-        margin, margin + 11
-      );
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.3);
-      doc.line(margin, margin + 14, pageW - margin, margin + 14);
-
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = generatedImageBase64!;
-      });
-
-      const imgRatio = img.width / img.height;
-      let drawW = contentW - 14;
-      let drawH = drawW / imgRatio;
-      if (drawH > contentH) {
-        drawH = contentH;
-        drawW = drawH * imgRatio;
-      }
-      const rulerSpace = 7;
-      const offsetX = margin + rulerSpace + (contentW - rulerSpace - drawW) / 2;
-      const offsetY = margin + 20;
-
-      const rulerColor = { r: 180, g: 180, b: 180 };
-      doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
-      doc.setLineWidth(0.2);
-      const rulerX = offsetX - 4;
-      doc.line(rulerX, offsetY, rulerX, offsetY + drawH);
-      const cmCountV = Math.floor(drawH / 10);
-      for (let i = 0; i <= cmCountV * 10; i++) {
-        const y = offsetY + i;
-        if (y > offsetY + drawH) break;
-        const isCm = i % 10 === 0;
-        const isHalf = i % 5 === 0;
-        const tickLen = isCm ? 3 : isHalf ? 2 : 1.5;
-        doc.line(rulerX - tickLen, y, rulerX, y);
-        if (isCm && i > 0) {
-          doc.setFontSize(5);
-          doc.setTextColor(rulerColor.r, rulerColor.g, rulerColor.b);
-          doc.text(`${i / 10}`, rulerX - tickLen - 3.5, y + 1);
-        }
-      }
-
-      const rulerY = offsetY - 4;
-      doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
-      doc.line(offsetX, rulerY, offsetX + drawW, rulerY);
-      const cmCountH = Math.floor(drawW / 10);
-      for (let i = 0; i <= cmCountH * 10; i++) {
-        const x = offsetX + i;
-        if (x > offsetX + drawW) break;
-        const isCm = i % 10 === 0;
-        const isHalf = i % 5 === 0;
-        const tickLen = isCm ? 3 : isHalf ? 2 : 1.5;
-        doc.line(x, rulerY - tickLen, x, rulerY);
-        if (isCm && i > 0) {
-          doc.setFontSize(5);
-          doc.setTextColor(rulerColor.r, rulerColor.g, rulerColor.b);
-          doc.text(`${i / 10}`, x - 1.5, rulerY - tickLen - 1);
-        }
-      }
-
-      doc.addImage(generatedImageBase64!, "PNG", offsetX, offsetY, drawW, drawH);
-
-      const markLen = 6;
-      const markGap = 2;
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.35);
-      doc.line(offsetX - markGap, offsetY, offsetX - markGap - markLen, offsetY);
-      doc.line(offsetX, offsetY - markGap, offsetX, offsetY - markGap - markLen);
-      doc.line(offsetX + drawW + markGap, offsetY, offsetX + drawW + markGap + markLen, offsetY);
-      doc.line(offsetX + drawW, offsetY - markGap, offsetX + drawW, offsetY - markGap - markLen);
-      doc.line(offsetX - markGap, offsetY + drawH, offsetX - markGap - markLen, offsetY + drawH);
-      doc.line(offsetX, offsetY + drawH + markGap, offsetX, offsetY + drawH + markGap + markLen);
-      doc.line(offsetX + drawW + markGap, offsetY + drawH, offsetX + drawW + markGap + markLen, offsetY + drawH);
-      doc.line(offsetX + drawW, offsetY + drawH + markGap, offsetX + drawW, offsetY + drawH + markGap + markLen);
-
-      doc.setDrawColor(100, 100, 100);
-      doc.setLineWidth(0.25);
-      const dashLen = 3;
-      const gapLen = 2;
-      const foldY = offsetY + drawH / 2;
-      let cx = offsetX;
-      while (cx < offsetX + drawW) {
-        const end = Math.min(cx + dashLen, offsetX + drawW);
-        doc.line(cx, foldY, end, foldY);
-        cx += dashLen + gapLen;
-      }
-      const foldX = offsetX + drawW / 2;
-      let cy = offsetY;
-      while (cy < offsetY + drawH) {
-        const end = Math.min(cy + dashLen, offsetY + drawH);
-        doc.line(foldX, cy, foldX, end);
-        cy += dashLen + gapLen;
-      }
-
-      doc.setFontSize(6);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        `${Math.round(drawW / 10 * 10) / 10} × ${Math.round(drawH / 10 * 10) / 10} cm`,
-        offsetX + drawW + 3, offsetY + drawH + 5
-      );
-
-      const legendY = offsetY + drawH + 12;
-      doc.setFontSize(7);
-      doc.setTextColor(100, 100, 100);
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.4);
-      doc.line(margin, legendY, margin + 12, legendY);
-      doc.text("Linha de corte (recortar)", margin + 14, legendY + 1);
-      doc.setDrawColor(100, 100, 100);
-      doc.setLineWidth(0.25);
-      let lx = margin;
-      const ly = legendY + 6;
-      for (let i = 0; i < 4; i++) {
-        doc.line(lx, ly, lx + 2, ly);
-        lx += 3.5;
-      }
-      doc.text("Linha de dobra (dobrar)", margin + 14, ly + 1);
-      doc.setDrawColor(rulerColor.r, rulerColor.g, rulerColor.b);
-      doc.setLineWidth(0.2);
-      doc.line(margin, legendY + 12, margin + 12, legendY + 12);
-      for (let i = 0; i <= 12; i += 3) {
-        doc.line(margin + i, legendY + 12 - 1.5, margin + i, legendY + 12);
-      }
-      doc.text("Régua em centímetros (cm)", margin + 14, legendY + 13);
-
-      const footerY = pageH - margin;
-      doc.setFontSize(6.5);
-      doc.setTextColor(170, 170, 170);
-      doc.text("Imprima em A4 · Escala 100% · Sem ajuste de página · Qualidade: Alta", margin, footerY);
-      doc.text("MoldePronto.com", pageW - margin, footerY, { align: "right" });
-
-      doc.save(`molde-${selectedTema?.name}-${selectedMolde?.name}-${nome}.pdf`);
-      toast.success("PDF salvo!");
-    } catch (err) {
-      console.error("Erro PDF:", err);
-      toast.error("Erro ao gerar PDF");
-    }
+  const handleDownloadMockup = async (formato: FormatoDivulgacao) => {
+    if (!mockupImageBase64) return;
+    await baixarFotoDivulgacao(
+      `divulgacao-${selectedTema?.name}-${selectedMolde?.name}-${nome}`,
+      mockupImageBase64,
+      formato,
+    );
   };
 
   const handleReset = () => {
@@ -1396,34 +1234,6 @@ export default function Criar() {
                         <Download className="h-4 w-4 mr-2" />
                         Baixar SVG importável
                       </Button>
-                      <Button
-                        onClick={() => handleDownload(generatedImageBase64, "arte")}
-                        variant="outline"
-                        className="w-full h-10 rounded-full text-xs font-semibold"
-                      >
-                        <Download className="h-3.5 w-3.5 mr-1.5" />
-                        PNG (imagem simples)
-                      </Button>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          onClick={() => handleDownloadPDF("landscape")}
-                          variant="outline"
-                          className="rounded-full text-xs font-medium h-9"
-                          size="sm"
-                        >
-                          <FileText className="h-3.5 w-3.5 mr-1" />
-                          PDF Horizontal
-                        </Button>
-                        <Button
-                          onClick={() => handleDownloadPDF("portrait")}
-                          variant="outline"
-                          className="rounded-full text-xs font-medium h-9"
-                          size="sm"
-                        >
-                          <FileText className="h-3.5 w-3.5 mr-1" />
-                          PDF Vertical
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="border-t border-border/60" />
@@ -1528,13 +1338,23 @@ export default function Criar() {
                       <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Baixar mockup
                       </h3>
-                      <Button
-                        onClick={() => handleDownload(mockupImageBase64, "mockup")}
-                        className="w-full h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Baixar PNG
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={() => void handleDownloadMockup("png")}
+                          className="h-11 rounded-full text-sm font-semibold gradient-hero border-0 text-white shadow-soft"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          PNG
+                        </Button>
+                        <Button
+                          onClick={() => void handleDownloadMockup("jpg")}
+                          variant="outline"
+                          className="h-11 rounded-full text-sm font-semibold"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          JPG/JPEG
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="border-t border-border/60" />

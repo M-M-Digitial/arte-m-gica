@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,11 @@ import { toast } from "sonner";
 import {
   composeKit,
   svgToPngDataUrl,
-  downloadDataUrl,
   type KitPalette,
   type TemaAsset,
 } from "@/lib/compose-kit";
 import { baixarArquivoSvg } from "@/lib/svg-file";
+import { baixarFotoDivulgacao, type FormatoDivulgacao } from "@/lib/raster-file";
 import { Thumb } from "@/components/Thumb";
 import { ThemeCover } from "@/components/ThemeCover";
 import { runImageGenerationJob } from "@/lib/image-job";
@@ -281,33 +281,10 @@ export default function Editor() {
   }, [etapa, themeSlug, molde, nome, gerar]);
 
   const baixarSvg = () => svg && baixarArquivoSvg(`kit-${nome || "arte"}`, svg);
-  const baixarPng = async () => {
-    if (!svg) return;
-    setBusy(true);
-    try { downloadDataUrl(`kit-${nome || "arte"}.png`, await svgToPngDataUrl(svg)); }
-    finally { setBusy(false); }
-  };
-  const baixarPdf = async () => {
-    if (!svg) return;
-    setBusy(true);
-    try {
-      const png = await svgToPngDataUrl(svg, 2526);
-      const { default: jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      const margin = 8;
-      doc.addImage(png, "PNG", margin, margin, 297 - margin * 2, (297 - margin * 2) * (1786 / 2526));
-      doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
-      doc.text("Imprima em A4 · Escala 100% · Sem ajuste de página", margin, 210 - 6);
-      doc.text("MoldePronto", 297 - margin, 210 - 6, { align: "right" });
-      doc.save(`kit-${nome || "arte"}.pdf`);
-    } finally { setBusy(false); }
-  };
-
-  const baixarMockup = () => {
+  const baixarMockup = async (formato: FormatoDivulgacao) => {
     const source = mockupImageBase64 ?? mockupImage;
     if (!source) return;
-    downloadDataUrl(`mockup-${mockupFormato}-${nome || "arte"}.png`, source);
+    await baixarFotoDivulgacao(`divulgacao-${mockupFormato}-${nome || "arte"}`, source, formato);
   };
 
   const previewSrc = useMemo(
@@ -746,12 +723,6 @@ export default function Editor() {
                       <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
                         <Download className="h-4 w-4 mr-1.5" /> Baixar SVG importável
                       </Button>
-                      <Button onClick={baixarPng} variant="outline" className="rounded-full" size="sm" disabled={busy}>
-                        <Download className="h-4 w-4 mr-1.5" /> PNG
-                      </Button>
-                      <Button onClick={baixarPdf} variant="outline" className="rounded-full" size="sm" disabled={busy}>
-                        <FileText className="h-4 w-4 mr-1.5" /> PDF pra imprimir
-                      </Button>
                       <Button onClick={() => gerar()} variant="ghost" className="rounded-full" size="sm" disabled={busy || mockupBusy}>
                         <RefreshCw className="h-4 w-4 mr-1.5" /> Recompor
                       </Button>
@@ -832,8 +803,11 @@ export default function Editor() {
 
                   {mockupImage && !mockupBusy && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button onClick={baixarMockup} className="rounded-full gradient-hero border-0 text-white" size="sm">
-                        <Download className="mr-1.5 h-4 w-4" /> Baixar mockup PNG
+                      <Button onClick={() => void baixarMockup("png")} className="rounded-full gradient-hero border-0 text-white" size="sm">
+                        <Download className="mr-1.5 h-4 w-4" /> Baixar PNG
+                      </Button>
+                      <Button onClick={() => void baixarMockup("jpg")} variant="outline" className="rounded-full" size="sm">
+                        <Download className="mr-1.5 h-4 w-4" /> Baixar JPG/JPEG
                       </Button>
                       <Button onClick={() => svg && void gerarMockup(svg, mockupFormato)} variant="outline" className="rounded-full" size="sm">
                         <RefreshCw className="mr-1.5 h-4 w-4" /> Nova versão
