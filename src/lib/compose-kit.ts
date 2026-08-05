@@ -320,6 +320,12 @@ export function montarSvgKit(d: KitDados): string {
     : !d.papelBodyUri
       ? `<rect x="${bodyRowX}" y="${bodyBot - avgFaceH * 0.14}" width="${bodyRowW}" height="${avgFaceH * 0.14}" fill="${corIdade}" opacity="0.82"/><path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.14} H ${bodyRowX + bodyRowW}" stroke="#FFFFFF" stroke-width="${Math.max(3, avgFaceH * 0.014)}" opacity="0.82"/>`
       : "";
+  const depthBand = !borderAsset && d.papelBodyUri && compositionProfile === "cenario"
+    ? `<g data-commercial-depth="ground-plane">
+        <rect x="${bodyRowX}" y="${bodyBot - avgFaceH * 0.19}" width="${bodyRowW}" height="${avgFaceH * 0.19}" fill="${corIdade}" opacity="0.18"/>
+        <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.19} H ${bodyRowX + bodyRowW}" stroke="#FFFFFF" stroke-width="${Math.max(3, avgFaceH * 0.012)}" opacity="0.72"/>
+      </g>`
+    : "";
 
   // ---- personagem grande ancorado na base da face ----
   const personagemBlock = (
@@ -345,8 +351,13 @@ export function montarSvgKit(d: KitDados): string {
     const requestedBase = baseOverride ?? safeBase - Math.max(0, borderHeight * 0.08);
     const base = Math.min(requestedBase, safeBase);
     const y = Math.max(f.y + f.h * safe.top, base - ah);
+    const backdrop = compositionProfile === "modular"
+      ? `<ellipse data-commercial-depth="midground" cx="${cx}" cy="${y + ah * 0.47}" rx="${Math.min(f.w * 0.39, aw * 0.58)}" ry="${Math.min(f.h * 0.37, ah * 0.50)}" fill="${clarear(corAcento, 0.72)}" fill-opacity="0.82" stroke="#FFFFFF" stroke-opacity="0.88" stroke-width="${Math.max(4, f.w * 0.012)}"/>`
+      : "";
+    const groundShadow = `<ellipse data-commercial-depth="contact-shadow" cx="${cx}" cy="${Math.min(safeBase, base + f.h * 0.006)}" rx="${Math.min(f.w * 0.32, aw * 0.38)}" ry="${Math.max(f.h * 0.018, ah * 0.025)}" fill="${escurecer(corAcento, 0.42)}" fill-opacity="0.24" filter="url(#softShadow)"/>`;
     const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
-    return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${imagem}</g>` : imagem;
+    const layeredHero = `<g data-commercial-layering="hero">${backdrop}${groundShadow}${imagem}</g>`;
+    return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${layeredHero}</g>` : layeredHero;
   };
 
   const monogramBlock = (f: Face) => {
@@ -406,8 +417,9 @@ export function montarSvgKit(d: KitDados): string {
     const plY = f.y + f.h - plH - f.h * 0.065;
     const inset = Math.max(5, plH * 0.075);
     const fundoPlaca = temPlaca
-      ? `<image href="${d.placaUri}" xlink:href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" preserveAspectRatio="xMidYMid meet"/>`
-      : `<rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(5, plH * 0.055)}"/>
+      ? `<rect data-commercial-depth="name-shadow" x="${cx - plW / 2}" y="${plY + plH * 0.035}" width="${plW}" height="${plH * 0.93}" rx="${plH * 0.24}" fill="#111111" fill-opacity="0.16" filter="url(#softShadow)"/><image href="${d.placaUri}" xlink:href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" preserveAspectRatio="xMidYMid meet"/>`
+      : `<rect data-commercial-depth="name-shadow" x="${cx - plW / 2}" y="${plY + plH * 0.045}" width="${plW}" height="${plH * 0.92}" rx="${plH * 0.24}" fill="#111111" fill-opacity="0.16" filter="url(#softShadow)"/>
+        <rect x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" rx="${plH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(5, plH * 0.055)}"/>
         <rect x="${cx - plW / 2 + inset}" y="${plY + inset}" width="${plW - inset * 2}" height="${plH - inset * 2}" rx="${plH * 0.18}" fill="#FFFDF8" fill-opacity="0.96" stroke="${corNome}" stroke-width="${Math.max(3, plH * 0.027)}"/>
         <path d="M ${cx - plW * 0.43} ${plY + plH * 0.5} l ${plH * 0.075} -${plH * 0.075} l ${plH * 0.075} ${plH * 0.075} l -${plH * 0.075} ${plH * 0.075} z M ${cx + plW * 0.43} ${plY + plH * 0.5} l ${plH * 0.075} -${plH * 0.075} l ${plH * 0.075} ${plH * 0.075} l -${plH * 0.075} ${plH * 0.075} z" fill="${corAcento}"/>`;
     // O SVG comprime apenas a largura quando necessario. Assim nomes longos
@@ -476,9 +488,19 @@ export function montarSvgKit(d: KitDados): string {
           const ornament = ornamentAssets.length
             ? ornamentBlock(f, ornamentAssets[nameIndex % ornamentAssets.length])
             : "";
+          const supportingCharacter = !ornament ? orderedHeroes[heroIndex++] : undefined;
+          const upperArt = supportingCharacter
+            ? personagemBlock(
+                supportingCharacter,
+                f,
+                qualityStandard.nameFaceElementHeight.target / 100,
+                false,
+                f.y + f.h * 0.60,
+              )
+            : ornament;
           nameIndex++;
           nameParts.push(plateBlock(f));
-          return ornament;
+          return upperArt;
         }
         const img = orderedHeroes[heroIndex++];
         if (img) return personagemBlock(img, f, heroHeightFor(img));
@@ -514,6 +536,9 @@ export function montarSvgKit(d: KitDados): string {
       <feComposite in="cor" in2="dila" operator="in" result="contorno"/>
       <feMerge><feMergeNode in="contorno"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <filter id="softShadow" x="-25%" y="-80%" width="150%" height="260%">
+      <feGaussianBlur stdDeviation="${Math.max(3, avgFaceH * 0.012)}"/>
+    </filter>
     <clipPath id="paperShape" clipPathUnits="userSpaceOnUse">${moldGeometry}</clipPath>
     <mask id="interior" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}" mask-type="alpha" style="mask-type:alpha"><image href="${d.maskUri}" xlink:href="${d.maskUri}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></mask>
   </defs>
@@ -523,6 +548,7 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoBase}
     ${fundoCorpo}
     ${faixaTema}
+    ${depthBand}
     ${festiveAccents}
     ${visualContent}
     ${protectedNameContent}

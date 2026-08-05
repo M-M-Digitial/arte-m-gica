@@ -27,4 +27,10 @@ describe("fluxo final do compositor", () => {
     expect(imageJob).toContain('"MOCKUP_QUALITY_REJECTED"');
     expect(imageJob).toContain("qualityRetry: true");
   });
+
+  it("retenta uma arte reprovada pela curadoria comercial", () => {
+    expect(imageJob).toContain('"ART_QUALITY_REJECTED"');
+    expect(imageJob).toContain('code === "MOCKUP_QUALITY_REJECTED" || code === "ART_QUALITY_REJECTED"');
+    expect(imageJob).toContain("qualityCorrection: qualityReview.correction_prompt");
+  });
 });

@@ -223,9 +223,10 @@ describe("composição SVG do kit", () => {
 
     const posesUsadas = Array.from(svg.matchAll(/<image href="data:image\/png;base64,(POSE_[A-D])"/g))
       .map((match) => match[1]);
-    expect(posesUsadas).toHaveLength(2);
-    expect(new Set(posesUsadas).size).toBe(2);
+    expect(posesUsadas).toHaveLength(4);
+    expect(new Set(posesUsadas).size).toBe(4);
     expect(posesUsadas).toContain("POSE_A");
+    expect(posesUsadas).toContain("POSE_D");
     expect(svg).not.toContain('scale(-1 1)');
   });
 

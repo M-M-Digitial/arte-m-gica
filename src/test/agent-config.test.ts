@@ -44,7 +44,8 @@ describe("configuração operacional dos agentes", () => {
     expect(AGENT_PROMPTS.maia).toContain("ACEITAR, RENEGOCIAR ou RECUSAR");
     expect(AGENT_PROMPTS.cora).toContain("CENÁRIO ou MODULAR");
     expect(AGENT_PROMPTS.cora).toContain("Fundo claro com cor, wash, textura ou microestampa");
-    expect(AGENT_PROMPTS.cora).toContain("Originalidade (10)");
+    expect(AGENT_PROMPTS.cora).toContain("Originalidade (5)");
+    expect(AGENT_PROMPTS.cora).toContain("Impacto comercial (10)");
     expect(AGENT_PROMPTS.cora).toContain("painéis mortos");
     expect(canonicalAgentId("violeta")).toBe("violeta");
   });

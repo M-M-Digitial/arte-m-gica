@@ -14,6 +14,7 @@ export type JobMeta = {
   qualityReview?: {
     score?: number;
     approved?: boolean;
+    correction_prompt?: string;
   };
   [key: string]: unknown;
 };
@@ -24,11 +25,17 @@ const RETRYABLE_GENERATION_CODES = new Set([
   "OPENAI_MODERATION_BLOCKED",
   "MOCKUP_SOURCE_PRESERVATION_FAILED",
   "MOCKUP_QUALITY_REJECTED",
+  "ART_QUALITY_REJECTED",
 ]);
 
-const retryOverrides = (code?: string) =>
-  code === "MOCKUP_QUALITY_REJECTED"
-    ? { qualityRetry: true }
+const retryOverrides = (code?: string, qualityReview?: JobMeta["qualityReview"]) =>
+  code === "MOCKUP_QUALITY_REJECTED" || code === "ART_QUALITY_REJECTED"
+    ? {
+        qualityRetry: true,
+        ...(code === "ART_QUALITY_REJECTED" && qualityReview?.correction_prompt
+          ? { qualityCorrection: qualityReview.correction_prompt }
+          : {}),
+      }
     : { safeMode: true };
 
 async function callFunction(functionName: string, payload: unknown): Promise<JobMeta> {
@@ -86,7 +93,7 @@ export async function runImageGenerationJob(
   let created = await startJob();
   if (RETRYABLE_GENERATION_CODES.has(created?.code)) {
     safeRetried = true;
-    created = await startJob(retryOverrides(created.code));
+    created = await startJob(retryOverrides(created.code, created.qualityReview));
   }
   if (created?.error) throw new Error(created.error);
   let jobId: string | undefined = created?.jobId;
@@ -126,7 +133,7 @@ export async function runImageGenerationJob(
     if (st?.status === "error") {
       if (RETRYABLE_GENERATION_CODES.has(st.code) && !safeRetried) {
         safeRetried = true;
-        const retry = await startJob(retryOverrides(st.code));
+        const retry = await startJob(retryOverrides(st.code, st.qualityReview));
         if (retry?.error || !retry?.jobId) {
           throw new Error(retry?.error ?? "A OpenAI bloqueou este tema por segurança.");
         }

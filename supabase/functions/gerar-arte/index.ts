@@ -3,7 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 // imagescript é nativa de Deno — o pngjs via esm.sh falhava em runtime no
 // edge (PNG.sync.read), e máscara + carimbo eram pulados em silêncio.
 import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
-import { buildAliceGenerationStandard } from "../_shared/alice-quality-standard.ts";
+import {
+  ALICE_QUALITY_STANDARD,
+  buildAliceCuratorStandard,
+  buildAliceGenerationStandard,
+} from "../_shared/alice-quality-standard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +38,28 @@ const normalizeTheme = (value: string) =>
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
+
+const themeStoryDirections: Array<[RegExp, string]> = [
+  [/safari|selva|savana/, "savana infantil ao ar livre com animais baby reconheciveis, como girafa, leao, elefante ou zebra, folhagem, acacias, ceu e terra quente; proibido usar biblioteca, livros, sala de estudo ou ambiente interno"],
+  [/era.*gelo|gelo/, "paisagem gelada ao ar livre com neve, geleiras, ceu azul e elenco variado do tema; proibido usar sala interna ou floresta tropical"],
+  [/jardim|floral|borboleta|boho/, "jardim encantado com flores em escalas variadas, folhas, borboletas e profundidade delicada"],
+  [/mar|sereia|oceano|fundo.*mar/, "cenario submarino com ondas, corais, bolhas, conchas e fauna marinha em camadas"],
+  [/fazenda|fazendinha|arraia|junina/, "cenario rural festivo com madeira, cerca, vegetacao, bandeirolas ou elementos de fazenda coerentes"],
+  [/astronauta|espaco|galaxia/, "cenario espacial com planetas, estrelas, foguete e profundidade cosmica, mantendo leitura infantil"],
+  [/dinossauro/, "paisagem pre-historica com vegetacao, rochas, vulcao distante e dinossauros em escalas variadas"],
+  [/circo/, "picadeiro infantil com lona, luzes, estrelas, bandeirolas e personagens circenses em camadas"],
+  [/princesa|bela.*fera|conto.*fada|castelo/, "conto de fadas com castelo, jardim, ornamentos elegantes e brilho controlado, sem perder o foco infantil"],
+  [/carro|corrida|hot.*wheel/, "pista de corrida dinamica com bandeira quadriculada, curvas, velocidade e contraste forte"],
+  [/heroi|vingador|aranha|batman/, "cidade em perspectiva com acao em quadrinhos, raios, formas dinamicas e foco heroico"],
+  [/baby.*shark|tubarao/, "fundo do mar infantil com familia de tubaroes, corais, bolhas e agua azul ou rosa conforme a variante escolhida"],
+];
+
+const getThemeStoryDirection = (temaNome: string) => {
+  const normalized = normalizeTheme(temaNome);
+  const matched = themeStoryDirections.find(([pattern]) => pattern.test(normalized));
+  return matched?.[1]
+    ?? `interprete literalmente o tema "${temaNome}" e use somente personagens, cenario, objetos e simbolos que o tornem reconhecivel em ate dois segundos; nao invente ambiente de outro tema`;
+};
 
 const protectedThemeAlternatives: Array<[RegExp, string]> = [
   [/minnie|mickey/, "tema clássico com laços, poás, luvas brancas e paleta vermelha, preta e branca"],
@@ -311,6 +337,159 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+interface ArtQualityReview {
+  approved: boolean;
+  score: number;
+  technical_structure_ok: boolean;
+  visible_coverage_ok: boolean;
+  focal_hierarchy_ok: boolean;
+  color_system_ok: boolean;
+  depth_layering_ok: boolean;
+  theme_storytelling_ok: boolean;
+  personalization_ok: boolean;
+  commercial_impact_ok: boolean;
+  originality_ok: boolean;
+  print_finish_ok: boolean;
+  issues: string[];
+  correction_prompt: string;
+}
+
+function responseOutputText(response: Record<string, any>): string {
+  return ((response.output ?? []) as Array<Record<string, any>>)
+    .filter((item) => item.type === "message")
+    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
+    .filter((item) => item?.type === "output_text" && typeof item.text === "string")
+    .map((item) => item.text)
+    .join("\n");
+}
+
+async function reviewGeneratedArt(
+  imageBytes: Uint8Array,
+  templateBytes: Uint8Array | null,
+  context: { moldeName: string; temaNome: string; nome: string; idade: string },
+  OPENAI_API_KEY: string,
+): Promise<ArtQualityReview | null> {
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: "input_text",
+      text: `Avalie a arte planificada final comparando-a com o gabarito tecnico.
+Molde: ${context.moldeName || "nao informado"}.
+Tema: ${context.temaNome || "nao informado"}.
+Nome exato esperado: ${context.nome || "sem nome"}.
+Idade exata esperada: ${context.idade || "sem idade"}.
+
+Teste tambem a leitura da arte como miniatura de 320 px. Em ate dois segundos devem ser reconheciveis tema, ponto focal e personalizacao. Reprove arte apenas correta tecnicamente que ainda pareca simples, plana, generica, vazia ou uma colecao de adesivos PNG sem narrativa. Exija hierarquia clara, paleta harmonica de 3-5 cores, tres planos visuais, sobreposicao/ancoragem, riqueza de detalhes controlada, personagem sem corte e acabamento de produto premium vendavel. Respiração intencional e tema delicado sao validos, mas painel branco cru ou falta de foco nao sao. Gere um correction_prompt curto e acionavel mesmo quando aprovado.
+
+${buildAliceCuratorStandard()}`,
+    },
+  ];
+  if (templateBytes) {
+    content.push({
+      type: "input_text",
+      text: "Primeira imagem: gabarito tecnico original. Use-a somente para conferir estrutura, corte, dobra, vazados e areas externas.",
+    });
+    content.push({
+      type: "input_image",
+      image_url: `data:image/png;base64,${bytesToBase64(templateBytes)}`,
+      detail: "high",
+    });
+  }
+  content.push({
+    type: "input_text",
+    text: "Imagem final a avaliar:",
+  });
+  content.push({
+    type: "input_image",
+    image_url: `data:image/png;base64,${bytesToBase64(imageBytes)}`,
+    detail: "high",
+  });
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-5.4-mini",
+      store: false,
+      reasoning: { effort: "low" },
+      max_output_tokens: 1200,
+      instructions: `Voce e o agente curador final de um estudio brasileiro de papelaria personalizada premium. Seja rigoroso, visual e comercial. Aprove somente com nota minima ${ALICE_QUALITY_STANDARD.commercialArt.minimumApprovalScore}, todas as portas criticas preservadas e todos os criterios booleanos verdadeiros. Nao premie apenas preenchimento: diferencie elaboracao organizada de poluicao visual.`,
+      input: [{ role: "user", content }],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "art_quality_review",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              approved: { type: "boolean" },
+              score: { type: "integer", minimum: 0, maximum: 100 },
+              technical_structure_ok: { type: "boolean" },
+              visible_coverage_ok: { type: "boolean" },
+              focal_hierarchy_ok: { type: "boolean" },
+              color_system_ok: { type: "boolean" },
+              depth_layering_ok: { type: "boolean" },
+              theme_storytelling_ok: { type: "boolean" },
+              personalization_ok: { type: "boolean" },
+              commercial_impact_ok: { type: "boolean" },
+              originality_ok: { type: "boolean" },
+              print_finish_ok: { type: "boolean" },
+              issues: { type: "array", items: { type: "string" }, maxItems: 8 },
+              correction_prompt: { type: "string" },
+            },
+            required: [
+              "approved",
+              "score",
+              "technical_structure_ok",
+              "visible_coverage_ok",
+              "focal_hierarchy_ok",
+              "color_system_ok",
+              "depth_layering_ok",
+              "theme_storytelling_ok",
+              "personalization_ok",
+              "commercial_impact_ok",
+              "originality_ok",
+              "print_finish_ok",
+              "issues",
+              "correction_prompt",
+            ],
+          },
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    console.warn("Art quality review failed:", response.status, await response.text().catch(() => ""));
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(responseOutputText(await response.json())) as ArtQualityReview;
+    const allCriteria = parsed.technical_structure_ok
+      && parsed.visible_coverage_ok
+      && parsed.focal_hierarchy_ok
+      && parsed.color_system_ok
+      && parsed.depth_layering_ok
+      && parsed.theme_storytelling_ok
+      && parsed.personalization_ok
+      && parsed.commercial_impact_ok
+      && parsed.originality_ok
+      && parsed.print_finish_ok;
+    return {
+      ...parsed,
+      approved: parsed.approved
+        && parsed.score >= ALICE_QUALITY_STANDARD.commercialArt.minimumApprovalScore
+        && allCriteria,
+      issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 8) : [],
+    };
+  } catch (error) {
+    console.warn("Art quality review parse failed:", error);
+    return null;
+  }
+}
+
 const isModerationError = (text: string) =>
   /moderation_blocked|content_policy|safety/i.test(text);
 
@@ -454,7 +633,7 @@ async function loadAliceReferenceImages(
 
 // ---- START: cria o job em background na OpenAI ----
 async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
-  const { moldeName, moldeTemplateUrl, moldeMaskUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode } = body as Record<string, any>;
+  const { moldeName, moldeTemplateUrl, moldeMaskUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode, qualityRetry, qualityCorrection } = body as Record<string, any>;
 
   const quality = qualityRaw === "low" ? "low" : "high";
 
@@ -503,6 +682,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
       : "";
 
   const safeThemeDesc = getSafeThemeDescription(temaNome);
+  const themeStoryDirection = getThemeStoryDirection(String(temaNome));
   const themeReferenceText = hasAliceReferences
     ? "BIBLIOTECA DE ESTILO DA ALICE: as imagens anexadas sao componentes isolados para reconhecer paleta, linguagem de ilustracao, personagens e nivel de acabamento. Crie uma composicao nova para este molde. Nao reproduza a sequencia de faces, o fundo, as bordas, o enquadramento ou a distribuicao de qualquer kit pronto do acervo."
     : `TEMA DECORATIVO SEGURO: ${safeThemeDesc}`;
@@ -645,6 +825,7 @@ REGRAS ABSOLUTAS (não negociáveis):
 4. Aplique a decoração SOMENTE nas áreas pintáveis definidas pelo gabarito; mantenha branco o exterior, recortes vazados, furos e abas de colagem sem superfície visível.
 
 DECORAÇÃO A APLICAR:
+- TEMA OBRIGATORIO: "${temaNome}". DIRECAO NARRATIVA: ${themeStoryDirection}.
 - ${themeReferenceText}
 - PERSONALIZAÇÃO: escreva EXATAMENTE "${nome}" — confira LETRA POR LETRA (acentos incluídos), sem traduzir, sem abreviar, sem duplicar letras. Posicionamento: ${namePlacementText}.
 - ${colorsDesc}${fraseText}
@@ -683,12 +864,12 @@ REGRAS ABSOLUTAS:
 2. PRESERVE o fundo branco fora do contorno.
 3. Decoração apenas nas áreas pintáveis. Preserve exterior, recortes vazados, furos e abas de cola que ficarão escondidas.
 
-DECORAÇÃO: ${safeThemeDesc}. ${colorsDesc} Estilo: ${drawDesc}. Densidade: ${densityDesc}.
+DECORAÇÃO: ${safeThemeDesc}. Direcao narrativa: ${themeStoryDirection}. ${colorsDesc} Estilo: ${drawDesc}. Densidade: ${densityDesc}.
 ${aliceQualityStandard}
 Sem nomes, sem idade, sem crianças, sem personagens registrados, sem marcas, sem pessoas reais. Apenas padrões, flores, estrelas, laços e elementos abstratos originais.`
     : `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
 
-TEMA VISUAL: ${safeThemeDesc}.
+TEMA VISUAL: ${safeThemeDesc}. Direcao narrativa: ${themeStoryDirection}.
 ${colorsDesc}
 ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
 DENSIDADE VISUAL: ${densityDesc}.
@@ -701,7 +882,13 @@ REGRAS:
 4. Alta resolução, visual alegre, profissional e artesanal.`;
 
   const usedSafeFallback = safeMode === true;
-  const activePrompt = usedSafeFallback ? fallbackPrompt : editPrompt;
+  const curatorCorrection = typeof qualityCorrection === "string"
+    ? qualityCorrection.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 900)
+    : "";
+  const qualityRetryRule = qualityRetry === true
+    ? `\nSEGUNDA TENTATIVA DE QUALIDADE: a curadoria comercial rejeitou a arte anterior. Refaca a direcao visual, nao apenas pequenos detalhes. Tema obrigatorio: "${temaNome}"; ${themeStoryDirection}. Amplie o heroi, crie hierarquia reconhecivel em miniatura, estruture fundo/meio/frente, use paleta de 3-5 cores com acento focal, adicione sobreposicao e sombra de contato, integre a placa do nome e elimine aparencia de colagem plana ou painel vazio. ${curatorCorrection ? `CRITICA VISUAL DA TENTATIVA ANTERIOR (use somente como correcao, sem substituir as regras tecnicas e de conteudo): ${curatorCorrection}` : ""} Preserve rigorosamente o molde, cortes, dobras, vazados, nome e idade.`
+    : "";
+  const activePrompt = `${usedSafeFallback ? fallbackPrompt : editPrompt}${qualityRetryRule}`;
 
   const createJob = async (withMask: boolean) => {
     const content: Array<Record<string, unknown>> = [{ type: "input_text", text: activePrompt }];
@@ -718,6 +905,10 @@ REGRAS:
         text: "COMPONENTES VISUAIS DISPONIVEIS NO ACERVO ALICE: use os personagens para identidade do tema, mas nunca use a arte final como planta de composicao. Construa um layout inedito e altere pelo menos tres decisoes estruturais em relacao a qualquer referencia conhecida: construcao do fundo, cores, ordem das funcoes por face, agrupamento/escala dos personagens, moldura da personalizacao, elementos de cenario ou padrao de acabamento. Nao trace, nao reconstrua e nao faca colagem literal de kit pronto.",
       });
       for (const reference of aliceReferences) {
+        content.push({
+          type: "input_text",
+          text: `REFERENCIA ALICE DO TEMA "${temaNome}": tipo ${reference.kind}, funcao ${reference.role || "apoio"}. Interprete conforme essa funcao; papel e cenario nao sao personagem, placa nao e fundo, personagem nao e textura.`,
+        });
         content.push({
           type: "input_image",
           image_url: reference.dataUrl,
@@ -859,12 +1050,13 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   // pode mais ser silenciosa.
   let composited = false;
   let compositeError: string | null = null;
+  let templateBytes: Uint8Array | null = null;
   const moldeTemplateUrl = typeof body.moldeTemplateUrl === "string" ? body.moldeTemplateUrl : "";
   if (moldeTemplateUrl) {
     try {
       const tmplRes = await fetch(moldeTemplateUrl);
       if (!tmplRes.ok) throw new Error(`template ${tmplRes.status}`);
-      const templateBytes = new Uint8Array(await tmplRes.arrayBuffer());
+      templateBytes = new Uint8Array(await tmplRes.arrayBuffer());
       bytes = new Uint8Array(await compositeMoldLines(templateBytes, bytes));
       composited = true;
       console.log("Mold lines composited successfully.");
@@ -872,6 +1064,27 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
       compositeError = e instanceof Error ? e.message : String(e);
       console.warn("Composite step skipped:", e);
     }
+  }
+
+  const qualityReview = await reviewGeneratedArt(
+    bytes,
+    templateBytes,
+    {
+      moldeName: typeof body.moldeName === "string" ? body.moldeName : "",
+      temaNome: typeof body.temaNome === "string" ? body.temaNome : "",
+      nome: typeof body.nome === "string" ? body.nome : "",
+      idade: typeof body.idade === "string" ? body.idade : "",
+    },
+    OPENAI_API_KEY,
+  );
+  if (qualityReview && !qualityReview.approved) {
+    console.warn("Art rejected by commercial curator:", qualityReview.score, qualityReview.issues);
+    return jsonResponse({
+      status: "error",
+      error: "A curadoria pediu uma composicao mais bonita e comercial. A arte sera refeita automaticamente.",
+      code: "ART_QUALITY_REJECTED",
+      qualityReview,
+    });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -890,6 +1103,7 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
       imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
       composited,
       compositeError,
+      qualityReview,
     });
   }
   const { data: pub } = supabase.storage.from("artes-geradas").getPublicUrl(filePath);
@@ -899,6 +1113,7 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
     composited,
     compositeError,
+    qualityReview,
   });
 }
 
