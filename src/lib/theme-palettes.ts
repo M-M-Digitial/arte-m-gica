@@ -26,6 +26,15 @@ const DEFAULT_THEME_PALETTES: Record<string, ThemePalette> = {
   },
 };
 
+const THEME_HERO_ROLE_OVERRIDES: Record<string, string> = {
+  "baby-shark-azul": "amigo",
+  "baby-shark-rosa": "amigo2",
+};
+
 export function getDefaultThemePalette(themeSlug: string): ThemePalette | undefined {
   return DEFAULT_THEME_PALETTES[themeSlug];
+}
+
+export function getThemeHeroRole(themeSlug: string): string {
+  return THEME_HERO_ROLE_OVERRIDES[themeSlug] ?? "principal";
 }

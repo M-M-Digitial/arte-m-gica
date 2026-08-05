@@ -4,6 +4,7 @@
 
 import { ALICE_QUALITY_STANDARD } from "../../supabase/functions/_shared/alice-quality-standard.ts";
 import { assertThemeReadyForComposition } from "./theme-curation";
+import { selectPrintableFaces, type PrintableFace } from "./printable-faces";
 export { getDefaultThemePalette } from "./theme-palettes";
 
 export interface MoldeCompose {
@@ -52,7 +53,7 @@ export interface ComposeInput {
   typography?: KitTypography;
 }
 
-interface Face { x: number; y: number; w: number; h: number; cx: number; cy: number; area: number }
+type Face = PrintableFace;
 
 export type AssetUsage = "hero" | "ornament" | "border" | "panel";
 
@@ -227,8 +228,8 @@ export function montarSvgKit(d: KitDados): string {
   const { faces } = JSON.parse(d.facesJson) as { faces: Face[] };
 
   // ---- zonas ----
-  const maxA = Math.max(...faces.map((f) => f.area));
-  const big = faces.filter((f) => f.area >= maxA * 0.45).sort((a, b) => a.x - b.x);
+  const big = selectPrintableFaces(faces, W, H);
+  if (!big.length) throw new Error("Molde sem faces imprimiveis validas");
   const bodyTop = Math.min(...big.map((f) => f.y));
   const bodyBot = Math.max(...big.map((f) => f.y + f.h));
   const defaultNameFace = big
@@ -271,8 +272,8 @@ export function montarSvgKit(d: KitDados): string {
   // o spec fala do MOTIVO interno (~8% da face); cada arquivo de papel já traz
   // uma grade de ~6-8 motivos, então o tile certo é ~metade da face no corpo
   // e mais fino nas abas (lê como textura)
-  const motCorpo = Math.max(180, avgFaceW * 0.5);
-  const motTopo = Math.max(120, avgFaceW * 0.33);
+  const motCorpo = Math.max(180, avgFaceW * (estampaDensa ? 0.92 : 0.58));
+  const motTopo = Math.max(120, avgFaceW * (estampaDensa ? 0.68 : 0.40));
   const defsPapel: string[] = [];
   let fundoTopo = "";
   let fundoBase = "";
@@ -282,10 +283,10 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = paletteTint
-      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="0.30"/>`
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${estampaDensa ? "0.22" : "0.30"}"/>`
       : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
     fundoBase = paletteTint
-      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="0.28"/>`
+      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${estampaDensa ? 0.20 : 0.28}"/>`
       : `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)"/>`;
   } else {
     const fechamento = paletteTint ? corNome : clarear(corIdade, 0.18);
@@ -297,7 +298,7 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = paletteTint
-      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${estampaDensa ? 0.34 : 0.40}"/>`
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${estampaDensa ? 0.22 : 0.40}"/>`
       : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
@@ -344,7 +345,7 @@ export function montarSvgKit(d: KitDados): string {
     const requestedBase = baseOverride ?? safeBase - Math.max(0, borderHeight * 0.08);
     const base = Math.min(requestedBase, safeBase);
     const y = Math.max(f.y + f.h * safe.top, base - ah);
-    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
+    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${imagem}</g>` : imagem;
   };
 
@@ -353,7 +354,7 @@ export function montarSvgKit(d: KitDados): string {
     const cx = f.cx;
     const cy = f.y + f.h * 0.48;
     const initial = esc(Array.from(nome.trim())[0]?.toUpperCase() || "");
-    return `<g data-theme-monogram="true">
+    return `<g data-theme-monogram="true" data-face-x="${f.x}" data-face-y="${f.y}">
       <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.43}" ry="${size * 0.50}" fill="#FFFDF8" fill-opacity="0.92" stroke="${corAcento}" stroke-width="${Math.max(4, size * 0.035)}"/>
       <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.36}" ry="${size * 0.43}" fill="${d.papelTopUri ? "url(#papelTop)" : clarear(corNome, 0.68)}" stroke="${corNome}" stroke-width="${Math.max(2, size * 0.015)}"/>
       <text x="${cx}" y="${cy + size * 0.04}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${size * 0.42}" fill="#FFFFFF" stroke="${escurecer(corNome, 0.25)}" stroke-width="${size * 0.025}" paint-order="stroke">${initial}</text>
@@ -365,7 +366,7 @@ export function montarSvgKit(d: KitDados): string {
     const panelH = f.h * 0.58;
     const x = f.cx - panelW / 2;
     const y = f.y + f.h * 0.16;
-    return `<g data-theme-panel="true">
+    return `<g data-theme-panel="true" data-face-x="${f.x}" data-face-y="${f.y}">
       <rect x="${x - f.w * 0.025}" y="${y - f.h * 0.025}" width="${panelW + f.w * 0.05}" height="${panelH + f.h * 0.05}" rx="${f.w * 0.06}" fill="#FFFDF8" fill-opacity="0.90" stroke="${corIdade}" stroke-width="${Math.max(3, f.w * 0.012)}"/>
       <image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${panelW}" height="${panelH}" preserveAspectRatio="xMidYMid slice" opacity="0.82"/>
     </g>`;
@@ -385,7 +386,7 @@ export function montarSvgKit(d: KitDados): string {
     }
     const x = f.cx - aw / 2;
     const y = f.y + f.h * 0.055;
-    return `<image data-theme-ornament="true" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/>`;
+    return `<image data-theme-ornament="true" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/>`;
   };
 
   const plateBlock = (f: Face) => {
@@ -402,7 +403,7 @@ export function montarSvgKit(d: KitDados): string {
       ? Math.min(maxPlateHeight, plW * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320)))
       : maxPlateHeight;
     const cx = f.cx;
-    const plY = bodyBot - plH - f.h * 0.045;
+    const plY = f.y + f.h - plH - f.h * 0.065;
     const inset = Math.max(5, plH * 0.075);
     const fundoPlaca = temPlaca
       ? `<image href="${d.placaUri}" xlink:href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" preserveAspectRatio="xMidYMid meet"/>`
@@ -425,7 +426,7 @@ export function montarSvgKit(d: KitDados): string {
       ? `<text x="${cx}" y="${plY + plH * 0.75}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsIdade}" fill="${corTexto}">${esc(idadeLimpa)} ${/^\d+$/.test(idadeLimpa) ? "anos" : ""}</text>`
       : "";
     const nomeY = plY + plH * (idadeLimpa ? 0.43 : 0.52);
-    return `<g data-name-plate="true">
+    return `<g data-name-plate="true" data-protected-zone="name" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}">
       ${fundoPlaca}
       <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.08}" paint-order="stroke">${esc(nome)}</text>
       ${idadeTxt}
@@ -454,26 +455,30 @@ export function montarSvgKit(d: KitDados): string {
         </g>`;
       }).join("")
     : "";
-  let content = "";
+  let visualContent = "";
+  let protectedNameContent = "";
   if (big.length === 1) {
     const f = big[0];
     const heroFace = { ...f, w: f.w * 0.52, cx: f.x + f.w * 0.28 } as Face;
     const plateFace = { ...f, w: f.w * 0.50, cx: f.x + f.w * 0.73 } as Face;
-    content =
-      (orderedHeroes[0] ? personagemBlock(orderedHeroes[0], heroFace, heroHeightFor(orderedHeroes[0])) : monogramBlock(heroFace)) +
-      plateBlock(plateFace);
+    visualContent = orderedHeroes[0]
+      ? personagemBlock(orderedHeroes[0], heroFace, heroHeightFor(orderedHeroes[0]))
+      : monogramBlock(heroFace);
+    protectedNameContent = plateBlock(plateFace);
   } else {
     let heroIndex = 0;
     let panelUsed = false;
     let nameIndex = 0;
-    content = big
+    const nameParts: string[] = [];
+    visualContent = big
       .map((f) => {
         if (milkNameFaces.includes(f) || f === nameFace) {
           const ornament = ornamentAssets.length
             ? ornamentBlock(f, ornamentAssets[nameIndex % ornamentAssets.length])
             : "";
           nameIndex++;
-          return ornament + plateBlock(f);
+          nameParts.push(plateBlock(f));
+          return ornament;
         }
         const img = orderedHeroes[heroIndex++];
         if (img) return personagemBlock(img, f, heroHeightFor(img));
@@ -484,6 +489,7 @@ export function montarSvgKit(d: KitDados): string {
         return monogramBlock(f);
       })
       .join("");
+    protectedNameContent = nameParts.join("");
   }
 
   const fontFace = d.fonteUri
@@ -495,6 +501,7 @@ export function montarSvgKit(d: KitDados): string {
   <title>Kit personalizado de ${esc(nome)}</title>
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
+  <metadata id="printable-face-count">${big.length}</metadata>
   <defs>
     ${fontFace}
     ${defsPapel.join("\n    ")}
@@ -517,7 +524,8 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoCorpo}
     ${faixaTema}
     ${festiveAccents}
-    ${content}
+    ${visualContent}
+    ${protectedNameContent}
   </g>
   <g id="molde-tecnico" fill="#111111" stroke="#111111">${moldGeometry}</g>
 </svg>`;

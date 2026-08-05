@@ -21,15 +21,8 @@ import {
 import { Thumb } from "@/components/Thumb";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { getThemeReadiness, isThemeHeroAsset } from "@/lib/theme-curation";
-import { getDefaultThemePalette } from "@/lib/theme-palettes";
-
-interface TemaCard {
-  slug: string;
-  name: string;
-  capa: string | null;   // clipart principal
-  papel: string | null;  // papel top (fundo do card)
-  cor: string;
-}
+import { getDefaultThemePalette, getThemeHeroRole } from "@/lib/theme-palettes";
+import { useThemeLibrary } from "@/hooks/use-theme-library";
 
 interface ClipartOption {
   url: string;
@@ -74,18 +67,10 @@ const PALETA_PERSONALIZADA: KitPalette = {
   accent: "#159A9C",
 };
 
-const BABY_SHARK_VARIANTS: Record<string, { heroRole: string }> = {
-  "baby-shark-azul": {
-    heroRole: "amigo",
-  },
-  "baby-shark-rosa": {
-    heroRole: "amigo2",
-  },
-};
-
 // Compositor "padrão Alice": biblioteca de 100 temas + molde vetorial + nome → arte editável na hora.
 export default function Editor() {
-  const [themeSlug, setThemeSlug] = useState<string>("");
+  const requestedTheme = useMemo(() => new URLSearchParams(window.location.search).get("tema") ?? "", []);
+  const [themeSlug, setThemeSlug] = useState<string>(requestedTheme);
   const [moldeId, setMoldeId] = useState<string>("");
   const [nome, setNome] = useState("");
   const [idade, setIdade] = useState("");
@@ -108,7 +93,7 @@ export default function Editor() {
   const [mockupQuality, setMockupQuality] = useState<MockupQuality | null>(null);
   const previewRequestRef = useRef(0);
   // Quiz em página inteira: 1 tema → 2 molde → 3 nome → 4 toque final → 5 resultado
-  const [etapa, setEtapa] = useState(1);
+  const [etapa, setEtapa] = useState(requestedTheme ? 2 : 1);
 
   // ao trocar de tema, carrega os cliparts p/ escolha do personagem em destaque
   useEffect(() => {
@@ -123,7 +108,7 @@ export default function Editor() {
         .eq("kind", "clipart");
       // a placa é elemento decorativo (medalhão/plaquinha), não personagem — fora do seletor
       const list = ((data ?? []) as ClipartOption[]).filter(isSelectableCharacter);
-      const preferredRole = BABY_SHARK_VARIANTS[themeSlug]?.heroRole ?? "principal";
+      const preferredRole = getThemeHeroRole(themeSlug);
       setCliparts(list);
       setPrincipalUrl(
         list.find((c) => c.role === preferredRole)?.url ??
@@ -134,46 +119,7 @@ export default function Editor() {
     })();
   }, [themeSlug]);
 
-  const { data: temas, isLoading: loadingTemas } = useQuery({
-    queryKey: ["biblioteca-temas-cards"],
-    queryFn: async (): Promise<TemaCard[]> => {
-      const { data: assets, error } = await (supabase as any)
-        .from("tema_assets")
-        .select("theme_slug,kind,url,role,meta");
-      if (error) throw error;
-      const { data: nomes, error: nomesError } = await supabase
-        .from("modelos_prontos_temas")
-        .select("slug,name");
-      if (nomesError) throw nomesError;
-      const nameBySlug = new Map((nomes ?? []).map((t: any) => [t.slug, t.name]));
-      const bySlug = new Map<string, TemaCard>();
-      const assetsBySlug = new Map<string, typeof assets>();
-      for (const a of assets ?? []) {
-        const grouped = assetsBySlug.get(a.theme_slug) ?? [];
-        grouped.push(a);
-        assetsBySlug.set(a.theme_slug, grouped);
-        const variant = BABY_SHARK_VARIANTS[a.theme_slug];
-        const defaultPalette = getDefaultThemePalette(a.theme_slug);
-        if (!bySlug.has(a.theme_slug)) {
-          bySlug.set(a.theme_slug, {
-            slug: a.theme_slug,
-            name: nameBySlug.get(a.theme_slug) ?? a.theme_slug.replace(/-/g, " "),
-            capa: null,
-            papel: null,
-            cor: defaultPalette?.background ?? "#E91E90",
-          });
-        }
-        const t = bySlug.get(a.theme_slug)!;
-        const coverRole = variant?.heroRole ?? "principal";
-        if (a.kind === "clipart" && a.role === coverRole) t.capa = a.url;
-        if (a.kind === "papel" && a.role === "top") t.papel = a.url;
-        if (!variant && a.kind === "fonte" && a.meta?.cor) t.cor = a.meta.cor;
-      }
-      return [...bySlug.values()]
-        .filter((theme) => getThemeReadiness(assetsBySlug.get(theme.slug) ?? []).ready)
-        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-    },
-  });
+  const { data: temas, isLoading: loadingTemas } = useThemeLibrary();
 
   const { data: moldes, isLoading: loadingMoldes } = useQuery({
     queryKey: ["moldes-vetoriais"],
@@ -198,10 +144,10 @@ export default function Editor() {
   const temaSel = useMemo(() => (temas ?? []).find((t) => t.slug === themeSlug), [temas, themeSlug]);
   const molde = useMemo(() => (moldes ?? []).find((m: any) => m.id === moldeId), [moldes, moldeId]);
   const paletaAtiva = useMemo<KitPalette | undefined>(() => {
-    if (paletaId === "tema") return getDefaultThemePalette(themeSlug);
+    if (paletaId === "tema") return getDefaultThemePalette(themeSlug) ?? temaSel?.palette;
     if (paletaId === "personalizada") return paletaPersonalizada;
     return PALETAS.find((paleta) => paleta.id === paletaId);
-  }, [paletaId, paletaPersonalizada, themeSlug]);
+  }, [paletaId, paletaPersonalizada, temaSel?.palette, themeSlug]);
   const fonteAtiva = useMemo(
     () => FONTES.find((fonte) => fonte.id === fonteId) ?? FONTES[0],
     [fonteId],
@@ -431,7 +377,6 @@ export default function Editor() {
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
               {temasFiltrados.map((t) => {
-                const variant = BABY_SHARK_VARIANTS[t.slug];
                 return (
                   <button
                     key={t.slug}
@@ -445,18 +390,18 @@ export default function Editor() {
                   >
                     <div
                       className="aspect-square bg-secondary relative"
-                      style={variant ? { backgroundColor: variant.palette.background } : undefined}
+                      style={{ backgroundColor: t.palette.background }}
                     >
-                      {t.papel && (
+                      {t.paper && (
                         <Thumb
-                          src={t.papel}
+                          src={t.paper}
                           size={320}
                           alt=""
-                          className={`absolute inset-0 h-full w-full object-cover ${variant ? "opacity-20" : "opacity-60"}`}
+                          className="absolute inset-0 h-full w-full object-cover opacity-35"
                         />
                       )}
-                      {t.capa && (
-                        <Thumb src={t.capa} size={320} alt={t.name}
+                      {t.cover && (
+                        <Thumb src={t.cover} size={320} alt={t.name}
                           className="absolute inset-0 w-full h-full object-contain p-2 drop-shadow-md group-hover:scale-105 transition-transform" />
                       )}
                       {themeSlug === t.slug && (
@@ -851,6 +796,22 @@ export default function Editor() {
                       </div>
                     ) : mockupImage ? (
                       <img src={mockupImage} alt={`Mockup da ${molde?.name} no tema ${temaSel?.name}`} className="h-full w-full object-contain" />
+                    ) : mockupError && previewSrc ? (
+                      <div className="flex h-full w-full min-h-0 flex-col bg-card">
+                        <img
+                          src={previewSrc}
+                          alt="Arte planificada preservada enquanto o mockup aguarda nova tentativa"
+                          className="min-h-0 w-full flex-1 object-contain p-3"
+                        />
+                        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card px-4 py-3">
+                          <p className="text-xs text-muted-foreground">
+                            A arte original foi preservada. O mockup ainda nao ficou pronto.
+                          </p>
+                          <Button onClick={() => void gerarMockup(svg!, mockupFormato)} size="sm" className="shrink-0" disabled={mockupBusy}>
+                            <RefreshCw className="mr-1.5 h-4 w-4" /> Tentar novamente
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <div className="max-w-sm space-y-3 px-6 text-center">
                         <Camera className="mx-auto h-8 w-8 text-primary/70" />

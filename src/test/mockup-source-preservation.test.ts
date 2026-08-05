@@ -9,14 +9,15 @@ const source = readFileSync(
 
 describe("preservação da arte no mockup", () => {
   it("sempre edita a arte aprovada enviada pelo editor", () => {
-    expect(source).toContain('{ type: "input_image", image_url: arteImageUrl }');
+    expect(source).toContain('{ type: "input_image", image_url: arteImageUrl, detail: "high" }');
     expect(source).toContain('action: "edit"');
     expect(source).toContain("A imagem anexa é a arte final aprovada vinda do acervo do Drive");
   });
 
-  it("não cria nem corrige uma estampa substituta", () => {
+  it("retenta sem descrever a propriedade visual e sem substituir a fonte", () => {
     expect(source).toContain("MOCKUP_SOURCE_PRESERVATION_FAILED");
-    expect(source).not.toContain("safeMode");
+    expect(source).toContain("safeMode");
+    expect(source).toContain("Preserve os pixels da arte anexa");
     expect(source).not.toContain("startQualityCorrection");
     expect(source).not.toContain("qualityCorrected");
     expect(source).not.toContain('status: "retrying"');

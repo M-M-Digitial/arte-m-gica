@@ -1,5 +1,5 @@
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-05-r9",
+  version: "alice-market-2026-08-05-r10",
   evidence: {
     aliceThemesReviewed: 30,
     marketLayoutReferencesReviewed: 1,
@@ -26,6 +26,8 @@ export const ALICE_QUALITY_STANDARD = {
     stickerMaxWidthToFace: 0.89,
     stickerSafeInset: { horizontal: 0.055, top: 0.075, bottom: 0.065 },
     directTextHaloToFontSize: 0.08,
+    printableFacesOnly: true,
+    protectedNameLayer: true,
   },
   score: {
     technicalStructure: 25,
@@ -41,6 +43,7 @@ export const ALICE_QUALITY_STANDARD = {
     "alca, tampa ou face visivel sem cor, wash, textura ou outro tratamento intencional",
     "furo ou recorte vazado coberto pela arte",
     "nome incorreto, ilegivel ou fora da area segura",
+    "personagem, monograma ou ornamento sobrepondo a personalizacao",
     "personagem ou texto em aba de cola escondida",
     "arte fora do contorno do molde",
     "composicao substancialmente identica a uma arte final de referencia",

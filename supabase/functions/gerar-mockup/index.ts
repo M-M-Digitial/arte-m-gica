@@ -29,9 +29,6 @@ const jsonResponse = (payload: unknown, status = 200) =>
 const isModerationError = (text: string) =>
   /moderation_blocked|content_policy|safety/i.test(text);
 
-const isImageRefusal = (text: string) =>
-  /não consigo gerar|nao consigo gerar|can't generate|cannot generate|protected|protegida|copyright|direitos autorais|versão segura|versao segura/i.test(text);
-
 function getProductGeometry(moldeName: string): string {
   const normalized = moldeName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/milk/.test(normalized)) {
@@ -210,6 +207,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     idade,
     formato,
     quality: qualityRaw,
+    safeMode,
   } = body as Record<string, any>;
 
   if (
@@ -233,9 +231,16 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
 
   const productGeometry = getProductGeometry(String(moldeName));
 
+  const themeDescription = safeMode
+    ? "com a identidade visual exata da imagem anexa"
+    : `com o tema "${temaNome}"`;
+  const safeModeRule = safeMode
+    ? "- Nao identifique, descreva ou recrie personagens da referencia. Preserve os pixels da arte anexa e limite a geracao ao volume de papel, iluminacao e cenario generico coordenado."
+    : "- Preserve todos os personagens e elementos tematicos exatamente como aparecem na referencia.";
+
   const prompt = `Crie uma fotografia publicitária realista de papelaria personalizada para redes sociais (${formatoDesc}).
 
-PRODUTO PRINCIPAL: ${moldeName} finalizado, montado e pronto para entrega, com o tema "${temaNome}"${personalizacao ? `, com ${personalizacao}` : ""}.
+PRODUTO PRINCIPAL: ${moldeName} finalizado, montado e pronto para entrega, ${themeDescription}${personalizacao ? `, com ${personalizacao}` : ""}.
 
 REFERÊNCIA OBRIGATÓRIA:
 - A imagem anexa é a arte final aprovada vinda do acervo do Drive e deve ser reutilizada como textura de impressão do produto.
@@ -243,6 +248,7 @@ REFERÊNCIA OBRIGATÓRIA:
 - Não crie outra estampa, não redesenhe personagens, não troque ilustrações ou ornamentos e não altere paleta, nome ou idade.
 - Trate a planificação fornecida como mapa de superfície. A IA deve criar somente o volume tridimensional, os materiais, a iluminação e o cenário.
 - O nome e a idade da referência devem permanecer legíveis e escritos exatamente como no arquivo aprovado.
+${safeModeRule}
 
 CONSTRUÇÃO DO PRODUTO:
 - Converta o molde planificado no ${moldeName} tridimensional correto, respeitando o padrão real de papelaria personalizada.
@@ -269,7 +275,7 @@ NÃO INCLUIR:
 
   const content: Array<Record<string, unknown>> = [
     { type: "input_text", text: prompt },
-    { type: "input_image", image_url: arteImageUrl },
+    { type: "input_image", image_url: arteImageUrl, detail: "high" },
   ];
 
   const res = await fetch("https://api.openai.com/v1/responses", {
@@ -348,15 +354,9 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   const call = output.find((o) => o.type === "image_generation_call" && o.status === "completed");
   const b64 = typeof call?.result === "string" ? call.result : null;
   if (!b64) {
-    const outputText = output
-      .filter((item) => item.type === "message")
-      .flatMap((item) => Array.isArray(item.content) ? item.content : [])
-      .filter((item) => item?.type === "output_text" && typeof item.text === "string")
-      .map((item) => item.text)
-      .join(" ");
     const imageCallFailed = output.some((item) => item.type === "image_generation_call" && item.status === "failed");
     console.error("Mockup completou sem imagem:", JSON.stringify(output.map((o) => ({ type: o.type, status: o.status }))));
-    if (imageCallFailed && isImageRefusal(outputText)) {
+    if (imageCallFailed) {
       return jsonResponse({
         status: "error",
         error: "A API não conseguiu montar o mockup preservando a arte original. Nenhuma arte substituta foi criada.",

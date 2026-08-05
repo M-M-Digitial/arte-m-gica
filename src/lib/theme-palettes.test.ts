@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDefaultThemePalette } from "./theme-palettes";
+import { getDefaultThemePalette, getThemeHeroRole } from "./theme-palettes";
 
 describe("default theme palettes", () => {
   it("usa cores infantis coordenadas na Bela e a Fera", () => {
@@ -13,5 +13,10 @@ describe("default theme palettes", () => {
 
   it("não força paleta em temas sem curadoria específica", () => {
     expect(getDefaultThemePalette("tema-sem-override")).toBeUndefined();
+  });
+
+  it("mantem as capas azul e rosa corretas do Baby Shark", () => {
+    expect(getThemeHeroRole("baby-shark-azul")).toBe("amigo");
+    expect(getThemeHeroRole("baby-shark-rosa")).toBe("amigo2");
   });
 });

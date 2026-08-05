@@ -109,6 +109,8 @@ describe("composição SVG do kit", () => {
       fonteUri: null,
       corNome: "#1F1F1F",
       corIdade: "#F47A2A",
+      corFundo: "#FFF1E8",
+      corAcento: "#F47A2A",
       nome: "Sofia",
       idade: "5",
     });
@@ -116,6 +118,7 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('<metadata id="alice-composition-profile">modular</metadata>');
     expect(svg).toContain('fill="url(#papelTop)"');
     expect(svg).toContain('fill="url(#papelBody)"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.22"');
     expect(svg).toContain("Sofia");
     expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
     expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(2);
@@ -260,5 +263,44 @@ describe("composição SVG do kit", () => {
     expect(y).toBeGreaterThanOrEqual(49);
     expect(width).toBeLessThanOrEqual(89);
     expect(y + height).toBeLessThanOrEqual(152.2);
+  });
+
+  it("mantem nome e personagens apenas nas faces centrais da Caixa Canudo", () => {
+    const faces = [
+      { x: 778, y: 171, w: 480, h: 599, area: 255021, cx: 1017.5, cy: 470 },
+      { x: 1798, y: 171, w: 480, h: 599, area: 254821, cx: 2037.5, cy: 470 },
+      { x: 1277, y: 777, w: 504, h: 505, area: 237746, cx: 1528.5, cy: 1029 },
+      { x: 771, y: 778, w: 498, h: 504, area: 235627, cx: 1019.5, cy: 1029.5 },
+      { x: 261, y: 778, w: 495, h: 503, area: 235227, cx: 508, cy: 1029 },
+      { x: 1788, y: 778, w: 490, h: 504, area: 234421, cx: 2032.5, cy: 1029.5 },
+      { x: 1288, y: 1289, w: 480, h: 322, area: 122045, cx: 1527.5, cy: 1449.5 },
+      { x: 270, y: 467, w: 476, h: 303, area: 117886, cx: 507.5, cy: 618 },
+      { x: 1290, y: 467, w: 476, h: 303, area: 117792, cx: 1527.5, cy: 618 },
+    ];
+    const svg = montarSvgKit({
+      moldName: "Caixa Canudo",
+      moldSvg: `<svg viewBox="0 0 2526 1786"><rect x="0" y="0" width="2526" height="1786"/></svg>`,
+      facesJson: JSON.stringify({ faces }),
+      maskUri: "data:image/png;base64,MASK",
+      papelTopUri: null,
+      papelBodyUri: null,
+      personagens: [
+        { uri: "data:image/png;base64,HERO_A", w: 800, h: 1200, role: "principal" },
+        { uri: "data:image/png;base64,HERO_B", w: 900, h: 1100, role: "amigo" },
+      ],
+      placaUri: null,
+      placaMeta: null,
+      fonteFamily: "sans-serif",
+      fonteUri: null,
+      corNome: "#163B73",
+      corIdade: "#F28C28",
+      nome: "Pablo Ryan",
+      idade: "2",
+    });
+
+    expect(svg).toContain('<metadata id="printable-face-count">4</metadata>');
+    expect(svg).not.toMatch(/data-theme-(?:hero|monogram|panel|ornament)="true"[^>]*data-face-y="(?:171|467|1289)"/);
+    expect(svg).toMatch(/data-name-plate="true"[^>]*data-face-y="77[78]"/);
+    expect(svg.lastIndexOf('data-name-plate="true"')).toBeGreaterThan(svg.lastIndexOf('data-theme-hero="true"'));
   });
 });

@@ -81,6 +81,14 @@ if (!assets.length) throw new Error(`tema "${slug}" sem assets`);
 
 const byRole = (role) => assets.find((a) => a.role === role);
 const fonte = assets.find((a) => a.kind === "fonte");
+if (!palette && paletaId === "tema") {
+  const primary = /^#[0-9a-f]{6}$/i.test(fonte?.meta?.cor ?? "") ? fonte.meta.cor : "#D93680";
+  const secondary = /^#[0-9a-f]{6}$/i.test(fonte?.meta?.cor2 ?? "") ? fonte.meta.cor2 : "#F2A900";
+  const value = primary.replace("#", "");
+  const lighten = (offset) => Math.round(Number.parseInt(value.slice(offset, offset + 2), 16) + (255 - Number.parseInt(value.slice(offset, offset + 2), 16)) * 0.86)
+    .toString(16).padStart(2, "0");
+  palette = { primary, secondary, background: `#${lighten(0)}${lighten(2)}${lighten(4)}`, accent: secondary };
+}
 const placa = assets.find((a) => a.kind === "placa");
 const rolePriority = (role) => role === "principal" ? 0 : role === "amigo" ? 1 : role === "amigo2" ? 2 : 3;
 const cliparts = assets

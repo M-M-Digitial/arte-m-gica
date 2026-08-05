@@ -2,12 +2,30 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Frame = { dataUrl: string; isFinal: boolean };
 
-export type JobMeta = Record<string, any>;
+export type JobMeta = {
+  error?: string;
+  code?: string;
+  jobId?: string;
+  status?: string;
+  imageUrl?: string;
+  imageBase64?: string;
+  mockupUrl?: string;
+  mockupBase64?: string;
+  qualityReview?: {
+    score?: number;
+    approved?: boolean;
+  };
+  [key: string]: unknown;
+};
 
 const POLL_INTERVAL_MS = 4000;
 const JOB_TIMEOUT_MS = 8 * 60_000;
+const RETRYABLE_GENERATION_CODES = new Set([
+  "OPENAI_MODERATION_BLOCKED",
+  "MOCKUP_SOURCE_PRESERVATION_FAILED",
+]);
 
-async function callFunction(functionName: string, payload: unknown): Promise<any> {
+async function callFunction(functionName: string, payload: unknown): Promise<JobMeta> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`;
   const anon = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
   const { data: { session } } = await supabase.auth.getSession();
@@ -23,18 +41,19 @@ async function callFunction(functionName: string, payload: unknown): Promise<any
     body: JSON.stringify(payload ?? {}),
   });
 
-  let json: any = null;
+  let json: unknown = null;
   try {
     json = await res.json();
   } catch {
     /* resposta sem corpo JSON */
   }
+  const result = json && typeof json === "object" ? json as JobMeta : {};
   if (!res.ok) {
-    const err = new Error(json?.error ?? `Erro ${res.status}`) as Error & { status?: number };
+    const err = new Error(result.error ?? `Erro ${res.status}`) as Error & { status?: number };
     err.status = res.status;
     throw err;
   }
-  return json ?? {};
+  return result;
 }
 
 /**
@@ -57,8 +76,10 @@ export async function runImageGenerationJob(
   const startJob = async (extra: Record<string, unknown> = {}) =>
     callFunction(functionName, { ...(body as Record<string, unknown>), ...extra });
 
+  let safeRetried = false;
   let created = await startJob();
-  if (created?.code === "OPENAI_MODERATION_BLOCKED") {
+  if (RETRYABLE_GENERATION_CODES.has(created?.code)) {
+    safeRetried = true;
     created = await startJob({ safeMode: true });
   }
   if (created?.error) throw new Error(created.error);
@@ -66,7 +87,6 @@ export async function runImageGenerationJob(
   if (!jobId) throw new Error("Não consegui iniciar a geração. Tente novamente.");
 
   const moldeTemplateUrl = (body as Record<string, unknown>)?.["moldeTemplateUrl"];
-  let safeRetried = false;
   let startedAt = Date.now();
 
   while (true) {
@@ -97,7 +117,7 @@ export async function runImageGenerationJob(
     }
 
     if (st?.status === "error") {
-      if (st.code === "OPENAI_MODERATION_BLOCKED" && !safeRetried) {
+      if (RETRYABLE_GENERATION_CODES.has(st.code) && !safeRetried) {
         safeRetried = true;
         const retry = await startJob({ safeMode: true });
         if (retry?.error || !retry?.jobId) {
