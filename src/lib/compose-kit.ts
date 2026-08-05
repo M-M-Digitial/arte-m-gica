@@ -36,7 +36,7 @@ export interface KitPalette {
   secondary: string;
   background: string;
   accent: string;
-  appearance?: "balanced" | "vibrant";
+  appearance?: "balanced" | "vibrant" | "elegant";
 }
 
 export interface KitTypography {
@@ -162,7 +162,7 @@ export interface KitDados {
   corIdade: string;
   corFundo?: string;
   corAcento?: string;
-  paletteAppearance?: "balanced" | "vibrant";
+  paletteAppearance?: "balanced" | "vibrant" | "elegant";
   nome: string;
   idade?: string;
 }
@@ -286,6 +286,7 @@ export function montarSvgKit(d: KitDados): string {
   const paletteTint = Boolean(d.corFundo || d.corAcento);
   const paletteAppearance = d.paletteAppearance ?? "balanced";
   const isVibrant = paletteAppearance === "vibrant";
+  const isElegant = paletteAppearance === "elegant";
   const qualityStandard = ALICE_QUALITY_STANDARD.layout;
   const family = d.fonteFamily || "sans-serif";
   const familyAttr = escAttr(family);
@@ -384,10 +385,10 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = paletteTint
-      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${isVibrant ? "0.16" : estampaDensa ? "0.22" : "0.30"}"/>`
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${isVibrant ? "0.16" : isElegant ? "0.24" : estampaDensa ? "0.22" : "0.30"}"/>`
       : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
     fundoBase = paletteTint
-      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${isVibrant ? 0.14 : estampaDensa ? 0.20 : 0.28}"/>`
+      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${isVibrant ? 0.14 : isElegant ? 0.22 : estampaDensa ? 0.20 : 0.28}"/>`
       : `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)"/>`;
   } else {
     const fechamento = paletteTint ? corNome : clarear(corIdade, 0.18);
@@ -399,7 +400,7 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = paletteTint
-      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${isVibrant ? 0.14 : estampaDensa ? 0.22 : 0.40}"/>`
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${isVibrant ? 0.14 : isElegant ? 0.28 : estampaDensa ? 0.22 : 0.40}"/>`
       : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
@@ -412,13 +413,20 @@ export function montarSvgKit(d: KitDados): string {
     ? lastBodyFace.x + lastBodyFace.w - firstBodyFace.x
     : W;
   const panoramicScene = panelAssets[0]
-    ? `<image data-theme-scene="panoramic" data-scene-continuity="licensed-panel" href="${panelAssets[0].uri}" xlink:href="${panelAssets[0].uri}" x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" preserveAspectRatio="xMidYMax slice" opacity="${isVibrant ? 0.50 : 0.72}"/>`
+    ? `<image data-theme-scene="panoramic" data-scene-continuity="licensed-panel" href="${panelAssets[0].uri}" xlink:href="${panelAssets[0].uri}" x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" preserveAspectRatio="xMidYMax slice" opacity="${isVibrant ? 0.50 : isElegant ? 0.60 : 0.72}"/>`
     : "";
   const vibrantColorLayer = isVibrant
     ? `<g data-vibrant-color-wash="true" data-scene-continuity="party-color-rhythm">
         <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.10} Q ${bodyRowX + bodyRowW * 0.25} ${bodyTop - avgFaceH * 0.04} ${bodyRowX + bodyRowW * 0.50} ${bodyTop + avgFaceH * 0.11} T ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.10} L ${bodyRowX + bodyRowW} ${bodyTop} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.34"/>
         <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.30} Q ${bodyRowX + bodyRowW * 0.18} ${bodyBot - avgFaceH * 0.42} ${bodyRowX + bodyRowW * 0.38} ${bodyBot - avgFaceH * 0.27} T ${bodyRowX + bodyRowW * 0.76} ${bodyBot - avgFaceH * 0.29} T ${bodyRowX + bodyRowW} ${bodyBot - avgFaceH * 0.25} L ${bodyRowX + bodyRowW} ${bodyBot} H ${bodyRowX} Z" fill="${corAcento}" fill-opacity="0.30"/>
         ${big.map((face, index) => `<ellipse cx="${face.cx}" cy="${face.y + face.h * 0.47}" rx="${face.w * 0.41}" ry="${face.h * 0.34}" fill="${index % 2 === 0 ? corIdade : corNome}" fill-opacity="${index % 2 === 0 ? 0.10 : 0.08}"/>`).join("")}
+      </g>`
+    : "";
+  const elegantFinishLayer = isElegant
+    ? `<g data-elegant-finish="true" data-scene-continuity="refined-linework">
+        <rect x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" fill="#FFFFFF" fill-opacity="0.12"/>
+        <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.045} H ${bodyRowX + bodyRowW}" stroke="${corIdade}" stroke-width="${Math.max(4, avgFaceH * 0.012)}" stroke-opacity="0.76"/>
+        <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.045} H ${bodyRowX + bodyRowW}" stroke="${corIdade}" stroke-width="${Math.max(3, avgFaceH * 0.009)}" stroke-opacity="0.58"/>
       </g>`
     : "";
   const sceneFamily = getThemeSceneFamily(d.themeSlug);
@@ -784,6 +792,7 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoCorpo}
     ${panoramicScene}
     ${vibrantColorLayer}
+    ${elegantFinishLayer}
     ${sceneLayer}
     ${closureBands}
     ${faixaTema}

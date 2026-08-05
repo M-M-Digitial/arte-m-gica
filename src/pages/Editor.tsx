@@ -58,6 +58,7 @@ const isSelectableCharacter = (asset: ClipartOption) =>
 
 const PALETAS: Array<KitPalette & { id: string; label: string }> = [
   { id: "vibrante", label: "Festa bem colorida", primary: "#E6005C", secondary: "#FFD000", background: "#29C7D8", accent: "#35B84A", appearance: "vibrant" },
+  { id: "elegante", label: "Elegante", primary: "#7A2D52", secondary: "#C8A44D", background: "#F8F3F6", accent: "#2F6B5B", appearance: "elegant" },
   { id: "pastel", label: "Pastel delicado", primary: "#B85C8A", secondary: "#79BFAF", background: "#FFF5F8", accent: "#E7B84B" },
   { id: "aventura", label: "Aventura", primary: "#245F4F", secondary: "#E4A82B", background: "#E9F5EA", accent: "#C9533F" },
   { id: "magica", label: "Ceu magico", primary: "#4D62A8", secondary: "#D77DA5", background: "#ECF3FF", accent: "#E7B93F" },

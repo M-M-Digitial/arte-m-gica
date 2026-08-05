@@ -352,4 +352,41 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('fill="url(#papelBody)" opacity="0.14"');
     expect(svg).toContain('fill="#35B84A" fill-opacity="0.92"');
   });
+
+  it("aplica acabamento refinado sem transformar a opcao elegante em pastel vazio", () => {
+    const faces = Array.from({ length: 4 }, (_, index) => ({
+      x: index * 100,
+      y: 40,
+      w: 100,
+      h: 120,
+      cx: index * 100 + 50,
+      cy: 100,
+      area: 12000,
+    }));
+    const svg = montarSvgKit({
+      moldName: "Caixa Milk",
+      moldSvg: `<svg viewBox="0 0 400 200"><rect x="0" y="0" width="400" height="200"/></svg>`,
+      facesJson: JSON.stringify({ faces }),
+      maskUri: "data:image/png;base64,MASK",
+      papelTopUri: "data:image/png;base64,TOP",
+      papelBodyUri: "data:image/png;base64,BODY",
+      personagens: [{ uri: "data:image/png;base64,HERO", w: 100, h: 100, role: "principal" }],
+      placaUri: null,
+      placaMeta: null,
+      fonteFamily: "serif",
+      fonteUri: null,
+      corNome: "#7A2D52",
+      corIdade: "#C8A44D",
+      corFundo: "#F8F3F6",
+      corAcento: "#2F6B5B",
+      paletteAppearance: "elegant",
+      nome: "Lia",
+      idade: "4",
+    });
+
+    expect(svg).toContain('<metadata id="color-appearance">elegant</metadata>');
+    expect(svg).toContain('data-elegant-finish="true"');
+    expect(svg).not.toContain('data-vibrant-color-wash="true"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.28"');
+  });
 });
