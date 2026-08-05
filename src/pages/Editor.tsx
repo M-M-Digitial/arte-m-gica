@@ -34,6 +34,7 @@ interface ClipartOption {
     enabled?: boolean;
     w?: number;
     h?: number;
+    label?: string;
   } | null;
 }
 
@@ -502,15 +503,21 @@ export default function Editor() {
                   <button
                     key={c.url}
                     onClick={() => setPrincipalUrl(c.url)}
-                    className={`relative rounded-2xl border-2 bg-white p-4 transition-all duration-200 ${
+                    type="button"
+                    aria-label={`Destacar ${c.meta?.label || c.role}`}
+                    aria-pressed={principalUrl === c.url}
+                    className={`relative min-h-40 rounded-2xl border-2 bg-white p-3 transition-all duration-200 ${
                       principalUrl === c.url
                         ? "border-primary shadow-soft scale-[1.03]"
                         : "border-border/40 hover:border-primary/40 hover:-translate-y-0.5"
                     }`}
                   >
                     <div className="h-28 flex items-center justify-center">
-                      <Thumb src={c.url} size={320} alt="" className="max-h-full max-w-full object-contain drop-shadow-sm" />
+                      <Thumb src={c.url} size={320} alt={c.meta?.label || "Personagem do tema"} className="max-h-full max-w-full object-contain drop-shadow-sm" />
                     </div>
+                    <span className="mt-2 block line-clamp-2 text-center text-xs font-semibold text-foreground">
+                      {c.meta?.label || "Personagem"}
+                    </span>
                     {principalUrl === c.url && (
                       <span className="absolute top-2 right-2 h-6 w-6 rounded-full gradient-hero text-white text-xs flex items-center justify-center shadow">✓</span>
                     )}
@@ -536,10 +543,10 @@ export default function Editor() {
                 {
                   id: "tema",
                   label: "Cores do tema",
-                  primary: temaSel?.cor || "#D93680",
-                  secondary: "#F2A900",
-                  background: "#FFFFFF",
-                  accent: "#159A9C",
+                  primary: temaSel?.palette.primary || "#D93680",
+                  secondary: temaSel?.palette.secondary || "#F2A900",
+                  background: temaSel?.palette.background || "#FFFFFF",
+                  accent: temaSel?.palette.accent || "#159A9C",
                 },
                 ...PALETAS,
                 { id: "personalizada", label: "Personalizada", ...paletaPersonalizada },
