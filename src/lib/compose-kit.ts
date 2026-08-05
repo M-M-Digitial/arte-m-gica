@@ -2,7 +2,10 @@
 // nome → arte SVG editável. O layout é PURO (montarSvgKit) para rodar igual no
 // navegador e no harness de prévia (tools/ingestao/preview-kit.mjs).
 
-import { ALICE_QUALITY_STANDARD } from "../../supabase/functions/_shared/alice-quality-standard.ts";
+import {
+  ALICE_QUALITY_STANDARD,
+  MARKET_VISUAL_RESEARCH,
+} from "../../supabase/functions/_shared/alice-quality-standard.ts";
 import { assertThemeReadyForComposition } from "./theme-curation";
 import { selectPrintableFaces, type PrintableFace } from "./printable-faces";
 export { getDefaultThemePalette } from "./theme-palettes";
@@ -417,9 +420,11 @@ export function montarSvgKit(d: KitDados): string {
     : "";
   const vibrantColorLayer = isVibrant
     ? `<g data-vibrant-color-wash="true" data-scene-continuity="party-color-rhythm">
-        <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.10} Q ${bodyRowX + bodyRowW * 0.25} ${bodyTop - avgFaceH * 0.04} ${bodyRowX + bodyRowW * 0.50} ${bodyTop + avgFaceH * 0.11} T ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.10} L ${bodyRowX + bodyRowW} ${bodyTop} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.34"/>
-        <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.30} Q ${bodyRowX + bodyRowW * 0.18} ${bodyBot - avgFaceH * 0.42} ${bodyRowX + bodyRowW * 0.38} ${bodyBot - avgFaceH * 0.27} T ${bodyRowX + bodyRowW * 0.76} ${bodyBot - avgFaceH * 0.29} T ${bodyRowX + bodyRowW} ${bodyBot - avgFaceH * 0.25} L ${bodyRowX + bodyRowW} ${bodyBot} H ${bodyRowX} Z" fill="${corAcento}" fill-opacity="0.30"/>
-        ${big.map((face, index) => `<ellipse cx="${face.cx}" cy="${face.y + face.h * 0.47}" rx="${face.w * 0.41}" ry="${face.h * 0.34}" fill="${index % 2 === 0 ? corIdade : corNome}" fill-opacity="${index % 2 === 0 ? 0.10 : 0.08}"/>`).join("")}
+        <rect x="${bodyRowX}" y="${bodyTop}" width="${bodyRowW}" height="${bodyBot - bodyTop}" fill="${corFundo}" fill-opacity="0.18"/>
+        <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.13} Q ${bodyRowX + bodyRowW * 0.25} ${bodyTop - avgFaceH * 0.04} ${bodyRowX + bodyRowW * 0.50} ${bodyTop + avgFaceH * 0.14} T ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.12} L ${bodyRowX + bodyRowW} ${bodyTop} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.46"/>
+        <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.32} Q ${bodyRowX + bodyRowW * 0.18} ${bodyBot - avgFaceH * 0.45} ${bodyRowX + bodyRowW * 0.38} ${bodyBot - avgFaceH * 0.28} T ${bodyRowX + bodyRowW * 0.76} ${bodyBot - avgFaceH * 0.31} T ${bodyRowX + bodyRowW} ${bodyBot - avgFaceH * 0.26} L ${bodyRowX + bodyRowW} ${bodyBot} H ${bodyRowX} Z" fill="${corAcento}" fill-opacity="0.42"/>
+        <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.53} C ${bodyRowX + bodyRowW * 0.24} ${bodyTop + avgFaceH * 0.45}, ${bodyRowX + bodyRowW * 0.71} ${bodyTop + avgFaceH * 0.62}, ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.50}" fill="none" stroke="${corNome}" stroke-width="${Math.max(10, avgFaceH * 0.045)}" stroke-opacity="0.24"/>
+        ${big.map((face, index) => `<ellipse cx="${face.cx}" cy="${face.y + face.h * 0.47}" rx="${face.w * 0.42}" ry="${face.h * 0.35}" fill="${index % 2 === 0 ? corIdade : corNome}" fill-opacity="${index % 2 === 0 ? 0.15 : 0.13}"/>`).join("")}
       </g>`
     : "";
   const elegantFinishLayer = isElegant
@@ -749,6 +754,8 @@ export function montarSvgKit(d: KitDados): string {
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">
   <title>Kit personalizado de ${esc(nome)}</title>
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
+  <metadata id="market-research-version">${MARKET_VISUAL_RESEARCH.version}</metadata>
+  <metadata id="market-reference-sample-size">${MARKET_VISUAL_RESEARCH.sampleSize}</metadata>
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
   <metadata id="color-appearance">${paletteAppearance}</metadata>
   <metadata id="printable-face-count">${big.length}</metadata>

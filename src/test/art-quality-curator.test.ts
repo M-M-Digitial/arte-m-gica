@@ -6,6 +6,14 @@ const source = readFileSync(
   resolve(process.cwd(), "supabase/functions/gerar-arte/index.ts"),
   "utf8",
 );
+const standardSource = readFileSync(
+  resolve(process.cwd(), "supabase/functions/_shared/alice-quality-standard.ts"),
+  "utf8",
+);
+const composerSource = readFileSync(
+  resolve(process.cwd(), "src/lib/compose-kit.ts"),
+  "utf8",
+);
 
 describe("curadoria comercial da arte gerada", () => {
   it("avalia a arte final antes do upload e reprova composicao fraca", () => {
@@ -36,5 +44,14 @@ describe("curadoria comercial da arte gerada", () => {
     expect(source).toContain("getThemeStoryDirection");
     expect(source).toContain("TEMA OBRIGATORIO");
     expect(source).toContain("CRITICA VISUAL DA TENTATIVA ANTERIOR");
+  });
+
+  it("usa a auditoria de 236 anuncios sem atribuir dados nao verificados a Shopee", () => {
+    expect(standardSource).toContain('version: "market-ml-2026-08-05-r1"');
+    expect(standardSource).toContain("sampleSize: 236");
+    expect(standardSource).toContain("paletteRecoloredAreaMin: 35");
+    expect(standardSource).toContain("Shopee: login necessario durante a coleta");
+    expect(composerSource).toContain('id="market-research-version"');
+    expect(composerSource).toContain('id="market-reference-sample-size"');
   });
 });

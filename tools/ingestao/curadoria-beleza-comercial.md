@@ -8,7 +8,8 @@ Traduzir "arte bonita e vendavel" em decisoes observaveis, mensuraveis e revisav
 
 - Inventario do Drive Alice: 100 temas e 490 fontes `.studio3` mapeadas.
 - Auditoria visual aprofundada: 30 temas Alice, incluindo fotos montadas, PDFs finais, papeis, placas e cliparts.
-- Mercado brasileiro: 16 referencias em Mercado Livre, Elo7, Shopee e Pinterest, cobrindo caixas Milk, Bala, Piramide, Sushi, Canudo, Alca e kits luxo.
+- Mercado brasileiro: 236 anuncios publicos unicos do Mercado Livre, coletados em cinco paginas da busca por `kit festa papelaria personalizada`; 146 exibiam volume de vendas e 143 exibiam avaliacao.
+- Shopee: coleta pendente porque a plataforma exigiu login nas sessoes disponiveis. Nenhuma conclusao da Shopee foi inventada ou substituida por resultado de outro site.
 - Evidencia de mercado recorrente: impressao fotografica ou alta resolucao, nome e idade, apliques 3D, camadas, fitas, lacos, pedrarias, acetato, papeis foscos de 180-240 g e variedade de modelos coordenados.
 - Pesquisa de percepcao visual: hierarquia depende de escala e contraste; elementos maiores, mais salientes e proximos ao centro recebem mais atencao. Complexidade aumenta percepcao de elaboracao e qualidade ate o ponto em que vira desordem; o alvo e o intervalo entre monotonia e caos.
 
@@ -52,6 +53,10 @@ Uma arte tem beleza comercial quando:
 - O acento aparece no heroi, nome ou detalhe de maior interesse, nao em toda parte.
 - Nome com contraste equivalente a pelo menos 4.5:1.
 - Paleta infantil pode ser vibrante sem usar todas as cores puras ao mesmo tempo; festas delicadas podem ser suaves sem perder um acento focal.
+- Na amostra de 236 anuncios, a saturacao media ficou entre 17,5% e 36,9% no intervalo interquartil; a area vibrante ficou entre 7,5% e 24,5% e a colorfulness entre 47,753 e 81,31.
+- Modo vibrante: fundo, faixas, placa do nome e ornamentos devem responder a troca de paleta; pelo menos 35% da area decorativa precisa mudar. Trocar apenas confetes reprova.
+- Modo elegante: pode reduzir saturacao, mas preserva contraste, tres planos, textura e um acento focal. Elegante nunca significa bege vazio.
+- Acentos agregados observados, para orientacao e nao como paleta universal: `#BC7230`, `#39736F`, `#E3B233`, `#BA1B30`, `#BD4848`, `#5F2248`, `#59A874`, `#574B54`.
 
 ### 4. Densidade e ritmo
 
@@ -141,6 +146,6 @@ Paleta suave, textura fina, floral ou brilho contido e foco muito claro. Poucos 
 - Nielsen Norman Group, principios de escala, hierarquia e contraste: https://media.nngroup.com/media/articles/attachments/Principles_Visual_Design-Letter.pdf
 - Pleyers (2024), complexidade visual e avaliacao de estetica, qualidade, prestigio e intencao de compra: https://onlinelibrary.wiley.com/doi/abs/10.1002/cb.2282
 - Graf e Landwehr (2015), equilibrio entre prazer imediato, interesse e complexidade: https://pubmed.ncbi.nlm.nih.gov/25742990/
-- Mercado Livre, caixa Bala 3D com aplique e fita banana: https://www.mercadolivre.com.br/30-caixa-bala-personalizada-3d-papel-fosco/up/MLBU1562336236
-- Elo7, kit luxo com aplique 3D em duas camadas, lacos, perolas e passamanaria: https://www.elo7.com.br/kit-luxo-24-itens/dp/1F75190
-- Elo7, kit em camadas de papel com acetato, pedrarias, lacos e personalizacao: https://www.elo7.com.br/kit-festa-personalizada-luxo-nova-ariel-25-pecas/dp/1E46009
+- Mercado Livre, busca publica auditada em 05/08/2026: https://lista.mercadolivre.com.br/kit-festa-papelaria-personalizada
+- Dataset completo e metricas: `output/market-audit/market-visual-analysis.json`.
+- PDF de auditoria: `output/pdf/auditoria-visual-kits-festa-mercado-2026-08-05.pdf`.

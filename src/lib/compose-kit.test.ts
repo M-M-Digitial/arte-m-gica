@@ -347,6 +347,8 @@ describe("composição SVG do kit", () => {
     });
 
     expect(svg).toContain('<metadata id="color-appearance">vibrant</metadata>');
+    expect(svg).toContain('<metadata id="market-research-version">market-ml-2026-08-05-r1</metadata>');
+    expect(svg).toContain('<metadata id="market-reference-sample-size">236</metadata>');
     expect(svg).toContain('data-vibrant-color-wash="true"');
     expect(svg).toContain('fill="#29C7D8"');
     expect(svg).toContain('fill="url(#papelBody)" opacity="0.14"');

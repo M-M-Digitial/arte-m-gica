@@ -1,11 +1,42 @@
+export const MARKET_VISUAL_RESEARCH = {
+  version: "market-ml-2026-08-05-r1",
+  collectedAt: "2026-08-05",
+  source: "Mercado Livre",
+  query: "kit festa papelaria personalizada",
+  sampleSize: 236,
+  recordsWithSales: 146,
+  recordsWithRating: 143,
+  blockedSources: ["Shopee: login necessario durante a coleta"],
+  metricPercentiles: {
+    meanSaturation: { p25: 0.175, median: 0.276, p75: 0.369 },
+    vividShare: { p25: 0.075, median: 0.154, p75: 0.245 },
+    colorfulness: { p25: 47.753, median: 62.74, p75: 81.31 },
+    whiteShare: { p25: 0.008, median: 0.183, p75: 0.504 },
+    entropy: { p25: 5.187, median: 6.736, p75: 7.378 },
+    edgeDensity: { p25: 0.138, median: 0.204, p75: 0.257 },
+    contrastSpread: { p25: 158.27, median: 187.86, p75: 207.742 },
+  },
+  basePalette: ["#EEEADB", "#BE896C", "#8C4342", "#3F373D", "#D0C5B6", "#767F72", "#A3B9AC", "#E9CBB0"],
+  vividAccentPalette: ["#BC7230", "#39736F", "#E3B233", "#BA1B30", "#BD4848", "#5F2248", "#59A874", "#574B54"],
+  compositionSignals: {
+    visualLayers: 3,
+    heroPanelCoverage: { min: 38, target: 48, max: 58 },
+    paletteRecoloredAreaMin: 35,
+    protectedNameZone: true,
+    distinctStructuralChangesFromReference: 3,
+  },
+} as const;
+
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-05-r14",
+  version: "alice-market-2026-08-05-r15",
   evidence: {
     aliceThemesReviewed: 30,
     aliceLibraryThemesMapped: 100,
     aliceStudioSourcesMapped: 490,
-    marketReferencesReviewed: 16,
-    marketChannels: ["Pinterest", "Shopee", "Mercado Livre", "Elo7"],
+    marketReferencesReviewed: MARKET_VISUAL_RESEARCH.sampleSize,
+    marketChannels: [MARKET_VISUAL_RESEARCH.source],
+    marketResearchVersion: MARKET_VISUAL_RESEARCH.version,
+    marketSourcesPending: MARKET_VISUAL_RESEARCH.blockedSources,
     researchBasis: [
       "inventario Drive Alice",
       "fotos e PDFs finais Alice",
@@ -114,6 +145,7 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
     : "REGRA GLOBAL DE PERSONALIZACAO: reserve a faixa inferior de uma face visivel sem personagem atras ou atravessando o texto; arte menor pode ocupar a parte superior. Use 68-82% da largura da face (alvo 76%) e tipografia proporcional. Em fundo calmo, prefira lettering com halo; em fundo movimentado, use placa solida simples ou a placa propria do tema.";
 
   return `PADRAO ALICE + MERCADO (obrigatorio):
+- BASE VERIFICADA: ${MARKET_VISUAL_RESEARCH.sampleSize} anuncios publicos do ${MARKET_VISUAL_RESEARCH.source}, pesquisa "${MARKET_VISUAL_RESEARCH.query}", coletados em ${MARKET_VISUAL_RESEARCH.collectedAt}. Shopee permanece pendente por login; nao invente conclusoes dessa plataforma. Use somente padroes agregados, nunca a composicao de um anuncio individual.
 - ${moldRule} Separe exterior, vazados, cola escondida, superficies visiveis calmas, superficies de destaque e area segura de personalizacao.
 - Trate 100% das superficies visiveis com cor, wash, textura, microestampa ou ilustracao coerente. Fundo claro tratado e espaco de respiro sao acabamento valido; papel branco cru sem intencao e falha.
 - Escolha UM perfil de composicao conforme a referencia e a geometria, sem misturar escalas:
@@ -128,6 +160,7 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
 - VINCOS SEPARAM ELEMENTOS FOCAIS: cenario e papel podem continuar pelas dobras, mas personagem, rosto, nome, placa, monograma e ornamento focal ficam integralmente dentro de uma unica face e de sua margem segura. Nunca deixe perna, orelha, cabeca ou fragmento isolado do outro lado do vinco.
 - FACE DO NOME TAMBEM E ARTE: mantenha personagem ou cena com 68-84% da altura util atras/acima da placa. A placa entra como primeiro plano no terco inferior; nunca substitua toda a composicao por uma flor pequena, monograma ou espaco vazio.
 - PALETA ARQUITETADA: use 3-5 cores com funcoes claras. Dominante 50-65%, apoio 22-35% e acento 8-15%, mais neutro quando necessario. O acento deve conduzir olhos ao foco e ao nome, nao disputar com eles. Evite mistura suja, excesso de arco-iris e monocromia acidental.
+- MODOS DE COR: no modo VIBRANTE, a troca de paleta precisa recolorir pelo menos ${MARKET_VISUAL_RESEARCH.compositionSignals.paletteRecoloredAreaMin}% da area decorativa entre fundo, faixas, moldura e ornamentos; nao basta trocar confetes. Como referencia de vitrine, a area de pixels vividos ficou entre ${(MARKET_VISUAL_RESEARCH.metricPercentiles.vividShare.p25 * 100).toFixed(1)}% e ${(MARKET_VISUAL_RESEARCH.metricPercentiles.vividShare.p75 * 100).toFixed(1)}% no intervalo interquartil. No modo ELEGANTE, reduza saturacao, mas preserve contraste, textura, tres planos e um acento focal; elegante nunca significa bege vazio.
 - RITMO E COMPLEXIDADE: riqueza visual vem de variacao de escala, repeticao controlada, sobreposicao e materiais sugeridos, nao de lotacao uniforme. Na face heroica, mantenha 58-78% de cobertura ativa e 18-35% de respiro. Alterne faces densas e calmas sem deixar nenhuma face esquecida. Proibido usar tres confetes, pontos ou losangos genericos como substituto de cenario e ornamento tematico.
 - ACABAMENTO PREMIUM IMPRESSO: use contorno branco de aplique, moldura dupla, recorte especial, faixa coordenada e brilho localizado apenas quando coerentes com o tema e imprimiveis. Integre exatamente um lacinho grafico refinado a cada plaquinha de personalizacao, com largura de 22-34% da placa (alvo 28%), no topo da moldura e com no maximo 24% de sobreposicao. O laco deve ter volume visual por luz e sombra, mas permanecer vetorial e nunca cobrir nome, idade, personagem, recorte ou linha tecnica. Nao simule pedraria, cetim ou acetato como se fossem fornecidos fisicamente no SVG plano.
 - No perfil modular, distribua funcoes entre faces: personagem, nome/idade, titulo visual do tema quando houver e face de estampa/respiro. Nao repita o mesmo bloco em todas as faces.
@@ -153,14 +186,16 @@ const normalizeForRule = (value?: string) =>
 export function buildAliceCuratorStandard() {
   const weights = ALICE_QUALITY_STANDARD.score;
   return `RUBRICA DE CURADORIA ALICE + MERCADO:
+- Evidencia de mercado: amostra versionada ${MARKET_VISUAL_RESEARCH.version}, com ${MARKET_VISUAL_RESEARCH.sampleSize} anuncios do ${MARKET_VISUAL_RESEARCH.source}; ${MARKET_VISUAL_RESEARCH.recordsWithSales} exibiam vendas e ${MARKET_VISUAL_RESEARCH.recordsWithRating} exibiam avaliacao. Use percentis como alerta, nao como autorizacao para copiar layout ou ativo.
 - Estrutura tecnica (${weights.technicalStructure}): existe exatamente um molde; contorno, corte, dobra, sangria, abas de cola, furos e proporcoes ficam intactos, sem camada tecnica duplicada.
 - Tratamento visivel (${weights.visibleCoverage}): todas as faces, tampas e alcas expostas recebem cor, wash, textura ou arte intencional; exterior, furos e cola escondida ficam preservados. Fundo claro tratado nao e falha.
 - Hierarquia focal (${weights.focalHierarchy}): tema, heroi e personalizacao sao reconhecidos em ate 2 segundos na miniatura; existe um foco dominante e variacao clara de escala.
 - Sistema de cor (${weights.colorSystem}): 3-5 cores harmonicas com dominante, apoio, acento e neutro; contraste de leitura forte e ausencia de mistura suja ou arco-iris sem funcao.
+- Resposta da paleta: no modo vibrante, fundo, faixas, placa e ornamentos devem responder a selecao e recolorir pelo menos ${MARKET_VISUAL_RESEARCH.compositionSignals.paletteRecoloredAreaMin}% da area decorativa; no elegante, mantenha profundidade e contraste mesmo com saturacao menor. Reprove troca que afete apenas detalhes pequenos.
 - Profundidade e camadas (${weights.depthLayering}): fundo, meio e frente perceptiveis, com sobreposicao, ancoragem, sombra de contato e continuidade entre faces; nao parece uma colecao plana de PNGs soltos.
 - Narrativa do tema (${weights.themeStorytelling}): personagens, cenario, papeis, icones e acabamento contam a mesma historia e cada face tem papel coordenado.
 - Personalizacao (${weights.personalization}): nome exato, legivel e proporcional, area reservada sem personagem, largura de 68-82% da face, idade com 35-45% do nome e contraste alto. Na Milk, primeiro e quarto paineis sao laterais com nome; o segundo e a frente e recebe o personagem principal maior.
-- Impacto comercial (${weights.commercialImpact}): a arte chama atencao em miniatura, parece produto premium pronto para venda e oferece detalhes que recompensam a aproximacao sem ficar caotica.
+- Impacto comercial (${weights.commercialImpact}): a arte chama atencao em miniatura, parece produto premium pronto para venda e oferece detalhes que recompensam a aproximacao sem ficar caotica. O grupo heroico deve ocupar cerca de ${MARKET_VISUAL_RESEARCH.compositionSignals.heroPanelCoverage.min}-${MARKET_VISUAL_RESEARCH.compositionSignals.heroPanelCoverage.max}% do painel frontal, salvo restricao geometrica documentada.
 - Originalidade (${weights.originality}): a referencia orienta estilo e qualidade, mas o resultado muda pelo menos tres decisoes estruturais e nao repete fundo, bordas, ordem das faces ou enquadramento de um kit pronto.
 - Acabamento para impressao (${weights.printFinish}): nitidez, ausencia de artefatos/texto indevido, recortes seguros entre vincos, linhas tecnicas limpas e unicas, sem personagem repartido entre faces, e lacinho grafico vetorial bem integrado a cada placa de nome, sem colisao.
 - Variedade visual: personagens e poses distintos sao usados antes de qualquer repeticao. Repetir ou apenas espelhar o mesmo recorte em faces diferentes reduz a nota; havendo poucos assets, prefira um elemento tematico coordenado. Reprove face do nome vazia, personagem pequeno sobre papel repetido ou confete generico usado para simular acabamento.

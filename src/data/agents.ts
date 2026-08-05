@@ -105,7 +105,7 @@ export const agents: Agent[] = [
     name: "Cora",
     title: "Curadoria de Moldes e Artes",
     description:
-      "Analisa o molde aberto e a peça montada, compara com o padrão Alice e com o mercado e aponta exatamente o que precisa ser corrigido.",
+      "Analisa o molde aberto e a peça montada com o padrão Alice e uma amostra verificada de 236 anúncios do Mercado Livre, sem copiar composições.",
     deliverables: ["Status e nota técnica", "Bloqueios de qualidade", "Correções prioritárias"],
     starters: [
       "Revise este molde aberto antes de eu imprimir.",

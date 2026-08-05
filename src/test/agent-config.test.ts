@@ -47,6 +47,9 @@ describe("configuração operacional dos agentes", () => {
     expect(AGENT_PROMPTS.cora).toContain("Originalidade (5)");
     expect(AGENT_PROMPTS.cora).toContain("Impacto comercial (10)");
     expect(AGENT_PROMPTS.cora).toContain("painéis mortos");
+    expect(AGENT_PROMPTS.cora).toContain("236 anúncios públicos do Mercado Livre");
+    expect(AGENT_PROMPTS.cora).toContain("Shopee permanece pendente");
+    expect(AGENT_PROMPTS.cora).toContain("VIBRANTE ou ELEGANTE");
     expect(canonicalAgentId("violeta")).toBe("violeta");
   });
 
