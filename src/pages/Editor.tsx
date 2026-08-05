@@ -19,6 +19,7 @@ import {
   type TemaAsset,
 } from "@/lib/compose-kit";
 import { Thumb } from "@/components/Thumb";
+import { ThemeCover } from "@/components/ThemeCover";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { getThemeReadiness, isThemeHeroAsset } from "@/lib/theme-curation";
 import { getDefaultThemePalette, getThemeHeroRole } from "@/lib/theme-palettes";
@@ -401,8 +402,7 @@ export default function Editor() {
                         />
                       )}
                       {t.cover && (
-                        <Thumb src={t.cover} size={320} alt={t.name}
-                          className="absolute inset-0 w-full h-full object-contain p-2 drop-shadow-md group-hover:scale-105 transition-transform" />
+                        <ThemeCover src={t.cover} size={320} alt={t.name} className="p-2" />
                       )}
                       {themeSlug === t.slug && (
                         <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full gradient-hero text-white text-xs flex items-center justify-center shadow">✓</span>

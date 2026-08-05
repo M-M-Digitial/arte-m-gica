@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Palette, Search, Wand2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Thumb } from "@/components/Thumb";
+import { ThemeCover } from "@/components/ThemeCover";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,11 +67,10 @@ export default function Temas() {
                       aria-hidden="true"
                       className="absolute inset-0 h-full w-full object-cover opacity-35"
                     />
-                    <Thumb
+                    <ThemeCover
                       src={theme.cover}
                       size={512}
                       alt={theme.name}
-                      className="absolute inset-0 h-full w-full object-contain p-4 drop-shadow-md transition-transform duration-200 group-hover:scale-[1.03]"
                     />
                   </div>
                   <div className="space-y-3 p-3">
