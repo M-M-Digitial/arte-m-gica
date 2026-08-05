@@ -16,7 +16,7 @@ const palettes = {
   aventura: { primary: "#245F4F", secondary: "#E4A82B", background: "#E9F5EA", accent: "#C9533F" },
   magica: { primary: "#4D62A8", secondary: "#D77DA5", background: "#ECF3FF", accent: "#E7B93F" },
 };
-const palette = palettes[paletaId];
+let palette = palettes[paletaId];
 if (!slug || !moldeName || !outPath) {
   console.error("uso: node preview-kit.mjs <theme_slug> <molde_name> <saida.png> [nome] [idade]");
   process.exit(1);
@@ -37,6 +37,7 @@ const bundle = path.join(here, ".compose-kit-bundle.mjs");
 execSync(`npx esbuild "${path.join(repo, "src/lib/compose-kit.ts")}" --bundle --format=esm --outfile="${bundle}" --platform=neutral`, { stdio: "pipe" });
 const mod = await import(pathToFileURL(bundle).href + `?v=${Math.random()}`);
 if (!mod.montarSvgKit) throw new Error("montarSvgKit não exportado — o compose-kit.ts precisa expor o layout puro");
+if (!palette && paletaId === "tema") palette = mod.getDefaultThemePalette?.(slug);
 
 const fetchBuf = async (u) => {
   const r = await fetch(u);

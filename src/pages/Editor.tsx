@@ -21,6 +21,7 @@ import {
 import { Thumb } from "@/components/Thumb";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { getThemeReadiness, isThemeHeroAsset } from "@/lib/theme-curation";
+import { getDefaultThemePalette } from "@/lib/theme-palettes";
 
 interface TemaCard {
   slug: string;
@@ -73,24 +74,12 @@ const PALETA_PERSONALIZADA: KitPalette = {
   accent: "#159A9C",
 };
 
-const BABY_SHARK_VARIANTS: Record<string, { heroRole: string; palette: KitPalette }> = {
+const BABY_SHARK_VARIANTS: Record<string, { heroRole: string }> = {
   "baby-shark-azul": {
     heroRole: "amigo",
-    palette: {
-      primary: "#1E64B7",
-      secondary: "#58B9E8",
-      background: "#DDF3FF",
-      accent: "#FFD21F",
-    },
   },
   "baby-shark-rosa": {
     heroRole: "amigo2",
-    palette: {
-      primary: "#F23E9D",
-      secondary: "#F78FC4",
-      background: "#FFE2F1",
-      accent: "#FFD21F",
-    },
   },
 };
 
@@ -164,13 +153,14 @@ export default function Editor() {
         grouped.push(a);
         assetsBySlug.set(a.theme_slug, grouped);
         const variant = BABY_SHARK_VARIANTS[a.theme_slug];
+        const defaultPalette = getDefaultThemePalette(a.theme_slug);
         if (!bySlug.has(a.theme_slug)) {
           bySlug.set(a.theme_slug, {
             slug: a.theme_slug,
             name: nameBySlug.get(a.theme_slug) ?? a.theme_slug.replace(/-/g, " "),
             capa: null,
             papel: null,
-            cor: variant?.palette.background ?? "#E91E90",
+            cor: defaultPalette?.background ?? "#E91E90",
           });
         }
         const t = bySlug.get(a.theme_slug)!;
@@ -208,7 +198,7 @@ export default function Editor() {
   const temaSel = useMemo(() => (temas ?? []).find((t) => t.slug === themeSlug), [temas, themeSlug]);
   const molde = useMemo(() => (moldes ?? []).find((m: any) => m.id === moldeId), [moldes, moldeId]);
   const paletaAtiva = useMemo<KitPalette | undefined>(() => {
-    if (paletaId === "tema") return BABY_SHARK_VARIANTS[themeSlug]?.palette;
+    if (paletaId === "tema") return getDefaultThemePalette(themeSlug);
     if (paletaId === "personalizada") return paletaPersonalizada;
     return PALETAS.find((paleta) => paleta.id === paletaId);
   }, [paletaId, paletaPersonalizada, themeSlug]);

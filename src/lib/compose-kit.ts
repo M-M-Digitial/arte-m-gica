@@ -4,6 +4,7 @@
 
 import { ALICE_QUALITY_STANDARD } from "../../supabase/functions/_shared/alice-quality-standard.ts";
 import { assertThemeReadyForComposition } from "./theme-curation";
+export { getDefaultThemePalette } from "./theme-palettes";
 
 export interface MoldeCompose {
   name?: string;
@@ -281,10 +282,10 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = paletteTint
-      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="0.48"/>`
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="0.30"/>`
       : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
     fundoBase = paletteTint
-      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="0.42"/>`
+      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="0.28"/>`
       : `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)"/>`;
   } else {
     const fechamento = paletteTint ? corNome : clarear(corIdade, 0.18);
@@ -296,7 +297,7 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = paletteTint
-      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${estampaDensa ? 0.44 : 0.52}"/>`
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${estampaDensa ? 0.34 : 0.40}"/>`
       : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
@@ -328,15 +329,22 @@ export function montarSvgKit(d: KitDados): string {
     baseOverride?: number,
   ) => {
     const ratio = img.w / img.h;
-    let ah = f.h * alturaPct;
+    const safe = qualityStandard.stickerSafeInset;
+    const maxSafeWidth = f.w * (1 - safe.horizontal * 2);
+    const maxSafeHeight = f.h * (1 - safe.top - safe.bottom);
+    let ah = Math.min(f.h * alturaPct, maxSafeHeight);
     let aw = ah * ratio;
-    if (aw > f.w * qualityStandard.stickerMaxWidthToFace) {
-      aw = f.w * qualityStandard.stickerMaxWidthToFace;
+    const widthLimit = Math.min(maxSafeWidth, f.w * qualityStandard.stickerMaxWidthToFace);
+    if (aw > widthLimit) {
+      aw = widthLimit;
       ah = aw / ratio;
     }
     const cx = f.cx;
-    const base = baseOverride ?? bodyBot - Math.max(4, borderHeight * 0.08);
-    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" x="${cx - aw / 2}" y="${base - ah}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
+    const safeBase = f.y + f.h * (1 - safe.bottom);
+    const requestedBase = baseOverride ?? safeBase - Math.max(0, borderHeight * 0.08);
+    const base = Math.min(requestedBase, safeBase);
+    const y = Math.max(f.y + f.h * safe.top, base - ah);
+    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${imagem}</g>` : imagem;
   };
 
@@ -432,6 +440,20 @@ export function montarSvgKit(d: KitDados): string {
     const ratio = img.h > 0 ? img.w / img.h : 1;
     return ratio >= 1.1 ? Math.max(heroTarget, 0.86) : Math.max(heroTarget, 0.90);
   };
+  const festiveAccents = paletteTint
+    ? big.map((f, index) => {
+        const unit = Math.min(f.w, f.h);
+        const dot = Math.max(4, unit * 0.018);
+        const starX = f.x + f.w * (index % 2 === 0 ? 0.82 : 0.16);
+        const starY = f.y + f.h * 0.18;
+        const diamond = `${starX},${starY - dot * 1.7} ${starX + dot},${starY} ${starX},${starY + dot * 1.7} ${starX - dot},${starY}`;
+        return `<g data-festive-accents="true" opacity="0.78">
+          <circle cx="${f.x + f.w * 0.13}" cy="${f.y + f.h * 0.29}" r="${dot}" fill="${index % 2 === 0 ? corAcento : corIdade}"/>
+          <polygon points="${diamond}" fill="${index % 2 === 0 ? corIdade : corAcento}"/>
+          <circle cx="${f.x + f.w * 0.74}" cy="${f.y + f.h * 0.11}" r="${dot * 0.62}" fill="${corNome}"/>
+        </g>`;
+      }).join("")
+    : "";
   let content = "";
   if (big.length === 1) {
     const f = big[0];
@@ -494,6 +516,7 @@ export function montarSvgKit(d: KitDados): string {
     ${fundoBase}
     ${fundoCorpo}
     ${faixaTema}
+    ${festiveAccents}
     ${content}
   </g>
   <g id="molde-tecnico" fill="#111111" stroke="#111111">${moldGeometry}</g>

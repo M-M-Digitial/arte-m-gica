@@ -57,11 +57,11 @@ describe("composição SVG do kit", () => {
     });
 
     expect(svg).toContain('height="20" fill="#245F4F"');
-    expect(svg).toContain('fill="url(#papelTop)" opacity="0.48"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.30"');
     expect(svg).toContain('height="10" fill="#245F4F"');
-    expect(svg).toContain('fill="url(#papelTop)" opacity="0.42"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.28"');
     expect(svg).toContain('height="70" fill="#E9F5EA"');
-    expect(svg).toContain('fill="url(#papelBody)" opacity="0.52"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.4"');
   });
 
   it("ignora pixels transparentes isolados ao calcular o recorte", () => {
@@ -224,5 +224,41 @@ describe("composição SVG do kit", () => {
     expect(new Set(posesUsadas).size).toBe(2);
     expect(posesUsadas).toContain("POSE_A");
     expect(svg).not.toContain('scale(-1 1)');
+  });
+
+  it("mantem o personagem dentro da area segura de impressao", () => {
+    const faces = Array.from({ length: 4 }, (_, index) => ({
+      x: index * 100,
+      y: 40,
+      w: 100,
+      h: 120,
+      cx: index * 100 + 50,
+      cy: 100,
+      area: 12000,
+    }));
+    const svg = montarSvgKit({
+      moldName: "Caixa Milk",
+      moldSvg: `<svg viewBox="0 0 400 200"><rect x="0" y="0" width="400" height="200"/></svg>`,
+      facesJson: JSON.stringify({ faces }),
+      maskUri: "data:image/png;base64,MASK",
+      papelTopUri: null,
+      papelBodyUri: null,
+      personagens: [{ uri: "data:image/png;base64,HERO", w: 100, h: 100, role: "principal" }],
+      placaUri: null,
+      placaMeta: null,
+      fonteFamily: "sans-serif",
+      fonteUri: null,
+      corNome: "#2563B8",
+      corIdade: "#F2C94C",
+      nome: "Lia",
+    });
+
+    const hero = svg.match(/data-print-safe="true"[^>]*x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+    expect(hero).not.toBeNull();
+    const [, x, y, width, height] = hero!.map(Number);
+    expect(x).toBeGreaterThanOrEqual(5.5);
+    expect(y).toBeGreaterThanOrEqual(49);
+    expect(width).toBeLessThanOrEqual(89);
+    expect(y + height).toBeLessThanOrEqual(152.2);
   });
 });

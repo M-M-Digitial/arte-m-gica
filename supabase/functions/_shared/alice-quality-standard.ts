@@ -1,5 +1,5 @@
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-04-r8",
+  version: "alice-market-2026-08-05-r9",
   evidence: {
     aliceThemesReviewed: 30,
     marketLayoutReferencesReviewed: 1,
@@ -23,7 +23,8 @@ export const ALICE_QUALITY_STANDARD = {
     skyElementsPerFace: { min: 0, target: 2, max: 3 },
     breathingZones: 1,
     stickerOutlineToFaceHeight: 0.012,
-    stickerMaxWidthToFace: 0.98,
+    stickerMaxWidthToFace: 0.89,
+    stickerSafeInset: { horizontal: 0.055, top: 0.075, bottom: 0.065 },
     directTextHaloToFontSize: 0.08,
   },
   score: {
