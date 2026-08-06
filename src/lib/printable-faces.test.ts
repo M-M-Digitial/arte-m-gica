@@ -126,4 +126,42 @@ describe("selecao das faces imprimiveis", () => {
 
     expect(selectPrintableFaces(faces, 900, 700, "Forminhas")).toHaveLength(6);
   });
+
+  it("usa apenas as quatro laterais orientadas da caixa piramide", () => {
+    const faces: PrintableFace[] = [
+      ...Array.from({ length: 4 }, (_, index) => ({
+        x: index * 240,
+        y: 200,
+        w: 220,
+        h: 520,
+        cx: index * 240 + 110,
+        cy: 460,
+        area: 90000 - index * 500,
+        safeX: index * 240 + 25,
+        safeY: 250,
+        safeW: 170,
+        safeH: 410,
+        safeRotation: index * 45,
+      })),
+      {
+        x: 960,
+        y: 200,
+        w: 520,
+        h: 260,
+        cx: 1170,
+        cy: 330,
+        area: 94000,
+        safeX: 990,
+        safeY: 250,
+        safeW: 400,
+        safeH: 150,
+        safeRotation: 0,
+      },
+    ];
+
+    const selected = selectPrintableFaces(faces, 1400, 900, "Caixa Piramide");
+
+    expect(selected).toHaveLength(4);
+    expect(selected).not.toContain(faces[4]);
+  });
 });

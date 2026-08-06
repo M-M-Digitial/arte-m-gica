@@ -134,14 +134,15 @@ export function findVisibleBounds(
 
 export function classifyClipartUsage(asset: ClipartDados): AssetUsage {
   if (asset.usage) return asset.usage;
-  const explicitRole = normalizarId(asset.role);
-  if (/^(principal|amigo2?|hero|personagem|secundario)$/.test(explicitRole)) return "hero";
   const semantic = normalizarId(`${asset.role ?? ""} ${asset.name ?? ""}`);
   if (/ornamento|decoracao|flor|rosa/.test(semantic)) return "ornament";
   if (/borda|border|faixa|rodape/.test(semantic)) return "border";
   if (/painel|panel|textura/.test(semantic)) return "panel";
   const ratio = asset.h > 0 ? asset.w / asset.h : 1;
   if (ratio >= 2.15) return "border";
+  if ((asset.visibleCoverage ?? 1) < 0.24 && ratio >= 1.1) return "border";
+  const explicitRole = normalizarId(asset.role);
+  if (/^(principal|amigo2?|hero|personagem|secundario)$/.test(explicitRole)) return "hero";
   if ((asset.visibleCoverage ?? 0) >= 0.84 && ratio >= 1.1) return "panel";
   return "hero";
 }
@@ -316,6 +317,8 @@ export function montarSvgKit(d: KitDados): string {
   const paletteAppearance = d.paletteAppearance ?? "balanced";
   const isVibrant = paletteAppearance === "vibrant";
   const isElegant = paletteAppearance === "elegant";
+  const compositionColors = [corNome, corIdade, corAcento, corFundo];
+  const indexedColor = (index: number) => compositionColors[Math.abs(index) % compositionColors.length];
   const qualityStandard = ALICE_QUALITY_STANDARD.layout;
   const family = d.fonteFamily || "sans-serif";
   const familyAttr = escAttr(family);
@@ -343,6 +346,13 @@ export function montarSvgKit(d: KitDados): string {
       [width, height] = [height, width];
       rotation += 90;
     }
+    // A deteccao conservadora encontra o eixo central do triangulo. Expandimos
+    // apenas na largura e reduzimos a altura para aproveitar a base sem tocar
+    // nas arestas inclinadas ou atravessar os vincos.
+    width = width < height * 0.72
+      ? Math.min(width * 1.34, height * 0.68)
+      : width * 0.94;
+    height *= 0.90;
     const upX = Math.sin(rotation * Math.PI / 180);
     const upY = -Math.cos(rotation * Math.PI / 180);
     const towardApexX = pyramidApex.x - safeFace.cx;
@@ -394,6 +404,7 @@ export function montarSvgKit(d: KitDados): string {
   const nameFace = milkNameFaces[0] ?? defaultNameFace;
   const avgFaceW = big.reduce((s, f) => s + f.w, 0) / big.length;
   const avgFaceH = big.reduce((s, f) => s + f.h, 0) / big.length;
+  const isSingleWideFace = big.length === 1 && big[0].w / big[0].h >= 1.28;
 
   // Estampas densas continuam coordenadas com o tema, mas recebem mais respiro
   // entre os elementos. O papel nunca vira um retângulo isolado sem função.
@@ -485,10 +496,10 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelTop" patternUnits="userSpaceOnUse" width="${motTopo}" height="${motTopo}"><image href="${d.papelTopUri}" x="0" y="0" width="${motTopo}" height="${motTopo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoTopo = paletteTint
-      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${isVibrant ? "0.16" : isElegant ? "0.24" : estampaDensa ? "0.22" : "0.30"}"/>`
+      ? `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="${corNome}"/><rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)" opacity="${isVibrant ? "0.30" : isElegant ? "0.38" : estampaDensa ? "0.34" : "0.44"}"/>`
       : `<rect x="0" y="0" width="${W}" height="${bodyTop}" fill="url(#papelTop)"/>`;
     fundoBase = paletteTint
-      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${isVibrant ? 0.14 : isElegant ? 0.22 : estampaDensa ? 0.20 : 0.28}"/>`
+      ? `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="${corNome}"/><rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)" opacity="${isVibrant ? 0.28 : isElegant ? 0.36 : estampaDensa ? 0.32 : 0.42}"/>`
       : `<rect x="0" y="${bodyBot}" width="${W}" height="${H - bodyBot}" fill="url(#papelTop)"/>`;
   } else {
     const fechamento = paletteTint ? corNome : clarear(corIdade, 0.18);
@@ -500,7 +511,7 @@ export function montarSvgKit(d: KitDados): string {
       `<pattern id="papelBody" patternUnits="userSpaceOnUse" width="${motCorpo}" height="${motCorpo}"><image href="${d.papelBodyUri}" x="0" y="0" width="${motCorpo}" height="${motCorpo}" preserveAspectRatio="xMidYMid slice"/></pattern>`
     );
     fundoCorpo = paletteTint
-      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${isVibrant ? 0.14 : isElegant ? 0.28 : estampaDensa ? 0.22 : 0.40}"/>`
+      ? `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="${corFundo}"/><rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)" opacity="${isVibrant ? 0.36 : isElegant ? 0.46 : estampaDensa ? 0.40 : 0.54}"/>`
       : `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#papelBody)"/>`;
   } else {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
@@ -537,9 +548,32 @@ export function montarSvgKit(d: KitDados): string {
     const height = bodyBot - bodyTop;
     const bottom = bodyBot;
     if (isPyramid) {
-      return `<g data-scene-continuity="true" data-scene-template="pyramid-fold-aware">
-        <path d="M ${bodyRowX} ${top + height * 0.10} Q ${bodyRowX + bodyRowW * 0.45} ${top + height * 0.02} ${bodyRowX + bodyRowW} ${top + height * 0.13}" fill="none" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="${Math.max(3, avgFaceH * 0.012)}"/>
-        <path d="M ${bodyRowX} ${bottom - height * 0.10} Q ${bodyRowX + bodyRowW * 0.55} ${bottom - height * 0.02} ${bodyRowX + bodyRowW} ${bottom - height * 0.12}" fill="none" stroke="${corIdade}" stroke-opacity="0.16" stroke-width="${Math.max(3, avgFaceH * 0.010)}"/>
+      const sceneStroke = Math.max(4, avgFaceH * 0.014);
+      let pyramidMotif = "";
+      if (sceneFamily === "fairytale" || sceneFamily === "garden") {
+        const wreath = (wreathX: number, wreathY: number, scale: number) => `<g data-motif-kind="ornamental-wreath" transform="translate(${wreathX} ${wreathY}) scale(${scale})" fill="none" stroke="${corNome}" stroke-opacity="0.24" stroke-width="${sceneStroke}">
+          <ellipse cx="0" cy="0" rx="${avgFaceW * 0.36}" ry="${avgFaceH * 0.29}"/>
+          <path d="M -${avgFaceW * 0.31} ${avgFaceH * 0.08} Q -${avgFaceW * 0.12} -${avgFaceH * 0.31} 0 -${avgFaceH * 0.22} Q ${avgFaceW * 0.12} -${avgFaceH * 0.31} ${avgFaceW * 0.31} ${avgFaceH * 0.08}"/>
+          <path d="M -${avgFaceW * 0.34} ${avgFaceH * 0.15} q ${avgFaceW * 0.11} ${avgFaceH * 0.12} ${avgFaceW * 0.22} 0 M ${avgFaceW * 0.34} ${avgFaceH * 0.15} q -${avgFaceW * 0.11} ${avgFaceH * 0.12} -${avgFaceW * 0.22} 0"/>
+        </g>`;
+        pyramidMotif = `${wreath(W * 0.25, H * 0.34, 1.05)}${wreath(W * 0.58, H * 0.25, 0.82)}${wreath(W * 0.78, H * 0.62, 1.08)}
+          <g fill="${corAcento}" fill-opacity="0.24"><circle cx="${W * 0.18}" cy="${H * 0.64}" r="${avgFaceW * 0.09}"/><circle cx="${W * 0.24}" cy="${H * 0.60}" r="${avgFaceW * 0.07}"/><circle cx="${W * 0.84}" cy="${H * 0.28}" r="${avgFaceW * 0.08}"/></g>`;
+      } else if (sceneFamily === "ice" || sceneFamily === "space") {
+        const crystal = (crystalX: number, crystalY: number, scale: number) => `<g transform="translate(${crystalX} ${crystalY}) scale(${scale})" fill="none" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="${sceneStroke}" stroke-linecap="round"><path d="M -${avgFaceW * 0.18} 0 H ${avgFaceW * 0.18} M 0 -${avgFaceW * 0.18} V ${avgFaceW * 0.18} M -${avgFaceW * 0.13} -${avgFaceW * 0.13} L ${avgFaceW * 0.13} ${avgFaceW * 0.13} M -${avgFaceW * 0.13} ${avgFaceW * 0.13} L ${avgFaceW * 0.13} -${avgFaceW * 0.13}"/></g>`;
+        pyramidMotif = `${crystal(W * 0.22, H * 0.32, 1.1)}${crystal(W * 0.55, H * 0.23, 0.72)}${crystal(W * 0.80, H * 0.58, 1.0)}
+          <ellipse cx="${W * 0.58}" cy="${H * 0.45}" rx="${W * 0.25}" ry="${H * 0.11}" fill="none" stroke="${corAcento}" stroke-opacity="0.22" stroke-width="${sceneStroke}" transform="rotate(-18 ${W * 0.58} ${H * 0.45})"/>`;
+      } else if (sceneFamily === "ocean") {
+        pyramidMotif = `<path d="M 0 ${H * 0.48} Q ${W * 0.125} ${H * 0.37} ${W * 0.25} ${H * 0.48} T ${W * 0.50} ${H * 0.48} T ${W * 0.75} ${H * 0.48} T ${W} ${H * 0.48}" fill="none" stroke="#FFFFFF" stroke-opacity="0.46" stroke-width="${sceneStroke * 1.4}"/>
+          <g fill="none" stroke="${corNome}" stroke-opacity="0.28" stroke-width="${sceneStroke}"><circle cx="${W * 0.22}" cy="${H * 0.26}" r="${avgFaceW * 0.12}"/><circle cx="${W * 0.62}" cy="${H * 0.22}" r="${avgFaceW * 0.08}"/><circle cx="${W * 0.82}" cy="${H * 0.63}" r="${avgFaceW * 0.15}"/></g>`;
+      } else {
+        pyramidMotif = `<path d="M ${W * 0.10} ${H * 0.16} L ${W * 0.88} ${H * 0.74} M ${W * 0.18} ${H * 0.76} L ${W * 0.84} ${H * 0.18}" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="${sceneStroke * 2.2}"/>
+          <ellipse cx="${W * 0.48}" cy="${H * 0.45}" rx="${W * 0.34}" ry="${H * 0.25}" fill="${corAcento}" fill-opacity="0.10" stroke="${corNome}" stroke-opacity="0.20" stroke-width="${sceneStroke}"/>`;
+      }
+      return `<g data-scene-continuity="true" data-scene-template="pyramid-${sceneFamily}-fold-aware">
+        <path d="M 0 ${H * 0.08} Q ${W * 0.45} ${H * 0.01} ${W} ${H * 0.12} L ${W} 0 H 0 Z" fill="${corIdade}" fill-opacity="${isVibrant ? 0.34 : 0.22}"/>
+        <path d="M 0 ${H * 0.72} Q ${W * 0.28} ${H * 0.61} ${W * 0.53} ${H * 0.74} T ${W} ${H * 0.70} V ${H} H 0 Z" fill="${corAcento}" fill-opacity="${isVibrant ? 0.30 : 0.18}"/>
+        <path d="M 0 ${H * 0.13} Q ${W * 0.45} ${H * 0.05} ${W} ${H * 0.16}" fill="none" stroke="#FFFFFF" stroke-opacity="0.58" stroke-width="${sceneStroke}"/>
+        ${pyramidMotif}
       </g>`;
     }
     if (sceneFamily === "fairytale") {
@@ -595,8 +629,83 @@ export function montarSvgKit(d: KitDados): string {
       const panels = big.map((f, index) => `<path d="M ${f.x} ${bottom} L ${f.cx} ${top + height * 0.12} L ${f.x + f.w} ${bottom} Z" fill="${index % 2 === 0 ? corNome : corAcento}" fill-opacity="0.07"/>`).join("");
       return `<g data-scene-continuity="true" data-scene-template="heroic-rays">${panels}<path d="M ${bodyRowX} ${bottom - height * 0.12} H ${bodyRowX + bodyRowW}" stroke="${corIdade}" stroke-opacity="0.42" stroke-width="${Math.max(4, avgFaceH * 0.02)}"/></g>`;
     }
-    return `<g data-scene-continuity="true" data-scene-template="layered-stage"><rect x="${bodyRowX}" y="${top}" width="${bodyRowW}" height="${height}" fill="${corAcento}" fill-opacity="0.025"/><path d="M ${bodyRowX} ${bottom - height * 0.14} Q ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.21} ${bodyRowX + bodyRowW * 0.50} ${bottom - height * 0.14} T ${bodyRowX + bodyRowW} ${bottom - height * 0.14} V ${bottom} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.08"/></g>`;
+    return `<g data-scene-continuity="true" data-scene-template="layered-stage"><rect x="${bodyRowX}" y="${top}" width="${bodyRowW}" height="${height}" fill="${corAcento}" fill-opacity="0.14"/><path d="M ${bodyRowX} ${bottom - height * 0.14} Q ${bodyRowX + bodyRowW * 0.25} ${bottom - height * 0.21} ${bodyRowX + bodyRowW * 0.50} ${bottom - height * 0.14} T ${bodyRowX + bodyRowW} ${bottom - height * 0.14} V ${bottom} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.18"/></g>`;
   })();
+
+  const faceDetailBlock = (f: Face, index: number) => {
+    const insetX = f.w * 0.075;
+    const insetY = f.h * 0.085;
+    const x = f.x + insetX;
+    const y = f.y + insetY;
+    const w = f.w - insetX * 2;
+    const h = f.h - insetY * 2;
+    const x2 = x + w;
+    const y2 = y + h;
+    const cx = f.cx;
+    const base = indexedColor(index);
+    const support = indexedColor(index + 1);
+    const accent = indexedColor(index + 2);
+    const line = Math.max(2, Math.min(f.w, f.h) * 0.012);
+    const dot = Math.max(3, Math.min(f.w, f.h) * 0.035);
+    const frame = `<rect data-palette-area="true" x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.min(w, h) * 0.10}" fill="${clarear(base, isVibrant ? 0.56 : isElegant ? 0.82 : 0.70)}" fill-opacity="${isVibrant ? 0.62 : isElegant ? 0.48 : 0.54}" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="${line * 1.65}"/>
+      <rect x="${x + line * 2.1}" y="${y + line * 2.1}" width="${Math.max(1, w - line * 4.2)}" height="${Math.max(1, h - line * 4.2)}" rx="${Math.min(w, h) * 0.08}" fill="none" stroke="${support}" stroke-opacity="${isElegant ? 0.48 : 0.68}" stroke-width="${line}"/>`;
+    let motif = "";
+
+    if (sceneFamily === "fairytale") {
+      const rose = (roseX: number, roseY: number, mirror = 1) => `<g data-motif-kind="rose" transform="translate(${roseX} ${roseY}) scale(${mirror} 1)">
+        <ellipse cx="${dot * 1.7}" cy="${dot * 0.2}" rx="${dot * 1.55}" ry="${dot * 0.58}" transform="rotate(-32 ${dot * 1.7} ${dot * 0.2})" fill="${corAcento}" fill-opacity="0.62"/>
+        <ellipse cx="${dot * 0.75}" cy="${dot * 0.95}" rx="${dot * 1.25}" ry="${dot * 0.52}" transform="rotate(28 ${dot * 0.75} ${dot * 0.95})" fill="${support}" fill-opacity="0.56"/>
+        <circle cx="0" cy="0" r="${dot * 1.18}" fill="${accent}" stroke="#FFFFFF" stroke-width="${line * 0.7}"/>
+        <circle cx="${dot * 0.23}" cy="-${dot * 0.12}" r="${dot * 0.60}" fill="${clarear(accent, 0.30)}"/>
+      </g>`;
+      motif = `<path d="M ${x + w * 0.12} ${y2} V ${y + h * 0.42} A ${w * 0.38} ${h * 0.34} 0 0 1 ${x2 - w * 0.12} ${y + h * 0.42} V ${y2}" fill="#FFFDF8" fill-opacity="0.28" stroke="${corIdade}" stroke-opacity="0.72" stroke-width="${line * 1.25}"/>
+        <path d="M ${x + w * 0.17} ${y + h * 0.18} Q ${cx} ${y + h * 0.04} ${x2 - w * 0.17} ${y + h * 0.18}" fill="none" stroke="${corAcento}" stroke-width="${line * 1.35}" stroke-linecap="round"/>
+        ${rose(x + w * 0.13, y + h * 0.17)}${rose(x2 - w * 0.13, y + h * 0.17, -1)}`;
+    } else if (sceneFamily === "safari") {
+      motif = `<circle cx="${x2 - w * 0.18}" cy="${y + h * 0.18}" r="${dot * 1.55}" fill="${corIdade}" fill-opacity="0.78" stroke="#FFFFFF" stroke-width="${line}"/>
+        <path d="M ${x} ${y2 - h * 0.23} Q ${x + w * 0.24} ${y2 - h * 0.40} ${x + w * 0.49} ${y2 - h * 0.24} T ${x2} ${y2 - h * 0.26} V ${y2} H ${x} Z" fill="${support}" fill-opacity="0.42"/>
+        <g fill="${base}" fill-opacity="0.66"><ellipse cx="${x + w * 0.12}" cy="${y + h * 0.20}" rx="${dot * 1.7}" ry="${dot * 0.64}" transform="rotate(-42 ${x + w * 0.12} ${y + h * 0.20})"/><ellipse cx="${x + w * 0.20}" cy="${y + h * 0.13}" rx="${dot * 1.55}" ry="${dot * 0.58}" transform="rotate(28 ${x + w * 0.20} ${y + h * 0.13})"/><ellipse cx="${x2 - w * 0.12}" cy="${y2 - h * 0.13}" rx="${dot * 1.6}" ry="${dot * 0.60}" transform="rotate(38 ${x2 - w * 0.12} ${y2 - h * 0.13})"/></g>`;
+    } else if (sceneFamily === "ocean") {
+      motif = `<path d="M ${x} ${y2 - h * 0.24} Q ${x + w * 0.125} ${y2 - h * 0.36} ${x + w * 0.25} ${y2 - h * 0.24} T ${x + w * 0.50} ${y2 - h * 0.24} T ${x + w * 0.75} ${y2 - h * 0.24} T ${x2} ${y2 - h * 0.24} V ${y2} H ${x} Z" fill="${base}" fill-opacity="0.42"/>
+        <path d="M ${x} ${y2 - h * 0.16} Q ${x + w * 0.10} ${y2 - h * 0.24} ${x + w * 0.20} ${y2 - h * 0.16} T ${x + w * 0.40} ${y2 - h * 0.16} T ${x + w * 0.60} ${y2 - h * 0.16} T ${x + w * 0.80} ${y2 - h * 0.16} T ${x2} ${y2 - h * 0.16}" fill="none" stroke="#FFFFFF" stroke-opacity="0.90" stroke-width="${line * 1.5}"/>
+        <g fill="none" stroke="${support}" stroke-width="${line}"><circle cx="${x + w * 0.16}" cy="${y + h * 0.18}" r="${dot * 1.30}"/><circle cx="${x + w * 0.27}" cy="${y + h * 0.11}" r="${dot * 0.72}"/><circle cx="${x2 - w * 0.15}" cy="${y + h * 0.23}" r="${dot * 1.05}"/></g>
+        <path d="M ${x + w * 0.09} ${y2 - h * 0.08} Q ${x + w * 0.06} ${y2 - h * 0.27} ${x + w * 0.15} ${y2 - h * 0.36} M ${x + w * 0.12} ${y2 - h * 0.18} l ${dot * 1.3} -${dot * 1.1} M ${x + w * 0.11} ${y2 - h * 0.24} l -${dot * 1.0} -${dot * 1.0}" fill="none" stroke="${accent}" stroke-width="${line * 1.8}" stroke-linecap="round"/>`;
+    } else if (sceneFamily === "ice") {
+      const snowflake = (flakeX: number, flakeY: number, radius: number) => `<g data-motif-kind="snowflake" stroke="#FFFFFF" stroke-width="${line}" stroke-linecap="round"><path d="M ${flakeX - radius} ${flakeY} H ${flakeX + radius} M ${flakeX} ${flakeY - radius} V ${flakeY + radius} M ${flakeX - radius * 0.72} ${flakeY - radius * 0.72} L ${flakeX + radius * 0.72} ${flakeY + radius * 0.72} M ${flakeX - radius * 0.72} ${flakeY + radius * 0.72} L ${flakeX + radius * 0.72} ${flakeY - radius * 0.72}"/></g>`;
+      motif = `<path d="M ${x} ${y2 - h * 0.20} L ${x + w * 0.19} ${y + h * 0.42} L ${x + w * 0.37} ${y2 - h * 0.20} L ${x + w * 0.58} ${y + h * 0.33} L ${x2} ${y2 - h * 0.20} V ${y2} H ${x} Z" fill="#FFFFFF" fill-opacity="0.46" stroke="${base}" stroke-opacity="0.38" stroke-width="${line}"/>
+        ${snowflake(x + w * 0.16, y + h * 0.18, dot * 1.45)}${snowflake(x2 - w * 0.17, y + h * 0.24, dot)}
+        <polygon points="${cx},${y + h * 0.08} ${cx + dot},${y + h * 0.18} ${cx},${y + h * 0.29} ${cx - dot},${y + h * 0.18}" fill="${support}" fill-opacity="0.52" stroke="#FFFFFF" stroke-width="${line * 0.8}"/>`;
+    } else if (sceneFamily === "space") {
+      motif = `<ellipse cx="${cx}" cy="${y + h * 0.47}" rx="${w * 0.40}" ry="${h * 0.19}" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="${line}" transform="rotate(-15 ${cx} ${y + h * 0.47})"/>
+        <circle cx="${x + w * 0.18}" cy="${y + h * 0.20}" r="${dot * 1.55}" fill="${support}" stroke="#FFFFFF" stroke-width="${line}"/><circle cx="${x2 - w * 0.18}" cy="${y + h * 0.30}" r="${dot}" fill="${accent}"/>
+        <path d="M ${x + w * 0.12} ${y2 - h * 0.16} L ${x + w * 0.19} ${y2 - h * 0.31} L ${x + w * 0.26} ${y2 - h * 0.16} L ${x + w * 0.19} ${y2 - h * 0.21} Z M ${x2 - w * 0.26} ${y + h * 0.14} L ${x2 - w * 0.20} ${y + h * 0.03} L ${x2 - w * 0.14} ${y + h * 0.14} L ${x2 - w * 0.20} ${y + h * 0.10} Z" fill="#FFFFFF" fill-opacity="0.86"/>`;
+    } else if (sceneFamily === "vehicles") {
+      const checks = Array.from({ length: 8 }, (_, check) => `<rect x="${x + (check % 4) * w * 0.25}" y="${y2 - h * (check < 4 ? 0.18 : 0.09)}" width="${w * 0.25}" height="${h * 0.09}" fill="${check % 2 === (check < 4 ? 0 : 1) ? "#FFFFFF" : base}" fill-opacity="0.78"/>`).join("");
+      motif = `<path d="M ${x} ${y2 - h * 0.34} H ${x2} V ${y2} H ${x} Z" fill="${escurecer(base, 0.34)}" fill-opacity="0.55"/><path d="M ${x} ${y2 - h * 0.27} H ${x2}" stroke="#FFFFFF" stroke-width="${line * 1.6}" stroke-dasharray="${w * 0.12} ${w * 0.08}"/>${checks}`;
+    } else if (sceneFamily === "garden") {
+      const flower = (flowerX: number, flowerY: number) => `<g data-motif-kind="flower" transform="translate(${flowerX} ${flowerY})"><circle cx="-${dot}" cy="0" r="${dot}" fill="${support}"/><circle cx="${dot}" cy="0" r="${dot}" fill="${support}"/><circle cx="0" cy="-${dot}" r="${dot}" fill="${accent}"/><circle cx="0" cy="${dot}" r="${dot}" fill="${accent}"/><circle cx="0" cy="0" r="${dot * 0.68}" fill="${corIdade}" stroke="#FFFFFF" stroke-width="${line * 0.6}"/></g>`;
+      motif = `<path d="M ${x + w * 0.06} ${y2 - h * 0.08} Q ${x + w * 0.17} ${y + h * 0.28} ${x + w * 0.38} ${y + h * 0.14} M ${x2 - w * 0.06} ${y2 - h * 0.08} Q ${x2 - w * 0.17} ${y + h * 0.31} ${x2 - w * 0.36} ${y + h * 0.16}" fill="none" stroke="${base}" stroke-width="${line * 1.6}"/>
+        ${flower(x + w * 0.18, y + h * 0.20)}${flower(x2 - w * 0.18, y + h * 0.23)}
+        <g fill="${base}" fill-opacity="0.66"><ellipse cx="${x + w * 0.11}" cy="${y + h * 0.38}" rx="${dot * 1.5}" ry="${dot * 0.58}" transform="rotate(-36 ${x + w * 0.11} ${y + h * 0.38})"/><ellipse cx="${x2 - w * 0.11}" cy="${y + h * 0.42}" rx="${dot * 1.5}" ry="${dot * 0.58}" transform="rotate(36 ${x2 - w * 0.11} ${y + h * 0.42})"/></g>`;
+    } else if (sceneFamily === "circus") {
+      const pennants = Array.from({ length: 5 }, (_, pennant) => {
+        const left = x + w * (0.08 + pennant * 0.17);
+        return `<path d="M ${left} ${y + h * 0.13} H ${left + w * 0.13} L ${left + w * 0.065} ${y + h * 0.25} Z" fill="${indexedColor(index + pennant)}" fill-opacity="0.82" stroke="#FFFFFF" stroke-width="${line * 0.55}"/>`;
+      }).join("");
+      motif = `<path d="M ${x + w * 0.05} ${y + h * 0.13} Q ${cx} ${y + h * 0.03} ${x2 - w * 0.05} ${y + h * 0.13}" fill="none" stroke="${base}" stroke-width="${line * 1.4}"/>${pennants}<path d="M ${x} ${y2 - h * 0.20} Q ${x + w * 0.25} ${y2 - h * 0.30} ${cx} ${y2 - h * 0.20} T ${x2} ${y2 - h * 0.20} V ${y2} H ${x} Z" fill="${support}" fill-opacity="0.38"/>`;
+    } else if (sceneFamily === "heroic") {
+      motif = `<path d="M ${cx} ${y + h * 0.05} L ${cx + w * 0.10} ${y + h * 0.34} L ${x2 - w * 0.05} ${y + h * 0.19} L ${cx + w * 0.23} ${y + h * 0.49} L ${x2 - w * 0.08} ${y2 - h * 0.18} L ${cx} ${y + h * 0.62} L ${x + w * 0.08} ${y2 - h * 0.18} L ${cx - w * 0.23} ${y + h * 0.49} L ${x + w * 0.05} ${y + h * 0.19} L ${cx - w * 0.10} ${y + h * 0.34} Z" fill="${support}" fill-opacity="0.34" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="${line}"/>
+        <path d="M ${x + w * 0.16} ${y2 - h * 0.13} l ${w * 0.10} -${h * 0.22} h -${w * 0.06} l ${w * 0.17} -${h * 0.26} l -${w * 0.06} ${h * 0.21} h ${w * 0.08} z" fill="${accent}" stroke="#FFFFFF" stroke-width="${line}"/>
+        <g fill="${base}" fill-opacity="0.42"><circle cx="${x2 - w * 0.16}" cy="${y + h * 0.17}" r="${dot}"/><circle cx="${x2 - w * 0.24}" cy="${y + h * 0.12}" r="${dot * 0.58}"/><circle cx="${x2 - w * 0.10}" cy="${y + h * 0.27}" r="${dot * 0.72}"/></g>`;
+    } else {
+      motif = `<path d="M ${x + w * 0.06} ${y + h * 0.20} Q ${cx} ${y + h * 0.04} ${x2 - w * 0.06} ${y + h * 0.20}" fill="none" stroke="${support}" stroke-width="${line * 1.45}"/>
+        <path d="M ${x} ${y2 - h * 0.18} Q ${x + w * 0.25} ${y2 - h * 0.30} ${cx} ${y2 - h * 0.18} T ${x2} ${y2 - h * 0.18} V ${y2} H ${x} Z" fill="${accent}" fill-opacity="0.34"/>
+        <circle cx="${x + w * 0.14}" cy="${y + h * 0.18}" r="${dot * 1.25}" fill="${base}" stroke="#FFFFFF" stroke-width="${line}"/><circle cx="${x2 - w * 0.14}" cy="${y + h * 0.18}" r="${dot * 1.25}" fill="${support}" stroke="#FFFFFF" stroke-width="${line}"/>`;
+    }
+
+    return `<g data-theme-detail="true" data-commercial-depth="thematic-midground" data-visual-layer="midground" data-theme-family="${sceneFamily}" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${x}" data-zone-y="${y}" data-zone-w="${w}" data-zone-h="${h}"${faceOrientationAttributes(f)}${faceSafeClip(f)}>${frame}${motif}</g>`;
+  };
+  const premiumFaceDetails = big.map(faceDetailBlock).join("");
   const borderAsset = borderAssets[0];
   const borderRatio = borderAsset && borderAsset.h > 0 ? borderAsset.w / borderAsset.h : 1;
   const borderHeight = borderAsset
@@ -620,6 +729,19 @@ export function montarSvgKit(d: KitDados): string {
     </g>`;
 
   const plateGeometryFor = (f: Face) => {
+    if (isSingleWideFace) {
+      const width = f.w * 0.38;
+      const maxHeight = f.h * 0.30;
+      const height = d.placaUri
+        ? Math.min(maxHeight, width * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320)))
+        : Math.min(maxHeight, width * fallbackPlateAspectRatio);
+      return {
+        x: f.x + f.w * 0.60,
+        y: f.y + f.h * 0.57,
+        width,
+        height,
+      };
+    }
     const nameWidth = isMilk ? qualityStandard.milkNamePlateWidth : qualityStandard.namePlateWidth;
     const width = f.w * (nameWidth.target / 100);
     const maxHeight = f.h * (isMilk ? 0.28 : 0.32);
@@ -644,9 +766,15 @@ export function montarSvgKit(d: KitDados): string {
     espelhar = false,
     baseOverride?: number,
     widthPct: number = qualityStandard.stickerMaxWidthToFace,
+    centerOverride?: number,
+    horizontalBounds?: { left: number; right: number },
   ) => {
     const ratio = img.w / img.h;
-    const maxSafeWidth = f.w * (1 - safe.horizontal * 2);
+    const safeLeft = f.x + f.w * safe.horizontal;
+    const safeRight = f.x + f.w * (1 - safe.horizontal);
+    const boundedLeft = Math.max(safeLeft, horizontalBounds?.left ?? safeLeft);
+    const boundedRight = Math.min(safeRight, horizontalBounds?.right ?? safeRight);
+    const maxSafeWidth = Math.max(1, boundedRight - boundedLeft);
     const safeTop = f.y + f.h * safe.top;
     const ordinarySafeBase = f.y + f.h * (1 - safe.bottom);
     const reservedBase = Math.min(baseOverride ?? ordinarySafeBase, ordinarySafeBase);
@@ -658,16 +786,24 @@ export function montarSvgKit(d: KitDados): string {
       aw = widthLimit;
       ah = aw / ratio;
     }
-    const cx = f.cx;
+    const desiredCx = centerOverride ?? f.cx;
+    const cx = Math.max(
+      boundedLeft + aw / 2,
+      Math.min(boundedRight - aw / 2, desiredCx),
+    );
     const safeBase = ordinarySafeBase;
     const requestedBase = baseOverride ?? safeBase - Math.max(0, borderHeight * 0.08);
     const base = Math.min(requestedBase, safeBase);
     const y = Math.max(safeTop, base - ah);
-    const backdrop = compositionProfile === "modular"
-      ? `<ellipse data-commercial-depth="midground" cx="${cx}" cy="${y + ah * 0.47}" rx="${Math.min(f.w * 0.39, aw * 0.58)}" ry="${Math.min(f.h * 0.37, ah * 0.50)}" fill="${clarear(corAcento, isVibrant ? 0.46 : 0.72)}" fill-opacity="${isVibrant ? 0.90 : 0.82}" stroke="#FFFFFF" stroke-opacity="0.88" stroke-width="${Math.max(4, f.w * 0.012)}"/>`
-      : "";
+    const backdropFill = compositionProfile === "modular"
+      ? clarear(corAcento, isVibrant ? 0.42 : 0.68)
+      : clarear(indexedColor(faceIndexFor(f)), isElegant ? 0.78 : isVibrant ? 0.50 : 0.66);
+    const backdrop = `<ellipse data-commercial-depth="midground" data-visual-layer="midground" cx="${cx}" cy="${y + ah * 0.47}" rx="${Math.min(f.w * 0.40, Math.max(aw * 0.58, f.w * 0.27))}" ry="${Math.min(f.h * 0.38, Math.max(ah * 0.50, f.h * 0.24))}" fill="${backdropFill}" fill-opacity="${isElegant ? 0.74 : isVibrant ? 0.88 : 0.80}" stroke="#FFFFFF" stroke-opacity="0.94" stroke-width="${Math.max(4, f.w * 0.012)}" filter="url(#ornamentShadow)"/>`;
     const groundShadow = `<ellipse data-commercial-depth="contact-shadow" cx="${cx}" cy="${Math.min(safeBase, base + f.h * 0.006)}" rx="${Math.min(f.w * 0.32, aw * 0.38)}" ry="${Math.max(f.h * 0.018, ah * 0.025)}" fill="${escurecer(corAcento, 0.42)}" fill-opacity="0.24" filter="url(#softShadow)"/>`;
-    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
+    const visibleCoverage = Number.isFinite(img.visibleCoverage)
+      ? Math.max(0, Math.min(1, img.visibleCoverage!))
+      : 0.72;
+    const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-index="${faceIndexFor(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-visible-coverage="${visibleCoverage.toFixed(4)}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
     const role = faceRole(f);
     const faceIndex = faceIndexFor(f);
     const priority = role === "front" ? "primary" : role === "side" ? "supporting" : "secondary";
@@ -675,12 +811,43 @@ export function montarSvgKit(d: KitDados): string {
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${layeredHero}</g>` : layeredHero;
   };
 
+  const supportingCharacterBlock = (img: ClipartDados, f: Face, index: number) => {
+    const ratio = img.h > 0 ? img.w / img.h : 1;
+    const isProtectedNameFace = milkNameFaces.includes(f) || f === nameFace;
+    const maxWidth = f.w * (isProtectedNameFace ? 0.46 : 0.54);
+    const maxHeight = f.h * (isProtectedNameFace ? 0.38 : 0.50);
+    let width = maxWidth;
+    let height = width / Math.max(0.1, ratio);
+    if (height > maxHeight) {
+      height = maxHeight;
+      width = height * ratio;
+    }
+    const onRight = index % 2 === 0;
+    const x = onRight
+      ? f.x + f.w * (1 - safe.horizontal) - width
+      : f.x + f.w * safe.horizontal;
+    const safeTop = f.y + f.h * safe.top;
+    const ordinarySafeBase = f.y + f.h * (1 - safe.bottom);
+    const visualBase = isProtectedNameFace
+      ? Math.min(nameArtBaseFor(f) - f.h * 0.018, ordinarySafeBase)
+      : ordinarySafeBase - f.h * 0.012;
+    const y = Math.max(safeTop, visualBase - height);
+    const cx = x + width / 2;
+    const visibleCoverage = Number.isFinite(img.visibleCoverage)
+      ? Math.max(0, Math.min(1, img.visibleCoverage!))
+      : 0.72;
+    return `<g data-theme-supporting="true" data-commercial-layering="supporting-character" data-commercial-depth="foreground-support" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${x}" data-zone-y="${y}" data-zone-w="${width}" data-zone-h="${height}"${faceOrientationAttributes(f)}${faceSafeClip(f)}>
+      <ellipse data-commercial-depth="contact-shadow" cx="${cx}" cy="${Math.min(ordinarySafeBase, visualBase + f.h * 0.004)}" rx="${Math.min(f.w * 0.24, width * 0.36)}" ry="${Math.max(f.h * 0.012, height * 0.024)}" fill="${escurecer(indexedColor(index + 2), 0.38)}" fill-opacity="0.22" filter="url(#softShadow)"/>
+      <image href="${img.uri}" xlink:href="${img.uri}" data-supporting-character="true" data-print-safe="true" data-face-index="${faceIndexFor(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-visible-coverage="${visibleCoverage.toFixed(4)}" x="${x}" y="${y}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet" filter="url(#adesivo)"/>
+    </g>`;
+  };
+
   const monogramBlock = (f: Face, compact = false) => {
     const size = Math.min(f.w * (compact ? 0.50 : 0.68), f.h * (compact ? 0.42 : 0.60));
     const cx = f.cx;
     const cy = f.y + f.h * (compact ? 0.30 : 0.48);
     const initial = esc(Array.from(nome.trim())[0]?.toUpperCase() || "");
-    return `<g data-theme-monogram="true" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}"${faceOrientationAttributes(f)}>
+    return `<g data-theme-monogram="true" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${cx - size * 0.43}" data-zone-y="${cy - size * 0.50}" data-zone-w="${size * 0.86}" data-zone-h="${size}"${faceOrientationAttributes(f)}>
       <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.43}" ry="${size * 0.50}" fill="#FFFDF8" fill-opacity="0.92" stroke="${corAcento}" stroke-width="${Math.max(4, size * 0.035)}"/>
       <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.36}" ry="${size * 0.43}" fill="${d.papelTopUri ? "url(#papelTop)" : clarear(corNome, 0.68)}" stroke="${corNome}" stroke-width="${Math.max(2, size * 0.015)}"/>
       <text x="${cx}" y="${cy + size * 0.04}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${size * 0.42}" fill="#FFFFFF" stroke="${escurecer(corNome, 0.25)}" stroke-width="${size * 0.025}" paint-order="stroke">${initial}</text>
@@ -692,7 +859,7 @@ export function montarSvgKit(d: KitDados): string {
     const panelH = f.h * 0.58;
     const x = f.cx - panelW / 2;
     const y = f.y + f.h * 0.16;
-    return `<g data-theme-panel="true" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}"${faceOrientationAttributes(f)}>
+    return `<g data-theme-panel="true" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${x - f.w * 0.025}" data-zone-y="${y - f.h * 0.025}" data-zone-w="${panelW + f.w * 0.05}" data-zone-h="${panelH + f.h * 0.05}"${faceOrientationAttributes(f)}>
       <rect x="${x - f.w * 0.025}" y="${y - f.h * 0.025}" width="${panelW + f.w * 0.05}" height="${panelH + f.h * 0.05}" rx="${f.w * 0.06}" fill="#FFFDF8" fill-opacity="0.90" stroke="${corIdade}" stroke-width="${Math.max(3, f.w * 0.012)}"/>
       <image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${panelW}" height="${panelH}" preserveAspectRatio="xMidYMid slice" opacity="0.82"/>
     </g>`;
@@ -702,15 +869,15 @@ export function montarSvgKit(d: KitDados): string {
   const ornamentBlock = (f: Face, asset?: ClipartDados) => {
     if (!asset) return "";
     const ratio = asset.h > 0 ? asset.w / asset.h : 1;
-    let aw = f.w * 0.66;
+    let aw = f.w * 0.82;
     let ah = aw / Math.max(0.1, ratio);
-    if (ah > f.h * 0.32) {
-      ah = f.h * 0.32;
+    if (ah > f.h * 0.42) {
+      ah = f.h * 0.42;
       aw = ah * ratio;
     }
     const x = f.cx - aw / 2;
-    const y = f.y + f.h * 0.055;
-    return `<g data-theme-ornament="true" data-face-x="${f.x}" data-face-y="${f.y}"${faceOrientationAttributes(f)}><image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/></g>`;
+    const y = f.y + f.h * 0.07;
+    return `<g data-theme-ornament="true" data-face-index="${faceIndexFor(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${x}" data-zone-y="${y}" data-zone-w="${aw}" data-zone-h="${ah}"${faceOrientationAttributes(f)}><image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/></g>`;
   };
 
   const ornamentAccentBlock = (f: Face, asset: ClipartDados, index: number, compact: boolean) => {
@@ -730,7 +897,7 @@ export function montarSvgKit(d: KitDados): string {
     const y = compact
       ? f.y + f.h * 0.07
       : f.y + f.h - ah * 0.90 - f.h * 0.025;
-    return `<g data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-crease-safe="true" data-face-x="${f.x}" data-face-y="${f.y}"${faceOrientationAttributes(f)}${faceSafeClip(f)}><image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"/></g>`;
+    return `<g data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-crease-safe="true" data-face-index="${faceIndexFor(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${x}" data-zone-y="${y}" data-zone-w="${aw}" data-zone-h="${ah}"${faceOrientationAttributes(f)}${faceSafeClip(f)}><image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"/></g>`;
   };
 
   const plateBlock = (f: Face) => {
@@ -741,7 +908,7 @@ export function montarSvgKit(d: KitDados): string {
     const plW = plateGeometry.width;
     const temPlaca = !!d.placaUri;
     const plH = plateGeometry.height;
-    const cx = f.cx;
+    const cx = plateGeometry.x + plW / 2;
     const plY = plateGeometry.y;
     const inset = Math.max(5, plH * 0.075);
     const fundoPlaca = temPlaca
@@ -777,7 +944,7 @@ export function montarSvgKit(d: KitDados): string {
       <ellipse cx="0" cy="0" rx="${bowW * 0.105}" ry="${bowH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(2, bowW * 0.018)}"/>
       <path d="M -${bowW * 0.36} -${bowH * 0.15} Q -${bowW * 0.25} -${bowH * 0.31} -${bowW * 0.13} -${bowH * 0.12} M ${bowW * 0.13} -${bowH * 0.12} Q ${bowW * 0.25} -${bowH * 0.31} ${bowW * 0.36} -${bowH * 0.15}" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="${Math.max(2, bowW * 0.014)}" stroke-linecap="round"/>
     </g>`;
-    return `<g data-name-plate="true" data-protected-zone="name" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${plateGeometry.x}" data-zone-y="${plateGeometry.y}" data-zone-w="${plateGeometry.width}" data-zone-h="${plateGeometry.height}"${faceOrientationAttributes(f)}>
+    return `<g data-name-plate="true" data-protected-zone="name" data-personalization-layout="${isSingleWideFace ? "side-by-side" : "stacked"}" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${plateGeometry.x}" data-zone-y="${plateGeometry.y}" data-zone-w="${plateGeometry.width}" data-zone-h="${plateGeometry.height}"${faceOrientationAttributes(f)}>
       ${fundoPlaca}
       ${bow}
       <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.08}" paint-order="stroke">${esc(nome)}</text>
@@ -798,31 +965,89 @@ export function montarSvgKit(d: KitDados): string {
   };
   const heroWidthFor = (role: string) => role === "side" ? 0.70 : role === "back" ? 0.82 : 0.94;
   const heroBaseFor = (face: Face, role: string) => role === "side" ? face.y + face.h * 0.78 : undefined;
+  const heroFitForFace = (img: ClipartDados, face: Face, maxWidthOverride?: number) => {
+    const ratio = img.h > 0 ? img.w / img.h : 1;
+    const role = faceRole(face);
+    const maxWidth = Math.min(face.w * heroWidthFor(role), maxWidthOverride ?? Number.POSITIVE_INFINITY);
+    const maxHeight = face.h * heroHeightFor(img, role);
+    const height = Math.min(maxHeight, maxWidth / Math.max(0.1, ratio));
+    const width = Math.min(maxWidth, height * ratio);
+    const visibleCoverage = Number.isFinite(img.visibleCoverage)
+      ? Math.max(0, Math.min(1, img.visibleCoverage!))
+      : 0.72;
+    return (width * height * visibleCoverage) / Math.max(1, face.w * face.h);
+  };
   let visualContent = "";
   let protectedNameContent = "";
   if (big.length === 1) {
     const f = big[0];
-    visualContent = orderedHeroes[0]
+    const sideBySideBounds = isSingleWideFace
+      ? {
+          left: f.x + f.w * safe.horizontal,
+          right: plateGeometryFor(f).x - f.w * 0.02,
+        }
+      : undefined;
+    const sideBySideWidth = sideBySideBounds
+      ? Math.max(1, sideBySideBounds.right - sideBySideBounds.left)
+      : undefined;
+    const bestSingleFaceHero = orderedHeroes
+      .slice()
+      .sort((a, b) => heroFitForFace(b, f, sideBySideWidth) - heroFitForFace(a, f, sideBySideWidth))[0];
+    visualContent = bestSingleFaceHero
       ? personagemBlock(
-          orderedHeroes[0],
+          bestSingleFaceHero,
           f,
-          heroHeightFor(orderedHeroes[0]),
+          heroHeightFor(bestSingleFaceHero),
           false,
-          nameArtBaseFor(f),
-          0.90,
+          isSingleWideFace ? undefined : nameArtBaseFor(f),
+          isSingleWideFace ? 0.96 : 0.90,
+          isSingleWideFace ? f.x + f.w * 0.29 : undefined,
+          sideBySideBounds,
         )
       : monogramBlock(f, true);
     protectedNameContent = plateBlock(f);
   } else {
-    let heroIndex = 0;
-    const nextHero = () => orderedHeroes[heroIndex++];
+    const heroAssignments = new Map<Face, ClipartDados>();
+    if (!hasMilkPanels && orderedHeroes.length) {
+      const primaryFace = big
+        .filter((face) => face !== nameFace)
+        .slice()
+        .sort((a, b) => heroFitForFace(orderedHeroes[0], b) - heroFitForFace(orderedHeroes[0], a))[0] ?? nameFace;
+      heroAssignments.set(primaryFace, orderedHeroes[0]);
+      const remainingFaces = [nameFace, ...big.filter((face) => face !== nameFace && face !== primaryFace)];
+      const remainingHeroes = orderedHeroes.slice(1);
+      remainingFaces.forEach((face) => {
+        if (!remainingHeroes.length) return;
+        let bestIndex = 0;
+        for (let index = 1; index < remainingHeroes.length; index++) {
+          if (heroFitForFace(remainingHeroes[index], face) > heroFitForFace(remainingHeroes[bestIndex], face)) {
+            bestIndex = index;
+          }
+        }
+        const [hero] = remainingHeroes.splice(bestIndex, 1);
+        heroAssignments.set(face, hero);
+      });
+    }
+    const primaryAssignments = hasMilkPanels ? milkHeroes : heroAssignments;
+    const assignedAssets = new Set(primaryAssignments.values());
+    const supportingAssignments = new Map<Face, ClipartDados>();
+    const supportFaces = [
+      ...big.filter((face) => !milkNameFaces.includes(face) && face !== nameFace),
+      ...big.filter((face) => milkNameFaces.includes(face) || face === nameFace),
+    ];
+    orderedHeroes
+      .filter((asset) => !assignedAssets.has(asset))
+      .slice(0, supportFaces.length)
+      .forEach((asset, index) => supportingAssignments.set(supportFaces[index], asset));
     let panelUsed = false;
     let nameIndex = 0;
     const nameParts: string[] = [];
     visualContent = big
       .map((f) => {
         const role = faceRole(f);
-        const assignedHero = hasMilkPanels ? milkHeroes.get(f) : nextHero();
+        const assignedHero = hasMilkPanels ? milkHeroes.get(f) : heroAssignments.get(f);
+        const support = supportingAssignments.get(f);
+        const supportArt = support ? supportingCharacterBlock(support, f, faceIndexFor(f)) : "";
         if (milkNameFaces.includes(f) || f === nameFace) {
           const supportingCharacter = assignedHero;
           const ornament = !supportingCharacter && ornamentAssets.length
@@ -843,15 +1068,15 @@ export function montarSvgKit(d: KitDados): string {
             : ornament || monogramBlock(f, true);
           nameIndex++;
           nameParts.push(plateBlock(f));
-          return upperArt;
+          return `${upperArt}${supportArt}`;
         }
         const img = assignedHero;
-        if (img) return personagemBlock(img, f, heroHeightFor(img, role), false, heroBaseFor(f, role), heroWidthFor(role));
+        if (img) return `${personagemBlock(img, f, heroHeightFor(img, role), false, heroBaseFor(f, role), heroWidthFor(role))}${supportArt}`;
         if (!panelUsed && panelAssets[0]) {
           panelUsed = true;
-          return panelBlock(f, panelAssets[0]);
+          return `${panelBlock(f, panelAssets[0])}${supportArt}`;
         }
-        return monogramBlock(f);
+        return `${monogramBlock(f)}${supportArt}`;
       })
       .join("");
     protectedNameContent = nameParts.join("");
@@ -873,17 +1098,20 @@ export function montarSvgKit(d: KitDados): string {
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">
   <title>Kit personalizado de ${esc(nome)}</title>
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
-  <metadata id="deterministic-quality-gate">kit-svg-r1</metadata>
+  <metadata id="deterministic-quality-gate">kit-svg-r2</metadata>
   <metadata id="market-research-version">${MARKET_VISUAL_RESEARCH.version}</metadata>
   <metadata id="market-reference-sample-size">${MARKET_VISUAL_RESEARCH.sampleSize}</metadata>
+  <metadata id="direct-paper-craft-sample-size">${MARKET_VISUAL_RESEARCH.directPaperCraftSampleSize}</metadata>
   <metadata id="google-image-validation-size">${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize}</metadata>
   <metadata id="shopee-indexed-validation-size">${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeIndexedSampleSize}</metadata>
   <metadata id="shopee-direct-access">${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeDirectAccess}</metadata>
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
   <metadata id="color-appearance">${paletteAppearance}</metadata>
   <metadata id="printable-face-count">${big.length}</metadata>
+  <metadata id="available-hero-asset-count">${heroAssets.length}</metadata>
   <metadata id="safe-face-geometry">${structuralFaces.every((face) => [face.safeX, face.safeY, face.safeW, face.safeH].every(Number.isFinite)) ? "detected" : "legacy"}</metadata>
   <metadata id="oriented-face-count">${big.filter((face) => Math.abs((face.safeRotation ?? 0) % 360) > 0.01).length}</metadata>
+  <metadata id="face-orientation-metadata-count">${structuralFaces.filter((face) => Number.isFinite(face.safeRotation)).length}</metadata>
   <metadata id="technical-mold-instance-count">1</metadata>
   ${frontFace ? `<metadata id="front-face-index">${big.indexOf(frontFace)}</metadata>` : ""}
   ${milkNameFaces.length ? `<metadata id="side-face-indices">${milkNameFaces.map((face) => big.indexOf(face)).join(",")}</metadata>` : ""}
@@ -894,11 +1122,12 @@ export function montarSvgKit(d: KitDados): string {
     <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="${clarear(corFundo, 0.28)}"/><stop offset="1" stop-color="${corFundo}"/>
     </linearGradient>
-    <filter id="adesivo" x="-8%" y="-8%" width="116%" height="116%">
+    <filter id="adesivo" x="-18%" y="-18%" width="136%" height="145%">
       <feMorphology in="SourceAlpha" operator="dilate" radius="${Math.max(4, Math.round(avgFaceH * qualityStandard.stickerOutlineToFaceHeight))}" result="dila"/>
       <feFlood flood-color="#FFFFFF" result="cor"/>
       <feComposite in="cor" in2="dila" operator="in" result="contorno"/>
-      <feMerge><feMergeNode in="contorno"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feDropShadow in="SourceAlpha" dx="0" dy="${Math.max(3, avgFaceH * 0.010)}" stdDeviation="${Math.max(2, avgFaceH * 0.007)}" flood-color="#2E1725" flood-opacity="0.30" result="adesivoShadow"/>
+      <feMerge><feMergeNode in="adesivoShadow"/><feMergeNode in="contorno"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <filter id="softShadow" x="-25%" y="-80%" width="150%" height="260%">
       <feGaussianBlur stdDeviation="${Math.max(3, avgFaceH * 0.012)}"/>
@@ -926,6 +1155,7 @@ export function montarSvgKit(d: KitDados): string {
     ${vibrantColorLayer}
     ${elegantFinishLayer}
     ${sceneLayer}
+    ${premiumFaceDetails}
     ${closureBands}
     ${faixaTema}
     ${depthBand}

@@ -88,10 +88,18 @@ export function selectPrintableFaces(
       .sort((a, b) => a.x - b.x || a.y - b.y);
   }
   if (normalizedName.includes("piramide")) {
-    return valid
+    const orientedSides = valid.filter((face) => {
+      const safeFace = toSafePrintableFace(face);
+      const normalizedRotation = Math.abs((safeFace.safeRotation ?? 0) % 180);
+      const horizontalBase = safeFace.w > safeFace.h * 1.40
+        && (normalizedRotation <= 12 || normalizedRotation >= 168);
+      return !horizontalBase;
+    });
+    const candidates = orientedSides.length >= 3 ? orientedSides : valid;
+    return candidates
       .slice()
       .sort((a, b) => b.area - a.area)
-      .slice(0, 5)
+      .slice(0, 4)
       .sort((a, b) => a.x - b.x || a.y - b.y);
   }
 

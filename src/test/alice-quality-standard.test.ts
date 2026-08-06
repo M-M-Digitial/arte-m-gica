@@ -59,7 +59,9 @@ describe("padrão Alice e mercado", () => {
     expect(prompt).toContain("TESTE DE MINIATURA");
     expect(prompt).toContain("exatamente um lacinho grafico refinado");
     expect(prompt).toContain("nunca cobrir nome, idade, personagem, recorte ou linha tecnica");
-    expect(prompt).toContain("350 referencias visuais adicionais");
+    expect(prompt).toContain("350 referencias do Google Imagens");
+    expect(prompt).toContain("apenas 56 anuncios de papelaria personalizada");
+    expect(prompt).toContain("Fotos de mesas, kits decorativos e mockups servem apenas para contexto comercial");
     expect(prompt).toContain("saturacao isolada nunca aprova beleza");
   });
 

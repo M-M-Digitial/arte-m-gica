@@ -1,6 +1,6 @@
 import { ALICE_QUALITY_STANDARD } from "../../supabase/functions/_shared/alice-quality-standard";
 
-export const KIT_QUALITY_GATE_VERSION = "kit-svg-r1";
+export const KIT_QUALITY_GATE_VERSION = "kit-svg-r2";
 
 export interface KitQualityIssue {
   code: string;
@@ -12,12 +12,19 @@ export interface KitQualityMetrics {
   printableFaces: number;
   activeFaces: number;
   heroInstances: number;
+  supportingCharacterInstances: number;
   uniqueHeroes: number;
   namePlates: number;
   minimumHeroHeightRatio: number;
   maximumHeroHeightRatio: number;
   minimumHeroScaleRatio: number;
   maximumHeroScaleRatio: number;
+  minimumHeroVisibleAreaRatio: number;
+  maximumHeroVisibleAreaRatio: number;
+  minimumFaceActiveEvidenceRatio: number;
+  averageFaceActiveEvidenceRatio: number;
+  thematicDetailFaces: number;
+  visualLayers: number;
   paletteColorCount: number;
 }
 
@@ -46,12 +53,19 @@ const emptyMetrics = (): KitQualityMetrics => ({
   printableFaces: 0,
   activeFaces: 0,
   heroInstances: 0,
+  supportingCharacterInstances: 0,
   uniqueHeroes: 0,
   namePlates: 0,
   minimumHeroHeightRatio: 0,
   maximumHeroHeightRatio: 0,
   minimumHeroScaleRatio: 0,
   maximumHeroScaleRatio: 0,
+  minimumHeroVisibleAreaRatio: 0,
+  maximumHeroVisibleAreaRatio: 0,
+  minimumFaceActiveEvidenceRatio: 0,
+  averageFaceActiveEvidenceRatio: 0,
+  thematicDetailFaces: 0,
+  visualLayers: 0,
   paletteColorCount: 0,
 });
 
@@ -124,6 +138,27 @@ const contrastAgainstWhite = (hex: string) => {
   return luminance === null ? 0 : 1.05 / (luminance + 0.05);
 };
 
+const opacityOf = (element: Element, attribute: "opacity" | "fill-opacity" | "stroke-opacity") => {
+  const raw = element.getAttribute(attribute);
+  if (raw === null || raw === "") return 1;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : 0;
+};
+
+const hasVisiblePaint = (element: Element) => {
+  const opacity = opacityOf(element, "opacity");
+  const fill = element.getAttribute("fill");
+  const stroke = element.getAttribute("stroke");
+  const visibleFill = fill !== "none" && fill !== "transparent" && opacityOf(element, "fill-opacity") >= 0.10;
+  const visibleStroke = Boolean(stroke && stroke !== "none" && stroke !== "transparent")
+    && opacityOf(element, "stroke-opacity") >= 0.16;
+  return opacity >= 0.10 && (visibleFill || visibleStroke);
+};
+
+const paintedShapeCount = (element: Element) => Array.from(
+  element.querySelectorAll("rect,path,circle,ellipse,polygon,polyline,line"),
+).filter(hasVisiblePaint).length;
+
 export function validateComposedKitSvg(svg: string, context: KitQualityContext): KitQualityReport {
   const issues: KitQualityIssue[] = [];
   const metrics = emptyMetrics();
@@ -169,14 +204,14 @@ export function validateComposedKitSvg(svg: string, context: KitQualityContext):
     true,
   );
   const isPyramid = normalize(context.moldName).includes("piramide");
-  const orientedFaceCount = Number(metadataValue(document, "oriented-face-count")) || 0;
+  const orientationMetadataCount = Number(metadataValue(document, "face-orientation-metadata-count")) || 0;
   check(
     "oriented_face_geometry",
     "As faces triangulares nao possuem orientacao de montagem e zona segura suficientes.",
     0,
     !isPyramid || (
       metadataValue(document, "safe-face-geometry") === "detected"
-      && orientedFaceCount >= 4
+      && orientationMetadataCount >= 4
     ),
     true,
   );
@@ -226,15 +261,27 @@ export function validateComposedKitSvg(svg: string, context: KitQualityContext):
 
   const safe = ALICE_QUALITY_STANDARD.layout.stickerSafeInset;
   const heroes = Array.from(document.querySelectorAll('image[data-theme-hero="true"]'));
+  const supportingCharacters = Array.from(document.querySelectorAll('image[data-supporting-character="true"]'));
   metrics.heroInstances = heroes.length;
+  metrics.supportingCharacterInstances = supportingCharacters.length;
   const heroRatios: number[] = [];
   const heroScaleRatios: number[] = [];
+  const heroVisibleAreaRatios: number[] = [];
+  const heroVisibleAreaRecords: Array<{ ratio: number; primary: boolean }> = [];
   const heroGeometryOk = heroes.every((hero) => {
     const image = elementBox(hero);
     const face = faceBox(hero);
     if (!image || !face) return false;
+    const visibleCoverage = numberAttribute(hero, "data-visible-coverage");
+    if (!Number.isFinite(visibleCoverage) || visibleCoverage <= 0 || visibleCoverage > 1) return false;
     heroRatios.push(image.height / face.height);
     heroScaleRatios.push(Math.max(image.height / face.height, image.width / face.width));
+    const visibleAreaRatio = Math.min(1, (image.width * image.height * visibleCoverage) / (face.width * face.height));
+    heroVisibleAreaRatios.push(visibleAreaRatio);
+    heroVisibleAreaRecords.push({
+      ratio: visibleAreaRatio,
+      primary: hero.closest('[data-visual-priority="primary"]') !== null,
+    });
     const tolerance = Math.min(face.width, face.height) * 0.008;
     const withinSafeArea = image.x >= face.x + face.width * safe.horizontal - tolerance
       && image.y >= face.y + face.height * safe.top - tolerance
@@ -256,40 +303,117 @@ export function validateComposedKitSvg(svg: string, context: KitQualityContext):
       && zone.x + zone.width <= face.x + face.width + tolerance
       && zone.y + zone.height <= face.y + face.height + tolerance;
   });
+  const supportingGeometryOk = supportingCharacters.every((support) => {
+    const image = elementBox(support);
+    const face = faceBox(support);
+    const coverage = numberAttribute(support, "data-visible-coverage");
+    if (!image || !face || !Number.isFinite(coverage) || coverage <= 0 || coverage > 1) return false;
+    const tolerance = Math.min(face.width, face.height) * 0.008;
+    const withinSafeArea = image.x >= face.x + face.width * safe.horizontal - tolerance
+      && image.y >= face.y + face.height * safe.top - tolerance
+      && image.x + image.width <= face.x + face.width * (1 - safe.horizontal) + tolerance
+      && image.y + image.height <= face.y + face.height * (1 - safe.bottom) + tolerance;
+    const faceIndex = support.getAttribute("data-face-index");
+    const sameFacePlate = plates.find((plate) => plate.getAttribute("data-face-index") === faceIndex);
+    const plateZone = sameFacePlate ? zoneBox(sameFacePlate) : null;
+    const nameOverlap = plateZone ? intersectionArea(image, plateZone) / (image.width * image.height) : 0;
+    return withinSafeArea && nameOverlap <= 0.01;
+  });
   check(
     "safe_geometry",
     "Personagem, placa ou texto cruza margem segura, dobra, corte ou zona do nome.",
     16,
-    heroes.length > 0 && heroGeometryOk && plateGeometryOk,
+    heroes.length > 0 && heroGeometryOk && supportingGeometryOk && plateGeometryOk,
     true,
   );
 
-  const activeSelectors = [
-    '[data-commercial-layering="hero"]',
-    '[data-theme-monogram="true"]',
-    '[data-theme-panel="true"]',
-    '[data-name-plate="true"]',
-  ].join(",");
+  const detailGroups = Array.from(document.querySelectorAll('[data-theme-detail="true"]'));
+  const detailIndices = new Set<number>();
+  const detailStructureOk = detailGroups.every((detail) => {
+    const index = Number(detail.getAttribute("data-face-index"));
+    const face = faceBox(detail);
+    const zone = zoneBox(detail);
+    if (!Number.isInteger(index) || index < 0 || !face || !zone) return false;
+    const zoneRatio = intersectionArea(face, zone) / (face.width * face.height);
+    const family = detail.getAttribute("data-theme-family") ?? "";
+    const visibleShapes = paintedShapeCount(detail);
+    const valid = zoneRatio >= ALICE_QUALITY_STANDARD.commercialArt.minimumThematicDetailZoneRatio
+      && family.length > 0
+      && visibleShapes >= 5;
+    if (valid) detailIndices.add(index);
+    return valid;
+  });
+  metrics.thematicDetailFaces = detailIndices.size;
+
+  const faceEvidence = Array.from({ length: metrics.printableFaces }, (_, faceIndex) => {
+    const onFace = (element: Element) => Number(element.getAttribute("data-face-index")) === faceIndex;
+    let evidence = 0;
+    for (const hero of heroes.filter(onFace)) {
+      const image = elementBox(hero);
+      const face = faceBox(hero);
+      const coverage = numberAttribute(hero, "data-visible-coverage");
+      if (image && face && Number.isFinite(coverage)) {
+        evidence += (image.width * image.height * coverage) / (face.width * face.height);
+      }
+    }
+    for (const support of supportingCharacters.filter(onFace)) {
+      const image = elementBox(support);
+      const face = faceBox(support);
+      const coverage = numberAttribute(support, "data-visible-coverage");
+      if (image && face && Number.isFinite(coverage)) {
+        evidence += (image.width * image.height * coverage) / (face.width * face.height);
+      }
+    }
+    const weightedZoneEvidence = (
+      selector: string,
+      factor: number,
+      requirePaint = false,
+    ) => Array.from(document.querySelectorAll(selector))
+      .filter(onFace)
+      .reduce((sum, element) => {
+        const face = faceBox(element);
+        const zone = zoneBox(element);
+        if (!face || !zone || (requirePaint && paintedShapeCount(element) < 5)) return sum;
+        return sum + Math.min(1, intersectionArea(face, zone) / (face.width * face.height)) * factor;
+      }, 0);
+    evidence += weightedZoneEvidence('[data-name-plate="true"]', 0.58);
+    evidence += weightedZoneEvidence('[data-theme-panel="true"]', 0.62);
+    evidence += weightedZoneEvidence('[data-theme-monogram="true"]', 0.48);
+    evidence += weightedZoneEvidence('[data-theme-ornament="true"]', 0.42);
+    evidence += weightedZoneEvidence('[data-theme-foreground="true"]', 0.34);
+    evidence += weightedZoneEvidence('[data-theme-detail="true"]', 0.42, true);
+    return Math.min(1, evidence);
+  });
+  metrics.minimumFaceActiveEvidenceRatio = faceEvidence.length ? Math.min(...faceEvidence) : 0;
+  metrics.averageFaceActiveEvidenceRatio = faceEvidence.length
+    ? faceEvidence.reduce((sum, value) => sum + value, 0) / faceEvidence.length
+    : 0;
   const activeIndices = new Set(
-    Array.from(document.querySelectorAll(activeSelectors))
-      .map((element) => Number(element.getAttribute("data-face-index")))
-      .filter((value) => Number.isInteger(value) && value >= 0),
+    faceEvidence
+      .map((evidence, index) => ({ evidence, index }))
+      .filter(({ evidence }) => evidence >= ALICE_QUALITY_STANDARD.commercialArt.minimumFaceActiveEvidenceRatio)
+      .map(({ index }) => index),
   );
   metrics.activeFaces = activeIndices.size;
   const allFacesActive = metrics.printableFaces > 0
-    && Array.from({ length: metrics.printableFaces }, (_, index) => activeIndices.has(index)).every(Boolean);
+    && detailStructureOk
+    && metrics.thematicDetailFaces === metrics.printableFaces
+    && metrics.activeFaces === metrics.printableFaces
+    && metrics.averageFaceActiveEvidenceRatio >= ALICE_QUALITY_STANDARD.commercialArt.averageFaceActiveEvidenceRatio;
   check(
     "visible_face_coverage",
-    "Existe face imprimivel sem personagem, personalizacao, painel ou elemento tematico focal.",
+    "Existe face imprimivel com pouca ocupacao visual ou sem detalhe tematico comprovavel.",
     10,
     allFacesActive,
     true,
   );
 
-  const heroUrls = heroes.map(hrefOf).filter(Boolean);
+  const heroUrls = [...heroes, ...supportingCharacters].map(hrefOf).filter(Boolean);
   const uniqueHeroUrls = new Set(heroUrls);
   metrics.uniqueHeroes = uniqueHeroUrls.size;
-  const minimumHeroes = metrics.printableFaces === 1 ? 1 : Math.min(2, metrics.printableFaces);
+  const availableHeroAssets = Math.max(0, Number(metadataValue(document, "available-hero-asset-count")) || 0);
+  const desiredHeroes = metrics.printableFaces === 1 ? 1 : Math.min(2, metrics.printableFaces);
+  const minimumHeroes = Math.min(desiredHeroes, availableHeroAssets);
   const heroDiversityOk = uniqueHeroUrls.size >= minimumHeroes && uniqueHeroUrls.size === heroUrls.length;
   check(
     "hero_diversity",
@@ -303,15 +427,43 @@ export function validateComposedKitSvg(svg: string, context: KitQualityContext):
   metrics.maximumHeroHeightRatio = heroRatios.length ? Math.max(...heroRatios) : 0;
   metrics.minimumHeroScaleRatio = heroScaleRatios.length ? Math.min(...heroScaleRatios) : 0;
   metrics.maximumHeroScaleRatio = heroScaleRatios.length ? Math.max(...heroScaleRatios) : 0;
+  metrics.minimumHeroVisibleAreaRatio = heroVisibleAreaRatios.length ? Math.min(...heroVisibleAreaRatios) : 0;
+  metrics.maximumHeroVisibleAreaRatio = heroVisibleAreaRatios.length ? Math.max(...heroVisibleAreaRatios) : 0;
   const plateWidthRatios = plates.map((plate) => {
     const face = faceBox(plate);
     const zone = zoneBox(plate);
-    return face && zone ? zone.width / face.width : 0;
+    return {
+      ratio: face && zone ? zone.width / face.width : 0,
+      sideBySide: plate.getAttribute("data-personalization-layout") === "side-by-side",
+    };
   });
   const requiredMaximumScale = metrics.printableFaces === 1 ? 0.48 : 0.72;
+  const sideBySideFocalOk = metrics.printableFaces === 1
+    && plateWidthRatios.some(({ sideBySide }) => sideBySide)
+    && metrics.maximumHeroScaleRatio >= ALICE_QUALITY_STANDARD.commercialArt.sideBySideHeroScaleRatio
+    && metrics.maximumHeroVisibleAreaRatio >= ALICE_QUALITY_STANDARD.commercialArt.sideBySideHeroVisibleAreaRatio;
+  const nameFaceStoryOk = plates.every((plate) => {
+    const faceIndex = plate.getAttribute("data-face-index");
+    if (faceIndex === null) return false;
+    return heroes.some((hero) => hero.getAttribute("data-face-index") === faceIndex)
+      || Array.from(document.querySelectorAll('[data-theme-panel="true"],[data-theme-ornament="true"]'))
+        .some((element) => element.getAttribute("data-face-index") === faceIndex)
+      || detailGroups.some((detail) => detail.getAttribute("data-face-index") === faceIndex
+        && paintedShapeCount(detail) >= 5);
+  });
   const hierarchyOk = metrics.maximumHeroScaleRatio >= requiredMaximumScale
     && metrics.minimumHeroScaleRatio >= 0.46
-    && plateWidthRatios.every((ratio) => ratio >= 0.52 && ratio <= 0.84);
+    && heroVisibleAreaRecords.every(({ ratio, primary }) => ratio >= (primary
+      ? ALICE_QUALITY_STANDARD.commercialArt.minimumHeroVisibleAreaRatio
+      : ALICE_QUALITY_STANDARD.commercialArt.minimumSupportingHeroVisibleAreaRatio))
+    && (metrics.maximumHeroVisibleAreaRatio >= ALICE_QUALITY_STANDARD.commercialArt.dominantHeroVisibleAreaRatio
+      || (metrics.maximumHeroScaleRatio >= ALICE_QUALITY_STANDARD.commercialArt.dominantHeroFullWidthScaleRatio - 0.001
+        && metrics.maximumHeroVisibleAreaRatio >= ALICE_QUALITY_STANDARD.commercialArt.dominantHeroNarrowFaceVisibleAreaRatio)
+      || sideBySideFocalOk)
+    && nameFaceStoryOk
+    && plateWidthRatios.every(({ ratio, sideBySide }) => sideBySide
+      ? ratio >= 0.379 && ratio <= 0.50
+      : ratio >= 0.52 && ratio <= 0.84);
   check(
     "visual_hierarchy",
     "Personagens ou placa estao pequenos demais para leitura comercial em miniatura.",
@@ -320,9 +472,19 @@ export function validateComposedKitSvg(svg: string, context: KitQualityContext):
     true,
   );
 
-  const depthOk = Boolean(document.querySelector("[data-scene-continuity]"))
-    && document.querySelectorAll("[data-commercial-depth]").length >= 2
-    && document.querySelectorAll('[data-commercial-layering="hero"]').length >= 1;
+  const scene = document.querySelector("[data-scene-template]");
+  const contactShadows = Array.from(document.querySelectorAll('[data-commercial-depth="contact-shadow"]'))
+    .filter(hasVisiblePaint);
+  const midgroundShapes = Array.from(document.querySelectorAll('[data-commercial-depth="midground"]'))
+    .filter(hasVisiblePaint);
+  const hasBackgroundLayer = Boolean(scene && paintedShapeCount(scene) >= 1);
+  const hasMidgroundLayer = detailStructureOk
+    && metrics.thematicDetailFaces === metrics.printableFaces
+    && midgroundShapes.length >= Math.min(heroes.length, metrics.printableFaces);
+  const hasForegroundLayer = heroes.length > 0 && plates.length > 0;
+  metrics.visualLayers = [hasBackgroundLayer, hasMidgroundLayer, hasForegroundLayer].filter(Boolean).length;
+  const depthOk = metrics.visualLayers >= ALICE_QUALITY_STANDARD.commercialArt.visualLayers.min
+    && contactShadows.length === heroes.length + supportingCharacters.length;
   check(
     "depth_layering",
     "A composicao nao apresenta fundo, apoio e primeiro plano suficientes.",
@@ -338,13 +500,22 @@ export function validateComposedKitSvg(svg: string, context: KitQualityContext):
       .filter((fill) => /^#[0-9A-F]{6}$/.test(fill) && fill !== "#FFFFFF" && fill !== "#FFFDF8" && fill !== "#111111"),
   );
   metrics.paletteColorCount = fills.size;
+  const vibrantLayer = document.querySelector('[data-vibrant-color-wash="true"]');
+  const elegantLayer = document.querySelector('[data-elegant-finish="true"]');
   const appearanceLayerOk = appearance === "vibrant"
-    ? Boolean(document.querySelector('[data-vibrant-color-wash="true"]'))
+    ? Boolean(vibrantLayer && paintedShapeCount(vibrantLayer) >= 4)
     : appearance === "elegant"
-      ? Boolean(document.querySelector('[data-elegant-finish="true"]'))
+      ? Boolean(elegantLayer && paintedShapeCount(elegantLayer) >= 3)
       : appearance === "balanced";
+  const paletteAreaFaces = new Set(
+    Array.from(document.querySelectorAll('[data-theme-detail="true"]'))
+      .filter((detail) => detail.querySelectorAll('[data-palette-area="true"]').length > 0)
+      .map((detail) => Number(detail.getAttribute("data-face-index")))
+      .filter((index) => Number.isInteger(index) && index >= 0),
+  );
   const colorOk = fills.size >= 3
     && appearanceLayerOk
+    && paletteAreaFaces.size === metrics.printableFaces
     && Boolean(document.querySelector("pattern#papelBody"))
     && Boolean(document.querySelector("pattern#papelTop"));
   check(

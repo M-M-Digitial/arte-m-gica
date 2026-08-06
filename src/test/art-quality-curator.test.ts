@@ -55,13 +55,15 @@ describe("curadoria comercial da arte gerada", () => {
   });
 
   it("separa a auditoria comercial da validacao visual do Google e da Shopee indexada", () => {
-    expect(standardSource).toContain('version: "market-multi-2026-08-05-r2"');
+    expect(standardSource).toContain('version: "market-multi-2026-08-06-r3"');
     expect(standardSource).toContain("sampleSize: 236");
+    expect(standardSource).toContain("directPaperCraftSampleSize: 56");
     expect(standardSource).toContain("generalSampleSize: 200");
     expect(standardSource).toContain("shopeeIndexedSampleSize: 150");
     expect(standardSource).toContain("salesVerified: false");
     expect(standardSource).toContain("paletteRecoloredAreaMin: 35");
-    expect(standardSource).toContain("Shopee direta: login necessario durante a coleta anonima");
+    expect(standardSource).toContain("Shopee: ranking global de mais vendidos nao e exposto publicamente de forma verificavel");
+    expect(standardSource).toContain("Fotos de mesa e decoracao validam apelo comercial, nao densidade do SVG planificado");
     expect(composerSource).toContain('id="market-research-version"');
     expect(composerSource).toContain('id="market-reference-sample-size"');
     expect(composerSource).toContain('id="google-image-validation-size"');

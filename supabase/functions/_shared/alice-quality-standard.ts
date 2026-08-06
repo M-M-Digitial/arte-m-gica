@@ -1,12 +1,23 @@
 export const MARKET_VISUAL_RESEARCH = {
-  version: "market-multi-2026-08-05-r2",
+  version: "market-multi-2026-08-06-r3",
   collectedAt: "2026-08-05",
   source: "Mercado Livre",
   query: "kit festa papelaria personalizada",
   sampleSize: 236,
   recordsWithSales: 146,
   recordsWithRating: 143,
-  blockedSources: ["Shopee direta: login necessario durante a coleta anonima"],
+  listingCategoryBreakdown: {
+    decorationAndTableKits: 117,
+    personalizedPaperCraft: 56,
+    mixedPartyItems: 45,
+    cakeToppers: 6,
+    stickers: 6,
+    displays: 5,
+    balloons: 1,
+  },
+  directPaperCraftSampleSize: 56,
+  benchmarkPolicy: "Composicao de caixas usa apenas a subamostra de papelaria personalizada e validacao visual de produtos montados; fotos de mesa servem somente para contexto de mockup.",
+  blockedSources: ["Shopee: ranking global de mais vendidos nao e exposto publicamente de forma verificavel"],
   metricPercentiles: {
     meanSaturation: { p25: 0.175, median: 0.276, p75: 0.369 },
     vividShare: { p25: 0.075, median: 0.154, p75: 0.245 },
@@ -52,7 +63,7 @@ export const MARKET_VISUAL_RESEARCH = {
 } as const;
 
 export const ALICE_QUALITY_STANDARD = {
-  version: "alice-market-2026-08-05-r16",
+  version: "alice-market-2026-08-06-r20",
   evidence: {
     aliceThemesReviewed: 30,
     aliceLibraryThemesMapped: 100,
@@ -112,6 +123,16 @@ export const ALICE_QUALITY_STANDARD = {
     activeCoverageHeroFace: { min: 58, target: 68, max: 78 },
     breathingAreaHeroFace: { min: 18, target: 25, max: 35 },
     minimumNameContrastRatio: 4.5,
+    minimumHeroVisibleAreaRatio: 0.055,
+    minimumSupportingHeroVisibleAreaRatio: 0.033,
+    dominantHeroVisibleAreaRatio: 0.14,
+    dominantHeroNarrowFaceVisibleAreaRatio: 0.09,
+    dominantHeroFullWidthScaleRatio: 0.86,
+    sideBySideHeroVisibleAreaRatio: 0.11,
+    sideBySideHeroScaleRatio: 0.55,
+    minimumFaceActiveEvidenceRatio: 0.30,
+    averageFaceActiveEvidenceRatio: 0.38,
+    minimumThematicDetailZoneRatio: 0.46,
     minimumApprovalScore: 86,
   },
   score: {
@@ -171,7 +192,7 @@ export function buildAliceGenerationStandard(context: PersonalizationContext = {
     : "REGRA GLOBAL DE PERSONALIZACAO: reserve a faixa inferior de uma face visivel sem personagem atras ou atravessando o texto; arte menor pode ocupar a parte superior. Use 68-82% da largura da face (alvo 76%) e tipografia proporcional. Em fundo calmo, prefira lettering com halo; em fundo movimentado, use placa solida simples ou a placa propria do tema.";
 
   return `PADRAO ALICE + MERCADO (obrigatorio):
-- BASE VERIFICADA: ${MARKET_VISUAL_RESEARCH.sampleSize} anuncios publicos do ${MARKET_VISUAL_RESEARCH.source}, pesquisa "${MARKET_VISUAL_RESEARCH.query}", coletados em ${MARKET_VISUAL_RESEARCH.collectedAt}; ${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize} referencias visuais adicionais do ${MARKET_VISUAL_RESEARCH.googleImageValidation.source}, sendo ${MARKET_VISUAL_RESEARCH.googleImageValidation.generalSampleSize} gerais e ${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeIndexedSampleSize} indexadas da Shopee. A busca direta da Shopee exigiu login. Nao atribua venda, ranking ou faturamento aos resultados do Google. Use somente padroes agregados, nunca a composicao de um anuncio individual.
+- BASE VERIFICADA: ${MARKET_VISUAL_RESEARCH.sampleSize} anuncios publicos do ${MARKET_VISUAL_RESEARCH.source} foram usados para descoberta de categorias, mas apenas ${MARKET_VISUAL_RESEARCH.directPaperCraftSampleSize} anuncios de papelaria personalizada formam o benchmark visual direto de moldes e caixas. A validacao adicional reuniu ${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize} referencias do ${MARKET_VISUAL_RESEARCH.googleImageValidation.source}, sendo ${MARKET_VISUAL_RESEARCH.googleImageValidation.generalSampleSize} gerais e ${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeIndexedSampleSize} indexadas da Shopee. Fotos de mesas, kits decorativos e mockups servem apenas para contexto comercial, nunca para medir a superficie plana do molde. Nao atribua venda, ranking ou faturamento aos resultados do Google e nunca copie a composicao de um anuncio individual.
 - ${moldRule} Separe exterior, vazados, cola escondida, superficies visiveis calmas, superficies de destaque e area segura de personalizacao.
 - Trate 100% das superficies visiveis com cor, wash, textura, microestampa ou ilustracao coerente. Fundo claro tratado e espaco de respiro sao acabamento valido; papel branco cru sem intencao e falha.
 - Escolha UM perfil de composicao conforme a referencia e a geometria, sem misturar escalas:
@@ -212,7 +233,7 @@ const normalizeForRule = (value?: string) =>
 export function buildAliceCuratorStandard() {
   const weights = ALICE_QUALITY_STANDARD.score;
   return `RUBRICA DE CURADORIA ALICE + MERCADO:
-- Evidencia de mercado: amostra versionada ${MARKET_VISUAL_RESEARCH.version}, com ${MARKET_VISUAL_RESEARCH.sampleSize} anuncios do ${MARKET_VISUAL_RESEARCH.source}; ${MARKET_VISUAL_RESEARCH.recordsWithSales} exibiam vendas e ${MARKET_VISUAL_RESEARCH.recordsWithRating} exibiam avaliacao. A validacao separada do Google tem ${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize} imagens e nao possui dados de venda; ${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeIndexedSampleSize} delas sao resultados da Shopee apenas indexados. Use percentis como alerta, nao como autorizacao para copiar layout ou ativo.
+- Evidencia de mercado: amostra versionada ${MARKET_VISUAL_RESEARCH.version}, com ${MARKET_VISUAL_RESEARCH.sampleSize} anuncios do ${MARKET_VISUAL_RESEARCH.source} para descoberta e ${MARKET_VISUAL_RESEARCH.directPaperCraftSampleSize} itens diretamente comparaveis usados como benchmark de caixas personalizadas; ${MARKET_VISUAL_RESEARCH.recordsWithSales} exibiam vendas e ${MARKET_VISUAL_RESEARCH.recordsWithRating} exibiam avaliacao. A validacao separada do Google tem ${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize} imagens e nao possui dados de venda; ${MARKET_VISUAL_RESEARCH.googleImageValidation.shopeeIndexedSampleSize} delas sao resultados da Shopee apenas indexados. Fotos de mesa e decoracao validam apelo comercial, nao densidade do SVG planificado. Use percentis como alerta, nao como autorizacao para copiar layout ou ativo.
 - Estrutura tecnica (${weights.technicalStructure}): existe exatamente um molde; contorno, corte, dobra, sangria, abas de cola, furos e proporcoes ficam intactos, sem camada tecnica duplicada.
 - Tratamento visivel (${weights.visibleCoverage}): todas as faces, tampas e alcas expostas recebem cor, wash, textura ou arte intencional; exterior, furos e cola escondida ficam preservados. Fundo claro tratado nao e falha.
 - Hierarquia focal (${weights.focalHierarchy}): tema, heroi e personalizacao sao reconhecidos em ate 2 segundos na miniatura; existe um foco dominante e variacao clara de escala.

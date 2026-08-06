@@ -26,9 +26,9 @@ const base: KitDados = {
   papelBodyUri: "data:image/png;base64,BODY",
   papelBodyInfo: { busy: false, corMedia: "#FBE7EF" },
   personagens: [
-    { uri: "data:image/png;base64,HERO_1", w: 500, h: 800, role: "principal" },
-    { uri: "data:image/png;base64,HERO_2", w: 540, h: 760, role: "amigo" },
-    { uri: "data:image/png;base64,HERO_3", w: 520, h: 740, role: "amigo2" },
+    { uri: "data:image/png;base64,HERO_1", w: 500, h: 800, role: "principal", visibleCoverage: 0.72 },
+    { uri: "data:image/png;base64,HERO_2", w: 540, h: 760, role: "amigo", visibleCoverage: 0.68 },
+    { uri: "data:image/png;base64,HERO_3", w: 520, h: 740, role: "amigo2", visibleCoverage: 0.70 },
   ],
   placaUri: null,
   placaMeta: null,
@@ -61,7 +61,11 @@ describe("curadoria deterministica do SVG composto", () => {
       heroInstances: 3,
       uniqueHeroes: 3,
       namePlates: 1,
+      thematicDetailFaces: 4,
+      visualLayers: 3,
     });
+    expect(report.metrics.minimumFaceActiveEvidenceRatio).toBeGreaterThanOrEqual(0.30);
+    expect(report.metrics.maximumHeroVisibleAreaRatio).toBeGreaterThanOrEqual(0.14);
   });
 
   it("bloqueia qualquer imagem externa no SVG importavel", () => {
@@ -100,6 +104,34 @@ describe("curadoria deterministica do SVG composto", () => {
     }));
   });
 
+  it("bloqueia personagem declarado grande mas com poucos pixels visiveis", () => {
+    const svg = montarSvgKit(base).replaceAll(
+      /data-visible-coverage="[0-9.]+"/g,
+      'data-visible-coverage="0.01"',
+    );
+    const report = validate(svg);
+
+    expect(report.approved).toBe(false);
+    expect(report.issues).toContainEqual(expect.objectContaining({
+      code: "visual_hierarchy",
+      critical: true,
+    }));
+  });
+
+  it("bloqueia face que tenta se certificar sem detalhes tematicos renderizaveis", () => {
+    const svg = montarSvgKit(base).replace(
+      'data-theme-detail="true"',
+      'data-theme-detail="tampered"',
+    );
+    const report = validate(svg);
+
+    expect(report.approved).toBe(false);
+    expect(report.issues).toContainEqual(expect.objectContaining({
+      code: "visible_face_coverage",
+      critical: true,
+    }));
+  });
+
   it("bloqueia piramide sem zonas orientadas para a montagem", () => {
     const svg = montarSvgKit({ ...base, moldName: "Caixa Piramide" });
     const report = validateComposedKitSvg(svg, {
@@ -112,6 +144,27 @@ describe("curadoria deterministica do SVG composto", () => {
     expect(report.issues).toContainEqual(expect.objectContaining({
       code: "oriented_face_geometry",
       critical: true,
+    }));
+  });
+
+  it("aceita uma face da piramide alinhada em zero graus quando as quatro orientacoes foram medidas", () => {
+    const orientedFaces = faces.map((face, index) => ({
+      ...face,
+      safeRotation: index * 45,
+    }));
+    const svg = montarSvgKit({
+      ...base,
+      moldName: "Caixa Piramide",
+      facesJson: JSON.stringify({ faces: orientedFaces }),
+    });
+    const report = validateComposedKitSvg(svg, {
+      expectedName: "Celine",
+      expectedAge: "2",
+      moldName: "Caixa Piramide",
+    });
+
+    expect(report.issues).not.toContainEqual(expect.objectContaining({
+      code: "oriented_face_geometry",
     }));
   });
 });

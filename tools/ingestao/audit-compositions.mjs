@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import { buildSync } from "esbuild";
+import { build } from "esbuild";
 import { JSDOM } from "jsdom";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -10,6 +10,14 @@ const ROOT = resolve(HERE, "../..");
 const facesOverrideDir = process.env.AUDIT_FACES_DIR
   ? resolve(ROOT, process.env.AUDIT_FACES_DIR)
   : null;
+const themeFilter = process.env.AUDIT_THEME?.trim() || null;
+const moldFilter = process.env.AUDIT_MOLD?.trim() || null;
+const paletteFilter = process.env.AUDIT_PALETTE?.trim() || null;
+const saveSvgPath = process.env.AUDIT_SAVE_SVG?.trim()
+  ? resolve(ROOT, process.env.AUDIT_SAVE_SVG.trim())
+  : null;
+const maxFailureDetails = Math.max(0, Number(process.env.AUDIT_MAX_FAILURES ?? 40) || 0);
+const includeAssetDiagnostics = process.env.AUDIT_ASSET_DIAGNOSTICS === "1";
 const metricsCachePath = resolve(HERE, ".audit-image-metrics.json");
 const metricsCache = existsSync(metricsCachePath)
   ? JSON.parse(readFileSync(metricsCachePath, "utf8"))
@@ -63,19 +71,50 @@ async function rest(path) {
   return response.json();
 }
 
-const bundle = (entry, output) => buildSync({
-  entryPoints: [entry],
+const sourceLoader = (path) => path.endsWith(".json") ? "json" : path.endsWith(".tsx") ? "tsx" : path.endsWith(".ts") ? "ts" : "js";
+const resolveSource = (importPath, resolveDir) => {
+  const candidate = resolve(resolveDir, importPath);
+  if (existsSync(candidate)) return candidate;
+  for (const extension of [".ts", ".tsx", ".js", ".mjs", ".json"]) {
+    if (existsSync(candidate + extension)) return candidate + extension;
+  }
+  return candidate;
+};
+const localSourcePlugin = {
+  name: "audit-local-source",
+  setup(context) {
+    context.onResolve({ filter: /^\./ }, (args) => ({
+      path: resolveSource(args.path, args.resolveDir),
+      namespace: "audit-source",
+    }));
+    context.onLoad({ filter: /.*/, namespace: "audit-source" }, (args) => ({
+      contents: readFileSync(args.path, "utf8"),
+      loader: sourceLoader(args.path),
+      resolveDir: dirname(args.path),
+    }));
+  },
+};
+const bundle = (entry, output) => build({
+  stdin: {
+    contents: readFileSync(entry, "utf8"),
+    sourcefile: entry,
+    resolveDir: dirname(entry),
+    loader: sourceLoader(entry),
+  },
   bundle: true,
   format: "esm",
   outfile: output,
   platform: "neutral",
   logLevel: "silent",
+  plugins: [localSourcePlugin],
 });
 
 const composeBundle = resolve(HERE, ".audit-compose-kit.mjs");
 const qualityBundle = resolve(HERE, ".audit-kit-quality.mjs");
-bundle(resolve(ROOT, "src/lib/compose-kit.ts"), composeBundle);
-bundle(resolve(ROOT, "src/lib/kit-quality.ts"), qualityBundle);
+await Promise.all([
+  bundle(resolve(ROOT, "src/lib/compose-kit.ts"), composeBundle),
+  bundle(resolve(ROOT, "src/lib/kit-quality.ts"), qualityBundle),
+]);
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
 globalThis.DOMParser = dom.window.DOMParser;
@@ -237,7 +276,10 @@ const [assets, rawMolds] = await Promise.all([
   rest("moldes?select=id,name,svg_url,mask_url,faces_url&order=sort_order,name"),
 ]);
 
-const molds = await mapPool(rawMolds, 6, async (mold) => {
+const selectedRawMolds = moldFilter
+  ? rawMolds.filter((mold) => mold.name === moldFilter)
+  : rawMolds;
+const molds = await mapPool(selectedRawMolds, 6, async (mold) => {
   if (!mold.svg_url || !mold.mask_url || !mold.faces_url) {
     throw new Error(`Molde incompleto: ${mold.name}`);
   }
@@ -274,7 +316,8 @@ const scores = [];
 let compositions = 0;
 let auditedThemes = 0;
 
-await mapPool([...byTheme], 3, async ([slug, themeAssets]) => {
+const selectedThemes = [...byTheme].filter(([slug]) => !themeFilter || slug === themeFilter);
+await mapPool(selectedThemes, 3, async ([slug, themeAssets]) => {
   let completedForTheme = 0;
   try {
   const active = themeAssets.filter((asset) => asset.url && asset.meta?.enabled !== false);
@@ -300,13 +343,15 @@ await mapPool([...byTheme], 3, async ([slug, themeAssets]) => {
   const characters = trimmedCliparts.map(({ asset, trimmed }, index) => ({
     ...trimmed,
     uri: auditDataUri(`${slug}-clipart-${index}`),
+    sourceUrl: asset.url,
     name: asset.name,
     role: asset.role,
     usage: ["hero", "ornament", "border", "panel"].includes(asset.meta?.usage)
       ? asset.meta.usage
       : undefined,
   }));
-  const palettes = paletteVariants(slug, defaultPalette(slug, fontAsset));
+  const palettes = paletteVariants(slug, defaultPalette(slug, fontAsset))
+    .filter((palette) => !paletteFilter || palette.id === paletteFilter);
 
   for (const mold of molds) {
     for (const palette of palettes) {
@@ -334,54 +379,41 @@ await mapPool([...byTheme], 3, async ([slug, themeAssets]) => {
           idade: "6",
         });
         const compactSvg = svg;
+        if (saveSvgPath) writeFileSync(saveSvgPath, compactSvg);
         compositions++;
         completedForTheme++;
-        if (palette.id === "tema") {
-          const report = curator.validateComposedKitSvg(compactSvg, {
-            expectedName: "Maria Eduarda",
-            expectedAge: "6",
-            moldName: mold.name,
+        const report = curator.validateComposedKitSvg(compactSvg, {
+          expectedName: "Maria Eduarda",
+          expectedAge: "6",
+          moldName: mold.name,
+        });
+        scores.push(report.score);
+        const selectedColorsApplied = [palette.primary, palette.secondary, palette.background, palette.accent]
+          .every((color) => compactSvg.includes(color));
+        if (!report.approved || !selectedColorsApplied) {
+          failures.push({
+            theme: slug,
+            mold: mold.name,
+            palette: palette.id,
+            score: report.score,
+            issues: [
+              ...report.issues.map((issue) => issue.code),
+              ...(!selectedColorsApplied ? ["selected_palette_not_applied"] : []),
+            ],
+            metrics: report.metrics,
+            ...(includeAssetDiagnostics ? {
+              assets: characters.map((asset) => ({
+                name: asset.name,
+                role: asset.role,
+                width: asset.w,
+                height: asset.h,
+                ratio: Number((asset.w / Math.max(1, asset.h)).toFixed(3)),
+                visibleCoverage: Number((asset.visibleCoverage ?? 0).toFixed(3)),
+                classifiedUsage: composer.classifyClipartUsage(asset),
+                sourceUrl: asset.sourceUrl,
+              })),
+            } : {}),
           });
-          scores.push(report.score);
-          if (!report.approved) {
-            failures.push({
-              theme: slug,
-              mold: mold.name,
-              palette: palette.id,
-              score: report.score,
-              issues: report.issues.map((issue) => issue.code),
-              metrics: report.metrics,
-            });
-          }
-        } else {
-          const expectedMarker = palette.id === "vibrante"
-            ? 'data-vibrant-color-wash="true"'
-            : 'data-elegant-finish="true"';
-          const signals = [
-            `<metadata id="color-appearance">${palette.appearance}</metadata>`,
-            '<metadata id="deterministic-quality-gate">kit-svg-r1</metadata>',
-            'pattern id="papelTop"',
-            'pattern id="papelBody"',
-            expectedMarker,
-            palette.primary,
-            palette.secondary,
-            palette.background,
-            palette.accent,
-          ];
-          const missingSignals = signals.filter((signal) => !compactSvg.includes(signal));
-          const externalImage = /<image\b[^>]*(?:href|xlink:href)="(?!data:image\/)/i.test(compactSvg);
-          if (missingSignals.length || externalImage) {
-            failures.push({
-              theme: slug,
-              mold: mold.name,
-              palette: palette.id,
-              issues: [
-                ...(missingSignals.length ? ["color_variant_signals"] : []),
-                ...(externalImage ? ["external_image"] : []),
-              ],
-              missingSignals,
-            });
-          }
         }
       } catch (error) {
         compositions++;
@@ -406,7 +438,7 @@ await mapPool([...byTheme], 3, async ([slug, themeAssets]) => {
   } finally {
     persistMetricsCache();
     auditedThemes++;
-    console.error(`auditados ${auditedThemes}/${byTheme.size}: ${slug}`);
+    console.error(`auditados ${auditedThemes}/${selectedThemes.length}: ${slug}`);
   }
 });
 
@@ -416,15 +448,21 @@ const failurePatterns = Object.entries(failures.reduce((patterns, failure) => {
   return patterns;
 }, {})).sort((a, b) => b[1] - a[1]);
 
+const failureCountsBy = (field) => Object.entries(failures.reduce((counts, failure) => {
+  const key = failure[field] || "unknown";
+  counts[key] = (counts[key] || 0) + 1;
+  return counts;
+}, {})).sort((a, b) => b[1] - a[1]);
+
 const result = {
   ok: failures.length === 0,
   totals: {
-    themes: byTheme.size,
+    themes: selectedThemes.length,
     molds: molds.length,
-    palettes: 3,
+    palettes: paletteFilter ? 1 : 3,
     compositions,
     fullSvgValidations: scores.length,
-    colorVariantChecks: compositions - scores.length,
+    colorVariantChecks: compositions,
   },
   scores: scores.length ? {
     minimum: Math.min(...scores),
@@ -433,7 +471,11 @@ const result = {
   } : null,
   failureCount: failures.length,
   failurePatterns,
-  failures: failures.slice(0, 200),
+  failureBreakdown: {
+    molds: failureCountsBy("mold"),
+    themes: failureCountsBy("theme"),
+  },
+  failures: failures.slice(0, maxFailureDetails),
 };
 
 console.log(JSON.stringify(result, null, 2));

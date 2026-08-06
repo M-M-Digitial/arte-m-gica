@@ -61,11 +61,11 @@ describe("composição SVG do kit", () => {
     });
 
     expect(svg).toContain('height="20" fill="#245F4F"');
-    expect(svg).toContain('fill="url(#papelTop)" opacity="0.30"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.44"');
     expect(svg).toContain('height="10" fill="#245F4F"');
-    expect(svg).toContain('fill="url(#papelTop)" opacity="0.28"');
+    expect(svg).toContain('fill="url(#papelTop)" opacity="0.42"');
     expect(svg).toContain('height="70" fill="#E9F5EA"');
-    expect(svg).toContain('fill="url(#papelBody)" opacity="0.4"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.54"');
   });
 
   it("ignora pixels transparentes isolados ao calcular o recorte", () => {
@@ -82,9 +82,11 @@ describe("composição SVG do kit", () => {
 
   it("separa personagens de ornamentos, bordas e paineis", () => {
     expect(classifyClipartUsage({ uri: "hero", w: 300, h: 500 })).toBe("hero");
-    expect(classifyClipartUsage({ uri: "wide-hero", w: 1200, h: 300, role: "principal" })).toBe("hero");
+    expect(classifyClipartUsage({ uri: "wide-hero", w: 1200, h: 300, role: "principal" })).toBe("border");
     expect(classifyClipartUsage({ uri: "border", w: 900, h: 200 })).toBe("border");
     expect(classifyClipartUsage({ uri: "panel", w: 640, h: 400, visibleCoverage: 0.95 })).toBe("panel");
+    expect(classifyClipartUsage({ uri: "filled-principal", w: 640, h: 550, visibleCoverage: 0.95, role: "principal" })).toBe("hero");
+    expect(classifyClipartUsage({ uri: "sparse-group", w: 900, h: 600, visibleCoverage: 0.18, role: "amigo" })).toBe("border");
     expect(classifyClipartUsage({ uri: "rose", w: 400, h: 400, usage: "ornament" })).toBe("ornament");
   });
 
@@ -123,7 +125,7 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('<metadata id="alice-composition-profile">modular</metadata>');
     expect(svg).toContain('fill="url(#papelTop)"');
     expect(svg).toContain('fill="url(#papelBody)"');
-    expect(svg).toContain('fill="url(#papelBody)" opacity="0.22"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.4"');
     expect(svg).toContain("Sofia");
     expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
     expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(3);
@@ -165,7 +167,7 @@ describe("composição SVG do kit", () => {
     expect(Array.from(svg.matchAll(/data-name-plate="true"[^>]*data-face-x="([^"]+)"/g), (match) => match[1])).toEqual(["0", "300"]);
     expect(svg).toContain('<metadata id="front-face-index">1</metadata>');
     expect(svg).toContain('<metadata id="side-face-indices">0,3</metadata>');
-    expect(svg.match(/data-face-role="front"/g)).toHaveLength(1);
+    expect(svg.match(/data-commercial-layering="hero" data-face-role="front"/g)).toHaveLength(1);
     expect(svg.match(/data-face-role="side"/g)?.length).toBeGreaterThanOrEqual(4);
     expect(svg).toContain('data-visual-priority="primary" data-crease-safe="true"');
     expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
@@ -348,14 +350,15 @@ describe("composição SVG do kit", () => {
     });
 
     expect(svg).toContain('<metadata id="color-appearance">vibrant</metadata>');
-    expect(svg).toContain('<metadata id="market-research-version">market-multi-2026-08-05-r2</metadata>');
+    expect(svg).toContain('<metadata id="market-research-version">market-multi-2026-08-06-r3</metadata>');
     expect(svg).toContain('<metadata id="market-reference-sample-size">236</metadata>');
+    expect(svg).toContain('<metadata id="direct-paper-craft-sample-size">56</metadata>');
     expect(svg).toContain('<metadata id="google-image-validation-size">350</metadata>');
     expect(svg).toContain('<metadata id="shopee-indexed-validation-size">150</metadata>');
     expect(svg).toContain('<metadata id="shopee-direct-access">blocked-login-required</metadata>');
     expect(svg).toContain('data-vibrant-color-wash="true"');
     expect(svg).toContain('fill="#29C7D8"');
-    expect(svg).toContain('fill="url(#papelBody)" opacity="0.14"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.36"');
     expect(svg).toContain('fill="#35B84A" fill-opacity="0.92"');
   });
 
@@ -393,6 +396,6 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('<metadata id="color-appearance">elegant</metadata>');
     expect(svg).toContain('data-elegant-finish="true"');
     expect(svg).not.toContain('data-vibrant-color-wash="true"');
-    expect(svg).toContain('fill="url(#papelBody)" opacity="0.28"');
+    expect(svg).toContain('fill="url(#papelBody)" opacity="0.46"');
   });
 });
