@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Download, FileText, Loader2, RefreshCw, Search, Heart, Wand2, Palette, Camera, Image as ImageIcon, Type, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,8 @@ import { Thumb } from "@/components/Thumb";
 import { ThemeCover } from "@/components/ThemeCover";
 import { runImageGenerationJob } from "@/lib/image-job";
 import { getThemeReadiness, isThemeHeroAsset } from "@/lib/theme-curation";
-import { getDefaultThemePalette, getThemeCoverScale, getThemeHeroRole } from "@/lib/theme-palettes";
+import { assertComposedKitQuality, type KitQualityReport } from "@/lib/kit-quality";
+import { adaptThemePalette, getDefaultThemePalette, getThemeCoverScale, getThemeHeroRole } from "@/lib/theme-palettes";
 import { useThemeLibrary } from "@/hooks/use-theme-library";
 
 interface ClipartOption {
@@ -95,6 +96,7 @@ export default function Editor() {
   const [mockupBusy, setMockupBusy] = useState(false);
   const [mockupError, setMockupError] = useState<string | null>(null);
   const [mockupQuality, setMockupQuality] = useState<MockupQuality | null>(null);
+  const [kitQuality, setKitQuality] = useState<KitQualityReport | null>(null);
   const previewRequestRef = useRef(0);
   // Quiz em página inteira: 1 tema → 2 molde → 3 nome → 4 toque final → 5 resultado
   const [etapa, setEtapa] = useState(requestedTheme ? 2 : 1);
@@ -147,11 +149,20 @@ export default function Editor() {
 
   const temaSel = useMemo(() => (temas ?? []).find((t) => t.slug === themeSlug), [temas, themeSlug]);
   const molde = useMemo(() => (moldes ?? []).find((m: any) => m.id === moldeId), [moldes, moldeId]);
+  const opcoesPaleta = useMemo(() => {
+    const tema = getDefaultThemePalette(themeSlug) ?? temaSel?.palette ?? PALETA_PERSONALIZADA;
+    return [
+      { id: "tema", label: "Cores do tema", ...tema },
+      ...PALETAS,
+      { id: "personalizada", label: "Personalizada", ...paletaPersonalizada },
+    ].map((paleta) => ({
+      ...paleta,
+      ...adaptThemePalette(themeSlug, paleta, paleta.id),
+    }));
+  }, [paletaPersonalizada, temaSel?.palette, themeSlug]);
   const paletaAtiva = useMemo<KitPalette | undefined>(() => {
-    if (paletaId === "tema") return getDefaultThemePalette(themeSlug) ?? temaSel?.palette;
-    if (paletaId === "personalizada") return paletaPersonalizada;
-    return PALETAS.find((paleta) => paleta.id === paletaId);
-  }, [paletaId, paletaPersonalizada, temaSel?.palette, themeSlug]);
+    return opcoesPaleta.find((paleta) => paleta.id === paletaId);
+  }, [opcoesPaleta, paletaId]);
   const fonteAtiva = useMemo(
     () => FONTES.find((fonte) => fonte.id === fonteId) ?? FONTES[0],
     [fonteId],
@@ -168,6 +179,12 @@ export default function Editor() {
     setMockupQuality(null);
 
     try {
+      const qualityReport = assertComposedKitQuality(sourceSvg, {
+        expectedName: nome.trim(),
+        expectedAge: idade.trim() || undefined,
+        moldName: molde.name,
+      });
+      setKitQuality(qualityReport);
       const arteImageUrl = await svgToPngDataUrl(sourceSvg, 1536);
       await runImageGenerationJob(
         "gerar-mockup",
@@ -215,9 +232,14 @@ export default function Editor() {
       return;
     }
     const requestId = previewOnly ? ++previewRequestRef.current : 0;
-    if (previewOnly) setPreviewing(true);
+    if (previewOnly) {
+      setPreviewing(true);
+      setKitQuality(null);
+    }
     else {
       setBusy(true);
+      setSvg(null);
+      setKitQuality(null);
       setResultadoTab("arte");
       setMockupImage(null);
       setMockupImageBase64(null);
@@ -259,7 +281,15 @@ export default function Editor() {
           useThemeFont: fonteAtiva.useThemeFont,
         },
       });
-      if (!previewOnly || requestId === previewRequestRef.current) setSvg(out);
+      const qualityReport = assertComposedKitQuality(out, {
+        expectedName: nome.trim(),
+        expectedAge: idade.trim() || undefined,
+        moldName: molde.name,
+      });
+      if (!previewOnly || requestId === previewRequestRef.current) {
+        setSvg(out);
+        setKitQuality(qualityReport);
+      }
       if (!previewOnly) {
         toast.success(`Kit ${temaSel?.name} da ${nome.trim()} pronto!`);
         setBusy(false);
@@ -267,7 +297,8 @@ export default function Editor() {
       }
     } catch (e: any) {
       console.error(e);
-      if (!previewOnly) toast.error(e?.message ?? "Erro ao compor o kit.");
+      if (previewOnly && requestId === previewRequestRef.current) setSvg(null);
+      else if (!previewOnly) toast.error(e?.message ?? "Erro ao compor o kit.");
     } finally {
       if (previewOnly) {
         if (requestId === previewRequestRef.current) setPreviewing(false);
@@ -284,17 +315,39 @@ export default function Editor() {
     };
   }, [etapa, themeSlug, molde, nome, gerar]);
 
-  const baixarSvg = () => svg && baixarArquivoSvg(`kit-${nome || "arte"}`, svg);
+  const validarArteAtual = useCallback(() => {
+    if (!svg || !molde) return null;
+    try {
+      const report = assertComposedKitQuality(svg, {
+        expectedName: nome.trim(),
+        expectedAge: idade.trim() || undefined,
+        moldName: molde.name,
+      });
+      setKitQuality(report);
+      return svg;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "A arte precisa ser recomposta antes da exportação.";
+      toast.error(message);
+      return null;
+    }
+  }, [idade, molde, nome, svg]);
+
+  const baixarSvg = () => {
+    const approvedSvg = validarArteAtual();
+    if (approvedSvg) baixarArquivoSvg(`kit-${nome || "arte"}`, approvedSvg);
+  };
   const baixarPng = async () => {
-    if (!svg) return;
+    const approvedSvg = validarArteAtual();
+    if (!approvedSvg) return;
     setBusy(true);
-    try { await baixarMoldePng(`kit-${nome || "arte"}`, svg); }
+    try { await baixarMoldePng(`kit-${nome || "arte"}`, approvedSvg); }
     finally { setBusy(false); }
   };
   const baixarPdf = async () => {
-    if (!svg) return;
+    const approvedSvg = validarArteAtual();
+    if (!approvedSvg) return;
     setBusy(true);
-    try { await baixarMoldePdf(`kit-${nome || "arte"}`, svg); }
+    try { await baixarMoldePdf(`kit-${nome || "arte"}`, approvedSvg); }
     finally { setBusy(false); }
   };
   const baixarMockup = async (formato: FormatoDivulgacao) => {
@@ -541,18 +594,7 @@ export default function Editor() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {[
-                {
-                  id: "tema",
-                  label: "Cores do tema",
-                  primary: temaSel?.palette.primary || "#D93680",
-                  secondary: temaSel?.palette.secondary || "#F2A900",
-                  background: temaSel?.palette.background || "#FFFFFF",
-                  accent: temaSel?.palette.accent || "#159A9C",
-                },
-                ...PALETAS,
-                { id: "personalizada", label: "Personalizada", ...paletaPersonalizada },
-              ].map((paleta) => (
+              {opcoesPaleta.map((paleta) => (
                 <button
                   key={paleta.id}
                   type="button"
@@ -723,6 +765,12 @@ export default function Editor() {
 
               {resultadoTab === "arte" ? (
                 <>
+                  {kitQuality?.approved && !busy && (
+                    <Badge variant="secondary" className="w-fit gap-1.5 text-[11px]">
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                      Curadoria aprovada · {kitQuality.score}/100
+                    </Badge>
+                  )}
                   <div className="aspect-[2526/1786] rounded-lg bg-secondary overflow-hidden flex items-center justify-center">
                     {busy ? (
                       <div className="text-center px-8 py-10 space-y-3">
@@ -742,13 +790,13 @@ export default function Editor() {
                   </div>
                   {svg && !busy && (
                     <div className="flex flex-wrap gap-2 items-center">
-                      <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm">
+                      <Button onClick={baixarSvg} className="rounded-full gradient-hero border-0 text-white" size="sm" disabled={!kitQuality?.approved}>
                         <Download className="h-4 w-4 mr-1.5" /> Baixar SVG importável
                       </Button>
-                      <Button onClick={() => void baixarPng()} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                      <Button onClick={() => void baixarPng()} variant="outline" className="rounded-full" size="sm" disabled={busy || !kitQuality?.approved}>
                         <Download className="h-4 w-4 mr-1.5" /> Molde PNG
                       </Button>
-                      <Button onClick={() => void baixarPdf()} variant="outline" className="rounded-full" size="sm" disabled={busy}>
+                      <Button onClick={() => void baixarPdf()} variant="outline" className="rounded-full" size="sm" disabled={busy || !kitQuality?.approved}>
                         <FileText className="h-4 w-4 mr-1.5" /> Molde PDF
                       </Button>
                       <Button onClick={() => gerar()} variant="ghost" className="rounded-full" size="sm" disabled={busy || mockupBusy}>
@@ -811,7 +859,7 @@ export default function Editor() {
                           <p className="text-xs text-muted-foreground">
                             A arte original foi preservada. O mockup ainda nao ficou pronto.
                           </p>
-                          <Button onClick={() => void gerarMockup(svg!, mockupFormato)} size="sm" className="shrink-0" disabled={mockupBusy}>
+                          <Button onClick={() => void gerarMockup(svg!, mockupFormato)} size="sm" className="shrink-0" disabled={mockupBusy || !kitQuality?.approved}>
                             <RefreshCw className="mr-1.5 h-4 w-4" /> Tentar novamente
                           </Button>
                         </div>
@@ -821,7 +869,7 @@ export default function Editor() {
                         <Camera className="mx-auto h-8 w-8 text-primary/70" />
                         <p className="text-sm text-muted-foreground">{mockupError ?? "A arte final já está pronta. Gere a divulgação somente quando precisar."}</p>
                         {svg && (
-                          <Button onClick={() => void gerarMockup(svg, mockupFormato)} size="sm" className="rounded-full" disabled={mockupBusy}>
+                          <Button onClick={() => void gerarMockup(svg, mockupFormato)} size="sm" className="rounded-full" disabled={mockupBusy || !kitQuality?.approved}>
                             <Camera className="mr-1.5 h-4 w-4" /> Gerar foto de divulgação
                           </Button>
                         )}
@@ -829,7 +877,7 @@ export default function Editor() {
                     )}
                   </div>
 
-                  {mockupImage && !mockupBusy && (
+                  {mockupImage && !mockupBusy && mockupQuality?.approved && (
                     <div className="flex flex-wrap items-center gap-2">
                       <Button onClick={() => void baixarMockup("png")} className="rounded-full gradient-hero border-0 text-white" size="sm">
                         <Download className="mr-1.5 h-4 w-4" /> Baixar PNG
@@ -837,7 +885,7 @@ export default function Editor() {
                       <Button onClick={() => void baixarMockup("jpg")} variant="outline" className="rounded-full" size="sm">
                         <Download className="mr-1.5 h-4 w-4" /> Baixar JPG/JPEG
                       </Button>
-                      <Button onClick={() => svg && void gerarMockup(svg, mockupFormato)} variant="outline" className="rounded-full" size="sm">
+                      <Button onClick={() => svg && void gerarMockup(svg, mockupFormato)} variant="outline" className="rounded-full" size="sm" disabled={!kitQuality?.approved}>
                         <RefreshCw className="mr-1.5 h-4 w-4" /> Nova versão
                       </Button>
                     </div>

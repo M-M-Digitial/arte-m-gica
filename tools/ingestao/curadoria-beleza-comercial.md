@@ -56,6 +56,7 @@ Uma arte tem beleza comercial quando:
 - Na amostra de 236 anuncios, a saturacao media ficou entre 17,5% e 36,9% no intervalo interquartil; a area vibrante ficou entre 7,5% e 24,5% e a colorfulness entre 47,753 e 81,31.
 - Modo vibrante: fundo, faixas, placa do nome e ornamentos devem responder a troca de paleta; pelo menos 35% da area decorativa precisa mudar. Trocar apenas confetes reprova.
 - Modo elegante: pode reduzir saturacao, mas preserva contraste, tres planos, textura e um acento focal. Elegante nunca significa bege vazio.
+- As variacoes partem da identidade cromatica de cada um dos 100 temas, extraida de papel, personagens e tipografia licenciados. Uma paleta universal aplicada a todos os temas reprova: vibrante da Era do Gelo continua azul-gelo; Bela e a Fera continua azul, dourado e vermelho; Baby Shark azul e rosa permanecem distintos.
 - Acentos agregados observados, para orientacao e nao como paleta universal: `#BC7230`, `#39736F`, `#E3B233`, `#BA1B30`, `#BD4848`, `#5F2248`, `#59A874`, `#574B54`.
 
 ### 4. Densidade e ritmo
@@ -105,6 +106,7 @@ Paleta suave, textura fina, floral ou brilho contido e foco muito claro. Poucos 
 - Arte tecnicamente correta, mas vazia ou generica.
 - Personagem pequeno diante de uma grande area sem funcao.
 - Personagem cortado, espremido ou encostando em dobra.
+- Personagem ou nome dentro da caixa externa de uma face inclinada, mas atravessando o vinco real. Faces triangulares e trapezoidais exigem retangulo interno detectado; a Piramide exige tambem orientacao de montagem.
 - Molde ou camada tecnica duplicada no mesmo arquivo.
 - Perna, orelha, cabeca ou outro fragmento do personagem isolado do outro lado de um vinco.
 - Nome pequeno, errado, sem contraste ou escondido.
@@ -115,13 +117,13 @@ Paleta suave, textura fina, floral ou brilho contido e foco muito claro. Poucos 
 - PNGs soltos sem chao, moldura, sombra, sobreposicao ou narrativa.
 - Copia perceptivel do fundo, ordem de faces ou enquadramento de um kit Alice.
 - Plaquinha vazia, painel panoramico ou ornamento classificado como personagem para completar artificialmente a cobertura.
-- Menos de quatro personagens ou variacoes coerentes para moldes de quatro faces. Repeticao e aceita apenas como contingencia e nunca pode produzir face vazia.
+- Mesmo recorte repetido para preencher faces. Quando houver menos personagens do que faces, completar com cenario, painel, ornamento ou monograma coordenado, sem duplicar a pose.
 
 ## Curadoria de assets
 
 - Cada PNG recebe uso explicito: `hero`, `panel`, `ornament` ou `border`.
 - `hero` exige personagem recortado, legivel em miniatura e com alpha limpo; painel, placa e paisagem nunca contam nessa categoria.
-- Quatro URLs heroicas distintas sao o alvo comercial para moldes de quatro faces. Com duas ou tres, o tema permanece funcional por repeticao controlada, mas recebe alerta de cobertura incompleta no curador.
+- Quatro URLs heroicas distintas continuam sendo o alvo comercial para moldes de quatro faces. Com duas ou tres, o tema permanece funcional sem repeticao: as demais faces recebem cenario, painel, ornamento ou monograma coordenado e continuam cobertas pelo curador geometrico.
 - Assets do mesmo tema precisam compartilhar linguagem visual, acabamento, temperatura de cor e nivel de detalhe.
 - A referencia da Alice define o piso de qualidade e o repertorio autorizado; o compositor deve criar enquadramento, hierarquia e distribuicao novos.
 - Na Caixa Milk de quatro paineis, primeiro e quarto paineis sao laterais com nome; o segundo e a frente com heroi principal maior; o terceiro funciona como verso coordenado.

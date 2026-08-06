@@ -50,7 +50,8 @@ describe("profundidade comercial do compositor", () => {
     expect(svg).toContain('data-protected-zone="decorative-bow"');
     expect(svg).toContain('<linearGradient id="bowSilk"');
     expect(svg).toContain('<filter id="bowShadow"');
-    expect(svg.match(/data-commercial-layering="hero"/g)?.length).toBe(4);
+    expect(svg.match(/data-commercial-layering="hero"/g)?.length).toBe(3);
+    expect(svg.match(/data-theme-monogram="true"/g)?.length).toBe(1);
     expect(svg).toContain('<filter id="softShadow"');
     expect(svg.indexOf('id="molde-tecnico"')).toBeGreaterThan(svg.indexOf('data-protected-zone="name"'));
   });

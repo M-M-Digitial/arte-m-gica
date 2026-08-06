@@ -24,6 +24,14 @@ describe("curadoria comercial da arte gerada", () => {
       .toBeLessThan(source.indexOf('.from("artes-geradas")', source.indexOf("async function handleStatus")));
   });
 
+  it("falha fechado quando o contorno ou o parecer do curador nao estao disponiveis", () => {
+    expect(source).toContain('code: "MOLD_COMPOSITE_FAILED"');
+    expect(source).toContain('code: "ART_QUALITY_UNAVAILABLE"');
+    expect(source).toContain("if (!qualityReview)");
+    expect(source.indexOf('code: "ART_QUALITY_UNAVAILABLE"'))
+      .toBeLessThan(source.indexOf('.from("artes-geradas")', source.indexOf("async function handleStatus")));
+  });
+
   it("mede os dez pilares e exige uma segunda direcao de arte", () => {
     for (const criterion of [
       "technical_structure_ok",

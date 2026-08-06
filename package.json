@@ -13,6 +13,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "audit:library": "node tools/ingestao/audit-library.mjs",
+    "audit:compositions": "node tools/ingestao/audit-compositions.mjs",
+    "curate:palettes": "node tools/ingestao/generate-theme-palettes.mjs",
     "test:ingestao": "node --test tools/ingestao/*.test.mjs",
     "preview": "vite preview",
     "test": "vitest run",

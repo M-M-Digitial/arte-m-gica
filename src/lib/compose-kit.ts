@@ -7,8 +7,12 @@ import {
   MARKET_VISUAL_RESEARCH,
 } from "../../supabase/functions/_shared/alice-quality-standard.ts";
 import { assertThemeReadyForComposition } from "./theme-curation";
-import { selectPrintableFaces, type PrintableFace } from "./printable-faces";
-export { getDefaultThemePalette } from "./theme-palettes";
+import {
+  selectPrintableFaces,
+  toSafePrintableFace,
+  type PrintableFace,
+} from "./printable-faces";
+export { adaptThemePalette, getDefaultThemePalette, getThemeHeroRole } from "./theme-palettes";
 
 export interface MoldeCompose {
   name?: string;
@@ -130,6 +134,8 @@ export function findVisibleBounds(
 
 export function classifyClipartUsage(asset: ClipartDados): AssetUsage {
   if (asset.usage) return asset.usage;
+  const explicitRole = normalizarId(asset.role);
+  if (/^(principal|amigo2?|hero|personagem|secundario)$/.test(explicitRole)) return "hero";
   const semantic = normalizarId(`${asset.role ?? ""} ${asset.name ?? ""}`);
   if (/ornamento|decoracao|flor|rosa/.test(semantic)) return "ornament";
   if (/borda|border|faixa|rodape/.test(semantic)) return "border";
@@ -237,6 +243,26 @@ const luminancia = (hex: string) => {
   return 0.299 * c(0) + 0.587 * c(2) + 0.114 * c(4);
 };
 
+const luminanciaRelativa = (hex: string) => {
+  const value = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(value)) return 0;
+  const channel = (offset: number) => {
+    const srgb = parseInt(value.slice(offset, offset + 2), 16) / 255;
+    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4);
+};
+
+const contrasteComBranco = (hex: string) => 1.05 / (luminanciaRelativa(hex) + 0.05);
+
+const garantirContrasteNoClaro = (hex: string, minimo = 4.5) => {
+  let result = hex;
+  for (let attempt = 0; attempt < 8 && contrasteComBranco(result) < minimo; attempt++) {
+    result = escurecer(result, 0.14);
+  }
+  return result;
+};
+
 // clareia uma cor em direção ao branco (0.8 = 80% do caminho) — céu do tema
 const clarear = (hex: string, fator: number) => {
   const m = hex.replace("#", "");
@@ -294,6 +320,7 @@ export function montarSvgKit(d: KitDados): string {
   const family = d.fonteFamily || "sans-serif";
   const familyAttr = escAttr(family);
   const isMilk = normalizarId(d.moldName).includes("caixa milk");
+  const isPyramid = normalizarId(d.moldName).includes("piramide");
 
   const vb = d.moldSvg.match(/viewBox="([^"]+)"/);
   if (!vb) throw new Error("Molde SVG sem viewBox");
@@ -302,13 +329,64 @@ export function montarSvgKit(d: KitDados): string {
   const { faces } = JSON.parse(d.facesJson) as { faces: Face[] };
 
   // ---- zonas ----
-  const big = selectPrintableFaces(faces, W, H);
-  if (!big.length) throw new Error("Molde sem faces imprimiveis validas");
-  const bodyTop = Math.min(...big.map((f) => f.y));
-  const bodyBot = Math.max(...big.map((f) => f.y + f.h));
+  const structuralFaces = selectPrintableFaces(faces, W, H, d.moldName);
+  if (!structuralFaces.length) throw new Error("Molde sem faces imprimiveis validas");
+  const pyramidApex = { x: W * 0.845, y: H * 0.16 };
+  const big = structuralFaces.map((face) => {
+    const safeFace = toSafePrintableFace(face);
+    if (!isPyramid) return safeFace;
+
+    let width = safeFace.w;
+    let height = safeFace.h;
+    let rotation = Number.isFinite(safeFace.safeRotation) ? safeFace.safeRotation! : 0;
+    if (width > height * 1.25) {
+      [width, height] = [height, width];
+      rotation += 90;
+    }
+    const upX = Math.sin(rotation * Math.PI / 180);
+    const upY = -Math.cos(rotation * Math.PI / 180);
+    const towardApexX = pyramidApex.x - safeFace.cx;
+    const towardApexY = pyramidApex.y - safeFace.cy;
+    if (upX * towardApexX + upY * towardApexY < 0) rotation += 180;
+    return {
+      ...safeFace,
+      x: safeFace.cx - width / 2,
+      y: safeFace.cy - height / 2,
+      w: width,
+      h: height,
+      area: width * height,
+      safeRotation: rotation,
+    };
+  });
+  const bodyTop = Math.min(...structuralFaces.map((f) => f.y));
+  const bodyBot = Math.max(...structuralFaces.map((f) => f.y + f.h));
+  const namePlateWidthRatio = qualityStandard.namePlateWidth.target / 100;
+  const plateAspectRatio = (d.placaMeta?.h || 202) / (d.placaMeta?.w || 320);
+  const fallbackPlateAspectRatio = 0.42;
+  const nameFaceCapacity = big.map((face) => ({
+    face,
+    width: face.w * namePlateWidthRatio,
+    height: d.placaUri
+      ? Math.min(face.h * 0.32, face.w * namePlateWidthRatio * plateAspectRatio)
+      : Math.min(face.h * 0.32, face.w * namePlateWidthRatio * fallbackPlateAspectRatio),
+  }));
+  const maxPlateWidth = Math.max(...nameFaceCapacity.map((candidate) => candidate.width));
+  const maxPlateHeight = Math.max(...nameFaceCapacity.map((candidate) => candidate.height));
   const defaultNameFace = big
     .slice()
-    .sort((a, b) => Math.abs(a.cx - W / 2) - Math.abs(b.cx - W / 2))[0];
+    .sort((a, b) => {
+      const centralityA = 1 - Math.min(1, Math.abs(a.cx - W / 2) / (W / 2));
+      const centralityB = 1 - Math.min(1, Math.abs(b.cx - W / 2) / (W / 2));
+      const capacityA = nameFaceCapacity.find((candidate) => candidate.face === a)!;
+      const capacityB = nameFaceCapacity.find((candidate) => candidate.face === b)!;
+      const scoreA = (capacityA.height / maxPlateHeight) * 0.62
+        + (capacityA.width / maxPlateWidth) * 0.23
+        + centralityA * 0.15;
+      const scoreB = (capacityB.height / maxPlateHeight) * 0.62
+        + (capacityB.width / maxPlateWidth) * 0.23
+        + centralityB * 0.15;
+      return scoreB - scoreA;
+    })[0];
   const hasMilkPanels = isMilk && big.length >= 4;
   const milkNameFaces = hasMilkPanels ? [big[0], big[big.length - 1]] : [];
   const frontFace = hasMilkPanels ? big[1] : undefined;
@@ -351,13 +429,28 @@ export function montarSvgKit(d: KitDados): string {
     if (face === nameFace) return "personalization";
     return "standard";
   };
+  const faceIndexFor = (face: Face) => {
+    const direct = big.indexOf(face);
+    if (direct >= 0) return direct;
+    if (big.length === 1) return 0;
+    return big.findIndex((candidate) => face.cx >= candidate.x && face.cx <= candidate.x + candidate.w);
+  };
+  const faceOrientationAttributes = (face: Face) => {
+    const rotation = Number.isFinite(face.safeRotation) ? face.safeRotation! : 0;
+    return Math.abs(rotation % 360) > 0.01
+      ? ` data-face-orientation="${rotation}" transform="rotate(${rotation} ${face.cx} ${face.cy})"`
+      : "";
+  };
   const milkHeroes = new Map<Face, ClipartDados>();
   if (hasMilkPanels && orderedHeroes.length) {
-    const heroAt = (index: number) => orderedHeroes[index % orderedHeroes.length];
-    milkHeroes.set(big[0], heroAt(1));
-    milkHeroes.set(big[1], heroAt(0));
-    milkHeroes.set(big[2], heroAt(2));
-    milkHeroes.set(big[big.length - 1], heroAt(3));
+    const assignHero = (face: Face, index: number) => {
+      const hero = orderedHeroes[index];
+      if (hero) milkHeroes.set(face, hero);
+    };
+    assignHero(big[0], 1);
+    assignHero(big[1], 0);
+    assignHero(big[2], 2);
+    assignHero(big[big.length - 1], 3);
   }
 
   const safe = qualityStandard.stickerSafeInset;
@@ -366,7 +459,11 @@ export function montarSvgKit(d: KitDados): string {
     const y = face.y + face.h * safe.top;
     const width = face.w * (1 - safe.horizontal * 2);
     const height = face.h * (1 - safe.top - safe.bottom);
-    return `<clipPath id="face-safe-${index}"><rect x="${x}" y="${y}" width="${width}" height="${height}"/></clipPath>`;
+    const rotation = Number.isFinite(face.safeRotation) ? face.safeRotation! : 0;
+    const transform = Math.abs(rotation % 360) > 0.01
+      ? ` transform="rotate(${rotation} ${face.cx} ${face.cy})"`
+      : "";
+    return `<clipPath id="face-safe-${index}"><rect x="${x}" y="${y}" width="${width}" height="${height}"${transform}/></clipPath>`;
   }).join("\n    ");
   const faceSafeClip = (face: Face) => {
     const index = big.indexOf(face);
@@ -409,8 +506,8 @@ export function montarSvgKit(d: KitDados): string {
     fundoCorpo = `<rect x="0" y="${bodyTop}" width="${W}" height="${bodyBot - bodyTop}" fill="url(#ceu)"/>`;
   }
 
-  const firstBodyFace = big[0];
-  const lastBodyFace = big[big.length - 1];
+  const firstBodyFace = structuralFaces[0];
+  const lastBodyFace = structuralFaces[structuralFaces.length - 1];
   const bodyRowX = firstBodyFace?.x ?? 0;
   const bodyRowW = firstBodyFace && lastBodyFace
     ? lastBodyFace.x + lastBodyFace.w - firstBodyFace.x
@@ -424,7 +521,7 @@ export function montarSvgKit(d: KitDados): string {
         <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.13} Q ${bodyRowX + bodyRowW * 0.25} ${bodyTop - avgFaceH * 0.04} ${bodyRowX + bodyRowW * 0.50} ${bodyTop + avgFaceH * 0.14} T ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.12} L ${bodyRowX + bodyRowW} ${bodyTop} H ${bodyRowX} Z" fill="${corIdade}" fill-opacity="0.46"/>
         <path d="M ${bodyRowX} ${bodyBot - avgFaceH * 0.32} Q ${bodyRowX + bodyRowW * 0.18} ${bodyBot - avgFaceH * 0.45} ${bodyRowX + bodyRowW * 0.38} ${bodyBot - avgFaceH * 0.28} T ${bodyRowX + bodyRowW * 0.76} ${bodyBot - avgFaceH * 0.31} T ${bodyRowX + bodyRowW} ${bodyBot - avgFaceH * 0.26} L ${bodyRowX + bodyRowW} ${bodyBot} H ${bodyRowX} Z" fill="${corAcento}" fill-opacity="0.42"/>
         <path d="M ${bodyRowX} ${bodyTop + avgFaceH * 0.53} C ${bodyRowX + bodyRowW * 0.24} ${bodyTop + avgFaceH * 0.45}, ${bodyRowX + bodyRowW * 0.71} ${bodyTop + avgFaceH * 0.62}, ${bodyRowX + bodyRowW} ${bodyTop + avgFaceH * 0.50}" fill="none" stroke="${corNome}" stroke-width="${Math.max(10, avgFaceH * 0.045)}" stroke-opacity="0.24"/>
-        ${big.map((face, index) => `<ellipse cx="${face.cx}" cy="${face.y + face.h * 0.47}" rx="${face.w * 0.42}" ry="${face.h * 0.35}" fill="${index % 2 === 0 ? corIdade : corNome}" fill-opacity="${index % 2 === 0 ? 0.15 : 0.13}"/>`).join("")}
+        ${isPyramid ? "" : big.map((face, index) => `<ellipse cx="${face.cx}" cy="${face.y + face.h * 0.47}" rx="${face.w * 0.42}" ry="${face.h * 0.35}" fill="${index % 2 === 0 ? corIdade : corNome}" fill-opacity="${index % 2 === 0 ? 0.15 : 0.13}"/>`).join("")}
       </g>`
     : "";
   const elegantFinishLayer = isElegant
@@ -439,6 +536,12 @@ export function montarSvgKit(d: KitDados): string {
     const top = bodyTop;
     const height = bodyBot - bodyTop;
     const bottom = bodyBot;
+    if (isPyramid) {
+      return `<g data-scene-continuity="true" data-scene-template="pyramid-fold-aware">
+        <path d="M ${bodyRowX} ${top + height * 0.10} Q ${bodyRowX + bodyRowW * 0.45} ${top + height * 0.02} ${bodyRowX + bodyRowW} ${top + height * 0.13}" fill="none" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="${Math.max(3, avgFaceH * 0.012)}"/>
+        <path d="M ${bodyRowX} ${bottom - height * 0.10} Q ${bodyRowX + bodyRowW * 0.55} ${bottom - height * 0.02} ${bodyRowX + bodyRowW} ${bottom - height * 0.12}" fill="none" stroke="${corIdade}" stroke-opacity="0.16" stroke-width="${Math.max(3, avgFaceH * 0.010)}"/>
+      </g>`;
+    }
     if (sceneFamily === "fairytale") {
       const arches = big.map((f, index) => {
         const inset = f.w * 0.11;
@@ -516,6 +619,23 @@ export function montarSvgKit(d: KitDados): string {
       <rect x="${bodyRowX}" y="${bodyBot - Math.max(5, avgFaceH * 0.025)}" width="${bodyRowW}" height="${Math.max(5, avgFaceH * 0.025)}" fill="${corNome}" fill-opacity="0.78"/>
     </g>`;
 
+  const plateGeometryFor = (f: Face) => {
+    const nameWidth = isMilk ? qualityStandard.milkNamePlateWidth : qualityStandard.namePlateWidth;
+    const width = f.w * (nameWidth.target / 100);
+    const maxHeight = f.h * (isMilk ? 0.28 : 0.32);
+    const height = d.placaUri
+      ? Math.min(maxHeight, width * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320)))
+      : Math.min(maxHeight, width * fallbackPlateAspectRatio);
+    return {
+      x: f.cx - width / 2,
+      y: f.y + f.h - height - f.h * 0.065,
+      width,
+      height,
+    };
+  };
+
+  const nameArtBaseFor = (f: Face) => plateGeometryFor(f).y - f.h * 0.04;
+
   // ---- personagem grande ancorado na base da face ----
   const personagemBlock = (
     img: ClipartDados,
@@ -527,7 +647,10 @@ export function montarSvgKit(d: KitDados): string {
   ) => {
     const ratio = img.w / img.h;
     const maxSafeWidth = f.w * (1 - safe.horizontal * 2);
-    const maxSafeHeight = f.h * (1 - safe.top - safe.bottom);
+    const safeTop = f.y + f.h * safe.top;
+    const ordinarySafeBase = f.y + f.h * (1 - safe.bottom);
+    const reservedBase = Math.min(baseOverride ?? ordinarySafeBase, ordinarySafeBase);
+    const maxSafeHeight = Math.max(1, reservedBase - safeTop);
     let ah = Math.min(f.h * alturaPct, maxSafeHeight);
     let aw = ah * ratio;
     const widthLimit = Math.min(maxSafeWidth, f.w * widthPct);
@@ -536,28 +659,28 @@ export function montarSvgKit(d: KitDados): string {
       ah = aw / ratio;
     }
     const cx = f.cx;
-    const safeBase = f.y + f.h * (1 - safe.bottom);
+    const safeBase = ordinarySafeBase;
     const requestedBase = baseOverride ?? safeBase - Math.max(0, borderHeight * 0.08);
     const base = Math.min(requestedBase, safeBase);
-    const y = Math.max(f.y + f.h * safe.top, base - ah);
+    const y = Math.max(safeTop, base - ah);
     const backdrop = compositionProfile === "modular"
       ? `<ellipse data-commercial-depth="midground" cx="${cx}" cy="${y + ah * 0.47}" rx="${Math.min(f.w * 0.39, aw * 0.58)}" ry="${Math.min(f.h * 0.37, ah * 0.50)}" fill="${clarear(corAcento, isVibrant ? 0.46 : 0.72)}" fill-opacity="${isVibrant ? 0.90 : 0.82}" stroke="#FFFFFF" stroke-opacity="0.88" stroke-width="${Math.max(4, f.w * 0.012)}"/>`
       : "";
     const groundShadow = `<ellipse data-commercial-depth="contact-shadow" cx="${cx}" cy="${Math.min(safeBase, base + f.h * 0.006)}" rx="${Math.min(f.w * 0.32, aw * 0.38)}" ry="${Math.max(f.h * 0.018, ah * 0.025)}" fill="${escurecer(corAcento, 0.42)}" fill-opacity="0.24" filter="url(#softShadow)"/>`;
     const imagem = `<image href="${img.uri}" xlink:href="${img.uri}" data-theme-hero="true" data-print-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" x="${cx - aw / 2}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMax meet" filter="url(#adesivo)"/>`;
     const role = faceRole(f);
-    const faceIndex = big.indexOf(f);
+    const faceIndex = faceIndexFor(f);
     const priority = role === "front" ? "primary" : role === "side" ? "supporting" : "secondary";
-    const layeredHero = `<g data-commercial-layering="hero" data-face-role="${role}" data-face-index="${faceIndex}" data-visual-priority="${priority}" data-crease-safe="true"${faceSafeClip(f)}>${backdrop}${groundShadow}${imagem}</g>`;
+    const layeredHero = `<g data-commercial-layering="hero" data-face-role="${role}" data-face-index="${faceIndex}" data-visual-priority="${priority}" data-crease-safe="true"${faceOrientationAttributes(f)}${faceSafeClip(f)}>${backdrop}${groundShadow}${imagem}</g>`;
     return espelhar ? `<g transform="translate(${2 * cx} 0) scale(-1 1)">${layeredHero}</g>` : layeredHero;
   };
 
-  const monogramBlock = (f: Face) => {
-    const size = Math.min(f.w * 0.68, f.h * 0.60);
+  const monogramBlock = (f: Face, compact = false) => {
+    const size = Math.min(f.w * (compact ? 0.50 : 0.68), f.h * (compact ? 0.42 : 0.60));
     const cx = f.cx;
-    const cy = f.y + f.h * 0.48;
+    const cy = f.y + f.h * (compact ? 0.30 : 0.48);
     const initial = esc(Array.from(nome.trim())[0]?.toUpperCase() || "");
-    return `<g data-theme-monogram="true" data-face-x="${f.x}" data-face-y="${f.y}">
+    return `<g data-theme-monogram="true" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}"${faceOrientationAttributes(f)}>
       <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.43}" ry="${size * 0.50}" fill="#FFFDF8" fill-opacity="0.92" stroke="${corAcento}" stroke-width="${Math.max(4, size * 0.035)}"/>
       <ellipse cx="${cx}" cy="${cy}" rx="${size * 0.36}" ry="${size * 0.43}" fill="${d.papelTopUri ? "url(#papelTop)" : clarear(corNome, 0.68)}" stroke="${corNome}" stroke-width="${Math.max(2, size * 0.015)}"/>
       <text x="${cx}" y="${cy + size * 0.04}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${size * 0.42}" fill="#FFFFFF" stroke="${escurecer(corNome, 0.25)}" stroke-width="${size * 0.025}" paint-order="stroke">${initial}</text>
@@ -569,15 +692,13 @@ export function montarSvgKit(d: KitDados): string {
     const panelH = f.h * 0.58;
     const x = f.cx - panelW / 2;
     const y = f.y + f.h * 0.16;
-    return `<g data-theme-panel="true" data-face-x="${f.x}" data-face-y="${f.y}">
+    return `<g data-theme-panel="true" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}"${faceOrientationAttributes(f)}>
       <rect x="${x - f.w * 0.025}" y="${y - f.h * 0.025}" width="${panelW + f.w * 0.05}" height="${panelH + f.h * 0.05}" rx="${f.w * 0.06}" fill="#FFFDF8" fill-opacity="0.90" stroke="${corIdade}" stroke-width="${Math.max(3, f.w * 0.012)}"/>
       <image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${panelW}" height="${panelH}" preserveAspectRatio="xMidYMid slice" opacity="0.82"/>
     </g>`;
   };
 
-  // ---- plaquinha de nome com contraste forte ----
-  // estudo Alice: largura mediana 58% da face, encostada na linha do chão
-  // (o personagem pode sobrepor a placa — assinatura dos kits reais)
+  // ---- plaquinha de nome com contraste forte e zona exclusiva ----
   const ornamentBlock = (f: Face, asset?: ClipartDados) => {
     if (!asset) return "";
     const ratio = asset.h > 0 ? asset.w / asset.h : 1;
@@ -589,7 +710,7 @@ export function montarSvgKit(d: KitDados): string {
     }
     const x = f.cx - aw / 2;
     const y = f.y + f.h * 0.055;
-    return `<image data-theme-ornament="true" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/>`;
+    return `<g data-theme-ornament="true" data-face-x="${f.x}" data-face-y="${f.y}"${faceOrientationAttributes(f)}><image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet"/></g>`;
   };
 
   const ornamentAccentBlock = (f: Face, asset: ClipartDados, index: number, compact: boolean) => {
@@ -609,24 +730,19 @@ export function montarSvgKit(d: KitDados): string {
     const y = compact
       ? f.y + f.h * 0.07
       : f.y + f.h - ah * 0.90 - f.h * 0.025;
-    return `<image data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-crease-safe="true" data-face-x="${f.x}" data-face-y="${f.y}" href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"${faceSafeClip(f)}/>`;
+    return `<g data-theme-foreground="true" data-commercial-depth="foreground-ornament" data-crease-safe="true" data-face-x="${f.x}" data-face-y="${f.y}"${faceOrientationAttributes(f)}${faceSafeClip(f)}><image href="${asset.uri}" xlink:href="${asset.uri}" x="${x}" y="${y}" width="${aw}" height="${ah}" preserveAspectRatio="xMidYMid meet" filter="url(#ornamentShadow)"/></g>`;
   };
 
   const plateBlock = (f: Face) => {
     // texto sempre legível: cores de tema claras são escurecidas na plaquinha
-    const corTexto = luminancia(corNome) > 0.6 ? escurecer(corNome, 0.45) : corNome;
-    const nameWidth = isMilk ? qualityStandard.milkNamePlateWidth : qualityStandard.namePlateWidth;
-    const plW = Math.min(
-      f.w * (nameWidth.target / 100),
-      avgFaceW * (nameWidth.max / 100),
-    );
+    const corTextoBase = luminancia(corNome) > 0.6 ? escurecer(corNome, 0.45) : corNome;
+    const corTexto = garantirContrasteNoClaro(corTextoBase);
+    const plateGeometry = plateGeometryFor(f);
+    const plW = plateGeometry.width;
     const temPlaca = !!d.placaUri;
-    const maxPlateHeight = f.h * (isMilk ? 0.28 : 0.32);
-    const plH = temPlaca
-      ? Math.min(maxPlateHeight, plW * ((d.placaMeta?.h || 202) / (d.placaMeta?.w || 320)))
-      : maxPlateHeight;
+    const plH = plateGeometry.height;
     const cx = f.cx;
-    const plY = f.y + f.h - plH - f.h * 0.065;
+    const plY = plateGeometry.y;
     const inset = Math.max(5, plH * 0.075);
     const fundoPlaca = temPlaca
       ? `<rect data-commercial-depth="name-shadow" x="${cx - plW / 2}" y="${plY + plH * 0.035}" width="${plW}" height="${plH * 0.93}" rx="${plH * 0.24}" fill="#111111" fill-opacity="0.16" filter="url(#softShadow)"/><image href="${d.placaUri}" xlink:href="${d.placaUri}" x="${cx - plW / 2}" y="${plY}" width="${plW}" height="${plH}" preserveAspectRatio="xMidYMid meet"/>`
@@ -661,7 +777,7 @@ export function montarSvgKit(d: KitDados): string {
       <ellipse cx="0" cy="0" rx="${bowW * 0.105}" ry="${bowH * 0.24}" fill="${corIdade}" stroke="#FFFDF8" stroke-width="${Math.max(2, bowW * 0.018)}"/>
       <path d="M -${bowW * 0.36} -${bowH * 0.15} Q -${bowW * 0.25} -${bowH * 0.31} -${bowW * 0.13} -${bowH * 0.12} M ${bowW * 0.13} -${bowH * 0.12} Q ${bowW * 0.25} -${bowH * 0.31} ${bowW * 0.36} -${bowH * 0.15}" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="${Math.max(2, bowW * 0.014)}" stroke-linecap="round"/>
     </g>`;
-    return `<g data-name-plate="true" data-protected-zone="name" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}">
+    return `<g data-name-plate="true" data-protected-zone="name" data-face-index="${faceIndexFor(f)}" data-face-role="${faceRole(f)}" data-face-x="${f.x}" data-face-y="${f.y}" data-face-w="${f.w}" data-face-h="${f.h}" data-zone-x="${plateGeometry.x}" data-zone-y="${plateGeometry.y}" data-zone-w="${plateGeometry.width}" data-zone-h="${plateGeometry.height}"${faceOrientationAttributes(f)}>
       ${fundoPlaca}
       ${bow}
       <text x="${cx}" y="${nomeY}" text-anchor="middle" dominant-baseline="middle" font-family="${familyAttr}" font-size="${fsNome}"${nomeFit} fill="${corTexto}" stroke="#FFFFFF" stroke-width="${fsNome * 0.08}" paint-order="stroke">${esc(nome)}</text>
@@ -686,24 +802,27 @@ export function montarSvgKit(d: KitDados): string {
   let protectedNameContent = "";
   if (big.length === 1) {
     const f = big[0];
-    const heroFace = { ...f, w: f.w * 0.52, cx: f.x + f.w * 0.28 } as Face;
-    const plateFace = { ...f, w: f.w * 0.50, cx: f.x + f.w * 0.73 } as Face;
     visualContent = orderedHeroes[0]
-      ? personagemBlock(orderedHeroes[0], heroFace, heroHeightFor(orderedHeroes[0]))
-      : monogramBlock(heroFace);
-    protectedNameContent = plateBlock(plateFace);
+      ? personagemBlock(
+          orderedHeroes[0],
+          f,
+          heroHeightFor(orderedHeroes[0]),
+          false,
+          nameArtBaseFor(f),
+          0.90,
+        )
+      : monogramBlock(f, true);
+    protectedNameContent = plateBlock(f);
   } else {
     let heroIndex = 0;
-    const nextHero = () => orderedHeroes.length
-      ? orderedHeroes[heroIndex++ % orderedHeroes.length]
-      : undefined;
+    const nextHero = () => orderedHeroes[heroIndex++];
     let panelUsed = false;
     let nameIndex = 0;
     const nameParts: string[] = [];
     visualContent = big
       .map((f) => {
         const role = faceRole(f);
-        const assignedHero = milkHeroes.get(f) ?? nextHero();
+        const assignedHero = hasMilkPanels ? milkHeroes.get(f) : nextHero();
         if (milkNameFaces.includes(f) || f === nameFace) {
           const supportingCharacter = assignedHero;
           const ornament = !supportingCharacter && ornamentAssets.length
@@ -718,10 +837,10 @@ export function montarSvgKit(d: KitDados): string {
                   heroHeightFor(supportingCharacter, role),
                 ),
                 false,
-                heroBaseFor(f, role),
+                nameArtBaseFor(f),
                 heroWidthFor(role),
               )
-            : ornament;
+            : ornament || monogramBlock(f, true);
           nameIndex++;
           nameParts.push(plateBlock(f));
           return upperArt;
@@ -754,6 +873,7 @@ export function montarSvgKit(d: KitDados): string {
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">
   <title>Kit personalizado de ${esc(nome)}</title>
   <metadata id="alice-quality-standard">${ALICE_QUALITY_STANDARD.version}</metadata>
+  <metadata id="deterministic-quality-gate">kit-svg-r1</metadata>
   <metadata id="market-research-version">${MARKET_VISUAL_RESEARCH.version}</metadata>
   <metadata id="market-reference-sample-size">${MARKET_VISUAL_RESEARCH.sampleSize}</metadata>
   <metadata id="google-image-validation-size">${MARKET_VISUAL_RESEARCH.googleImageValidation.sampleSize}</metadata>
@@ -762,6 +882,8 @@ export function montarSvgKit(d: KitDados): string {
   <metadata id="alice-composition-profile">${compositionProfile}</metadata>
   <metadata id="color-appearance">${paletteAppearance}</metadata>
   <metadata id="printable-face-count">${big.length}</metadata>
+  <metadata id="safe-face-geometry">${structuralFaces.every((face) => [face.safeX, face.safeY, face.safeW, face.safeH].every(Number.isFinite)) ? "detected" : "legacy"}</metadata>
+  <metadata id="oriented-face-count">${big.filter((face) => Math.abs((face.safeRotation ?? 0) % 360) > 0.01).length}</metadata>
   <metadata id="technical-mold-instance-count">1</metadata>
   ${frontFace ? `<metadata id="front-face-index">${big.indexOf(frontFace)}</metadata>` : ""}
   ${milkNameFaces.length ? `<metadata id="side-face-indices">${milkNameFaces.map((face) => big.indexOf(face)).join(",")}</metadata>` : ""}

@@ -1066,6 +1066,15 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     }
   }
 
+  if (moldeTemplateUrl && !composited) {
+    return jsonResponse({
+      status: "error",
+      error: "A arte nao recebeu o contorno tecnico do molde e nao foi liberada.",
+      code: "MOLD_COMPOSITE_FAILED",
+      compositeError,
+    });
+  }
+
   const qualityReview = await reviewGeneratedArt(
     bytes,
     templateBytes,
@@ -1077,7 +1086,15 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     },
     OPENAI_API_KEY,
   );
-  if (qualityReview && !qualityReview.approved) {
+  if (!qualityReview) {
+    console.warn("Art curator did not return a valid review. Output blocked.");
+    return jsonResponse({
+      status: "error",
+      error: "A curadoria nao conseguiu validar a arte. Nenhuma versao sem aprovacao foi entregue.",
+      code: "ART_QUALITY_UNAVAILABLE",
+    });
+  }
+  if (!qualityReview.approved) {
     console.warn("Art rejected by commercial curator:", qualityReview.score, qualityReview.issues);
     return jsonResponse({
       status: "error",

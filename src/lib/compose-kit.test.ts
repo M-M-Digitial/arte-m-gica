@@ -82,6 +82,7 @@ describe("composição SVG do kit", () => {
 
   it("separa personagens de ornamentos, bordas e paineis", () => {
     expect(classifyClipartUsage({ uri: "hero", w: 300, h: 500 })).toBe("hero");
+    expect(classifyClipartUsage({ uri: "wide-hero", w: 1200, h: 300, role: "principal" })).toBe("hero");
     expect(classifyClipartUsage({ uri: "border", w: 900, h: 200 })).toBe("border");
     expect(classifyClipartUsage({ uri: "panel", w: 640, h: 400, visibleCoverage: 0.95 })).toBe("panel");
     expect(classifyClipartUsage({ uri: "rose", w: 400, h: 400, usage: "ornament" })).toBe("ornament");
@@ -124,8 +125,8 @@ describe("composição SVG do kit", () => {
     expect(svg).toContain('fill="url(#papelBody)"');
     expect(svg).toContain('fill="url(#papelBody)" opacity="0.22"');
     expect(svg).toContain("Sofia");
-    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(4);
-    expect(svg.match(/data-theme-monogram="true"/g)).toBeNull();
+    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
+    expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(3);
     expect(svg).toContain('data-name-plate="true"');
   });
 
@@ -167,8 +168,8 @@ describe("composição SVG do kit", () => {
     expect(svg.match(/data-face-role="front"/g)).toHaveLength(1);
     expect(svg.match(/data-face-role="side"/g)?.length).toBeGreaterThanOrEqual(4);
     expect(svg).toContain('data-visual-priority="primary" data-crease-safe="true"');
-    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(4);
-    expect(svg.match(/data-theme-monogram="true"/g)).toBeNull();
+    expect(svg.match(/<image href="data:image\/png;base64,HERO"/g)).toHaveLength(1);
+    expect(svg.match(/data-theme-monogram="true"/g)).toHaveLength(3);
     expect(svg).toContain('width="64"');
   });
 

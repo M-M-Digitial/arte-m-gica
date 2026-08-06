@@ -24,6 +24,8 @@ dist-ssr
 *.sw?
 supabase/.temp/
 tools/ingestao/.compose-kit-bundle.mjs
+tools/ingestao/.audit-*.mjs
+tools/ingestao/.audit-image-metrics.json
 tools/ingestao/.fonte-*.ttf
 
 # Cache incremental do TypeScript

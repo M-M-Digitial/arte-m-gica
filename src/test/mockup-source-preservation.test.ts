@@ -32,6 +32,13 @@ describe("preservação da arte no mockup", () => {
     expect(source).toContain("Nenhuma versão inadequada foi entregue");
   });
 
+  it("nao armazena mockup quando o curador nao consegue emitir parecer", () => {
+    expect(source).toContain('code: "MOCKUP_QUALITY_UNAVAILABLE"');
+    expect(source).toContain("if (!qualityReview)");
+    expect(source.indexOf('code: "MOCKUP_QUALITY_UNAVAILABLE"'))
+      .toBeLessThan(source.indexOf("storeMockup(bytes)"));
+  });
+
   it("exige uma mesa de festa completa com bolo, balões e conjunto de lembrancinhas", () => {
     expect(source).toContain("mesa principal de aniversário completa");
     expect(source).toContain("arco ou arranjo volumoso de balões");

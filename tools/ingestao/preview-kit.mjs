@@ -90,16 +90,32 @@ if (!palette && paletaId === "tema") {
     .toString(16).padStart(2, "0");
   palette = { primary, secondary, background: `#${lighten(0)}${lighten(2)}${lighten(4)}`, accent: secondary };
 }
+if (palette) palette = mod.adaptThemePalette?.(slug, palette, paletaId) ?? palette;
 const placa = assets.find((a) => a.kind === "placa");
-const rolePriority = (role) => role === "principal" ? 0 : role === "amigo" ? 1 : role === "amigo2" ? 2 : 3;
+const preferredRole = mod.getThemeHeroRole?.(slug) ?? "principal";
+const rolePriority = (role) => role === preferredRole ? 0 : role === "principal" ? 1 : role === "amigo" ? 2 : role === "amigo2" ? 3 : 4;
 const cliparts = assets
   .filter((asset) => asset.kind === "clipart" && asset.url && asset.meta?.enabled !== false)
   .filter((asset, index, list) => list.findIndex((candidate) => candidate.url === asset.url) === index)
+  .map((asset) => ({ ...asset }))
   .sort((a, b) => rolePriority(a.role) - rolePriority(b.role));
+const preferredHero = cliparts.find((asset) => asset.role === preferredRole);
+const currentPrincipal = cliparts.find((asset) => asset.role === "principal");
+if (preferredHero && currentPrincipal && preferredHero !== currentPrincipal) {
+  preferredHero.role = "principal";
+  currentPrincipal.role = preferredRole;
+}
+
+const facesOverridePath = process.env.PREVIEW_FACES_DIR
+  ? path.resolve(repo, process.env.PREVIEW_FACES_DIR, path.basename(new URL(molde.faces_url).pathname))
+  : null;
+const localFacesJson = facesOverridePath && fs.existsSync(facesOverridePath)
+  ? fs.readFileSync(facesOverridePath, "utf8")
+  : null;
 
 const [moldSvg, facesJson, maskBuf] = await Promise.all([
   fetch(molde.svg_url).then((r) => r.text()),
-  fetch(molde.faces_url).then((r) => r.text()),
+  localFacesJson ?? fetch(molde.faces_url).then((r) => r.text()),
   fetchBuf(molde.mask_url),
 ]);
 const get = async (a, doTrim = false) => {
@@ -165,6 +181,9 @@ const svg = mod.montarSvgKit({
   paletteAppearance: palette?.appearance,
   nome, idade,
 });
+if (process.env.PREVIEW_SVG_PATH) {
+  fs.writeFileSync(path.resolve(repo, process.env.PREVIEW_SVG_PATH), svg);
+}
 
 const fontFiles = [];
 if (fonteBin) {

@@ -1,0 +1,602 @@
+{
+  "3-palavrinhas": {
+    "primary": "#DB1220",
+    "secondary": "#EEC62B",
+    "background": "#FCFEFF",
+    "accent": "#1DD85E"
+  },
+  "a-bela-e-a-fera": {
+    "primary": "#DB1B32",
+    "secondary": "#FADCA7",
+    "background": "#FADCA7",
+    "accent": "#EDEDFD"
+  },
+  "a-casa-magica-da-gaby": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#F8FCFE",
+    "accent": "#FFD584"
+  },
+  "a-era-do-gelo": {
+    "primary": "#35B7E8",
+    "secondary": "#CBCBCC",
+    "background": "#CBCBCC",
+    "accent": "#482517"
+  },
+  "a-pequena-sereia": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FBFBFB",
+    "accent": "#D9FAD6"
+  },
+  "a-princesa-sofia": {
+    "primary": "#1BA67C",
+    "secondary": "#A5A4D2",
+    "background": "#FCFEFF",
+    "accent": "#CA2BB8"
+  },
+  "abelhinha": {
+    "primary": "#FFBF00",
+    "secondary": "#72FF1A",
+    "background": "#FFFFFF",
+    "accent": "#0CC4E9"
+  },
+  "angry-birds": {
+    "primary": "#F9B924",
+    "secondary": "#1BA67C",
+    "background": "#F4ED9E",
+    "accent": "#12CAE3"
+  },
+  "arca-de-noe": {
+    "primary": "#FDD987",
+    "secondary": "#FE9DA9",
+    "background": "#FDFBF7",
+    "accent": "#E8F6FA"
+  },
+  "arco-iris-boho": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FAF7F8",
+    "accent": "#FEF4EA"
+  },
+  "arraial": {
+    "primary": "#D66D78",
+    "secondary": "#674F3D",
+    "background": "#B29981",
+    "accent": "#3BBA62"
+  },
+  "as-princesas-disney": {
+    "primary": "#E0A315",
+    "secondary": "#FDE5EA",
+    "background": "#FDF7FC",
+    "accent": "#FCECF4"
+  },
+  "astronauta": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#A4CBD1",
+    "accent": "#A4CBD1"
+  },
+  "astronauta-02": {
+    "primary": "#F7BD2E",
+    "secondary": "#0A1A40",
+    "background": "#FB9A34",
+    "accent": "#E8E8E8"
+  },
+  "atletico-mineiro": {
+    "primary": "#403C3D",
+    "secondary": "#B9B6B7",
+    "background": "#FEFEFE",
+    "accent": "#3BBA50"
+  },
+  "baby-shark-azul": {
+    "primary": "#FED407",
+    "secondary": "#5BB4E6",
+    "background": "#5BB4E6",
+    "accent": "#E84F96"
+  },
+  "baby-shark-rosa": {
+    "primary": "#FED407",
+    "secondary": "#5BB4E6",
+    "background": "#5BB4E6",
+    "accent": "#E84F96"
+  },
+  "bale-dos-bichinhos": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#F9D3E0",
+    "accent": "#F9D3E0"
+  },
+  "barbie": {
+    "primary": "#E75FAC",
+    "secondary": "#FED7E5",
+    "background": "#FCC7DA",
+    "accent": "#41CC29"
+  },
+  "batizado-menina": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FFFFFF",
+    "accent": "#FED9E0"
+  },
+  "batizado-menino": {
+    "primary": "#91D9FD",
+    "secondary": "#EFF1F0",
+    "background": "#FBFBFB",
+    "accent": "#E51045"
+  },
+  "bita-no-safari": {
+    "primary": "#EE0102",
+    "secondary": "#EED1A4",
+    "background": "#EED1A4",
+    "accent": "#0DE867"
+  },
+  "blaze": {
+    "primary": "#F64800",
+    "secondary": "#1BA67C",
+    "background": "#F3E3DD",
+    "accent": "#314290"
+  },
+  "bob-esponja": {
+    "primary": "#E59227",
+    "secondary": "#12BED2",
+    "background": "#FFFFFF",
+    "accent": "#24D1CD"
+  },
+  "bobbie-goods": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FCE7E6",
+    "accent": "#FCE7E6"
+  },
+  "bolofofos": {
+    "primary": "#1BA67C",
+    "secondary": "#ACE0F4",
+    "background": "#C1E8FA",
+    "accent": "#CA2BB8"
+  },
+  "boneca-metoo-dool": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FFFEFE",
+    "accent": "#FFE4E8"
+  },
+  "bosque-encantado-menina": {
+    "primary": "#C2880F",
+    "secondary": "#D43269",
+    "background": "#FFFCFE",
+    "accent": "#FAD7D9"
+  },
+  "bosque-encantado-menino": {
+    "primary": "#F27E2C",
+    "secondary": "#EFF6D4",
+    "background": "#EFF6D4",
+    "accent": "#19DCBB"
+  },
+  "cactos": {
+    "primary": "#FF8684",
+    "secondary": "#E982C9",
+    "background": "#E982C9",
+    "accent": "#0CE96C"
+  },
+  "carrinhos": {
+    "primary": "#62E4F0",
+    "secondary": "#E9F5F7",
+    "background": "#89D8F3",
+    "accent": "#D51F7A"
+  },
+  "carros": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FF8F80",
+    "accent": "#FF8F80"
+  },
+  "cha-de-bebe": {
+    "primary": "#BDA89E",
+    "secondary": "#E0DFD6",
+    "background": "#FEFEFE",
+    "accent": "#3BBA99"
+  },
+  "cha-revelacao": {
+    "primary": "#7099AB",
+    "secondary": "#F3E4E1",
+    "background": "#F3E4E1",
+    "accent": "#BA3B5E"
+  },
+  "chapeuzinho-vermelho": {
+    "primary": "#CC673E",
+    "secondary": "#C8E467",
+    "background": "#C8E467",
+    "accent": "#D8F4E9"
+  },
+  "chuva-de-amor": {
+    "primary": "#C59770",
+    "secondary": "#C1E7FE",
+    "background": "#C1E7FE",
+    "accent": "#FCC7DB"
+  },
+  "circo-azul": {
+    "primary": "#57E1CA",
+    "secondary": "#C5F7FB",
+    "background": "#FAFAFA",
+    "accent": "#96D8FB"
+  },
+  "circo-rosa": {
+    "primary": "#57E1CA",
+    "secondary": "#C5F7FB",
+    "background": "#FAFAFA",
+    "accent": "#96D8FB"
+  },
+  "confeitaria": {
+    "primary": "#FBE2A0",
+    "secondary": "#EBF8FE",
+    "background": "#FAF7F8",
+    "accent": "#FEEDF7"
+  },
+  "corujinha": {
+    "primary": "#53DFF4",
+    "secondary": "#F37C98",
+    "background": "#F37C98",
+    "accent": "#DB1971"
+  },
+  "cruzeiro": {
+    "primary": "#065AA2",
+    "secondary": "#1BA67C",
+    "background": "#FFFFFF",
+    "accent": "#471902"
+  },
+  "dinossauro-baby": {
+    "primary": "#01B7DE",
+    "secondary": "#FFFCA8",
+    "background": "#FFFCA8",
+    "accent": "#E6B796"
+  },
+  "dinossauro-rosa": {
+    "primary": "#1BA67C",
+    "secondary": "#B1FDDF",
+    "background": "#FCE6E9",
+    "accent": "#FCE6E9"
+  },
+  "dragon-ball-z": {
+    "primary": "#EA6420",
+    "secondary": "#1BA67C",
+    "background": "#FCFEFF",
+    "accent": "#2854A1"
+  },
+  "elefantinho-azul": {
+    "primary": "#7099AB",
+    "secondary": "#DAE4E9",
+    "background": "#DAE4E9",
+    "accent": "#BA3B5E"
+  },
+  "elefantinho-rosa": {
+    "primary": "#D28D85",
+    "secondary": "#F3EDF1",
+    "background": "#FBF9FB",
+    "accent": "#3BBA7D"
+  },
+  "eu-amo-o-meu-tete-menina": {
+    "primary": "#1BA67C",
+    "secondary": "#F2B6CA",
+    "background": "#FFFFFF",
+    "accent": "#171717"
+  },
+  "eu-amo-o-meu-tete-menino": {
+    "primary": "#47BDD4",
+    "secondary": "#171717",
+    "background": "#FFFFFF",
+    "accent": "#BF366F"
+  },
+  "fazendinha-azul": {
+    "primary": "#47BDD4",
+    "secondary": "#191919",
+    "background": "#E0EDF0",
+    "accent": "#262627"
+  },
+  "fazendinha-rosa": {
+    "primary": "#DBBB95",
+    "secondary": "#F2B6CA",
+    "background": "#F2B6CA",
+    "accent": "#3BBAB5"
+  },
+  "frozen": {
+    "primary": "#00B1CB",
+    "secondary": "#1BA67C",
+    "background": "#FFFFFF",
+    "accent": "#E90C71"
+  },
+  "fundo-do-mar": {
+    "primary": "#E1B771",
+    "secondary": "#1BA67C",
+    "background": "#BDECFF",
+    "accent": "#BDECFF"
+  },
+  "futebol": {
+    "primary": "#3FA503",
+    "secondary": "#403C3D",
+    "background": "#FEFFFE",
+    "accent": "#1A10E5"
+  },
+  "galinha-pintadinha-rosa": {
+    "primary": "#1BA67C",
+    "secondary": "#A0E0DE",
+    "background": "#FFFFFF",
+    "accent": "#FFB7B8"
+  },
+  "galinha-pintadinha-tradicional": {
+    "primary": "#FF9E00",
+    "secondary": "#0094B2",
+    "background": "#FFFFFF",
+    "accent": "#0CE1E9"
+  },
+  "hello-kitty": {
+    "primary": "#FF509B",
+    "secondary": "#1BA67C",
+    "background": "#FFADD3",
+    "accent": "#0FE90C"
+  },
+  "homem-aranha": {
+    "primary": "#C42018",
+    "secondary": "#005899",
+    "background": "#F0F3F9",
+    "accent": "#1C1D1C"
+  },
+  "hot-wheels": {
+    "primary": "#FF6600",
+    "secondary": "#FFED35",
+    "background": "#FEFEFE",
+    "accent": "#ED3237"
+  },
+  "jardim-das-borboletas": {
+    "primary": "#F8B0C6",
+    "secondary": "#FCF5E9",
+    "background": "#FEFCFC",
+    "accent": "#E7EAE9"
+  },
+  "jardim-das-fadas": {
+    "primary": "#1BA67C",
+    "secondary": "#DFE0BF",
+    "background": "#D3EEF5",
+    "accent": "#D3EEF5"
+  },
+  "madagascar": {
+    "primary": "#92BF4F",
+    "secondary": "#EDF5E6",
+    "background": "#EDF5E6",
+    "accent": "#262728"
+  },
+  "margarida": {
+    "primary": "#DE2387",
+    "secondary": "#BA97C6",
+    "background": "#FCFEFF",
+    "accent": "#3CCC29"
+  },
+  "margarida-flores": {
+    "primary": "#FFCE89",
+    "secondary": "#FFD3D1",
+    "background": "#FFD3D1",
+    "accent": "#0CE8E9"
+  },
+  "mickey": {
+    "primary": "#717170",
+    "secondary": "#1D1D1F",
+    "background": "#E8E8E8",
+    "accent": "#3B85BA"
+  },
+  "minecraft-menino": {
+    "primary": "#F4A01F",
+    "secondary": "#5163AE",
+    "background": "#FBFDFD",
+    "accent": "#3EB54A"
+  },
+  "minha-primeira-volta-ao-sol": {
+    "primary": "#38A6BC",
+    "secondary": "#C2E7EC",
+    "background": "#B7E2E6",
+    "accent": "#BA3B70"
+  },
+  "mini-beats": {
+    "primary": "#D81874",
+    "secondary": "#78C194",
+    "background": "#FCFEFF",
+    "accent": "#F8EB53"
+  },
+  "minions": {
+    "primary": "#FEE976",
+    "secondary": "#1BA67C",
+    "background": "#FEE976",
+    "accent": "#4786BB"
+  },
+  "minnie-aquarelada": {
+    "primary": "#EEBFDF",
+    "secondary": "#D36045",
+    "background": "#FFB1E5",
+    "accent": "#5CBA3A"
+  },
+  "minnie-rosa": {
+    "primary": "#FE9BC4",
+    "secondary": "#FD821C",
+    "background": "#FDA1CB",
+    "accent": "#0EE60F"
+  },
+  "moana": {
+    "primary": "#2BC6F4",
+    "secondary": "#F0D2AC",
+    "background": "#FDFDFD",
+    "accent": "#FAD636"
+  },
+  "moranguinho": {
+    "primary": "#00A53F",
+    "secondary": "#E95886",
+    "background": "#E95886",
+    "accent": "#1BA67C"
+  },
+  "mulher-maravilha": {
+    "primary": "#FFF800",
+    "secondary": "#005EA8",
+    "background": "#F3F2DD",
+    "accent": "#0C93E9"
+  },
+  "my-little-pony": {
+    "primary": "#FBC65E",
+    "secondary": "#99DCF7",
+    "background": "#D5A4E5",
+    "accent": "#D5A4E5"
+  },
+  "naruto": {
+    "primary": "#F58633",
+    "secondary": "#E7E7EA",
+    "background": "#FBFDFE",
+    "accent": "#E8E670"
+  },
+  "natal": {
+    "primary": "#D11910",
+    "secondary": "#ABAC84",
+    "background": "#ABAC84",
+    "accent": "#1CD973"
+  },
+  "natal-cristao": {
+    "primary": "#C2A77A",
+    "secondary": "#8AA4B9",
+    "background": "#8AA4B9",
+    "accent": "#3BB5BA"
+  },
+  "o-poderoso-chefinho": {
+    "primary": "#A4D8E2",
+    "secondary": "#0193D1",
+    "background": "#FCFEFF",
+    "accent": "#3C3D3C"
+  },
+  "o-rei-leao": {
+    "primary": "#98AA09",
+    "secondary": "#BA7747",
+    "background": "#D59464",
+    "accent": "#99B6B5"
+  },
+  "o-tempo-voa": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#F7E7E8",
+    "accent": "#F7E7E8"
+  },
+  "o-tempo-voa-menino": {
+    "primary": "#D0D5D4",
+    "secondary": "#E9D7C8",
+    "background": "#E9D7C8",
+    "accent": "#D5D7D6"
+  },
+  "one-piece": {
+    "primary": "#925105",
+    "secondary": "#E4CB97",
+    "background": "#E4CB97",
+    "accent": "#14E1D8"
+  },
+  "pascoa": {
+    "primary": "#B37D70",
+    "secondary": "#C9D4D8",
+    "background": "#C9D4D8",
+    "accent": "#3BBA88"
+  },
+  "pinguim": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#FFFFFF",
+    "accent": "#313131"
+  },
+  "playstation": {
+    "primary": "#28DDD9",
+    "secondary": "#010A17",
+    "background": "#DFF1F1",
+    "accent": "#11110A"
+  },
+  "pop-it": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#C8FCD8",
+    "accent": "#FFFFB5"
+  },
+  "procurando-nemo": {
+    "primary": "#FF9F36",
+    "secondary": "#FFF5EA",
+    "background": "#FCFDFD",
+    "accent": "#EEF3F9"
+  },
+  "roblox-rosa": {
+    "primary": "#FFFFA7",
+    "secondary": "#EBF8FE",
+    "background": "#FAF7F8",
+    "accent": "#FEF4EA"
+  },
+  "safari": {
+    "primary": "#EAC791",
+    "secondary": "#A4D2E1",
+    "background": "#FFFFFF",
+    "accent": "#FDD9D6"
+  },
+  "safari-do-mickey": {
+    "primary": "#EE0102",
+    "secondary": "#A4D2E1",
+    "background": "#FFFFFF",
+    "accent": "#F0A156"
+  },
+  "slime": {
+    "primary": "#1BA67C",
+    "secondary": "#FCF1B1",
+    "background": "#FBFBFB",
+    "accent": "#FEDCE7"
+  },
+  "sonic": {
+    "primary": "#028DBC",
+    "secondary": "#252B67",
+    "background": "#DDEDF3",
+    "accent": "#2857A7"
+  },
+  "spirit": {
+    "primary": "#D65E12",
+    "secondary": "#FDCBDA",
+    "background": "#FDCBDA",
+    "accent": "#F9ECCB"
+  },
+  "super-mario": {
+    "primary": "#FF2900",
+    "secondary": "#41B538",
+    "background": "#F3E1DD",
+    "accent": "#FEF31B"
+  },
+  "the-flash": {
+    "primary": "#FBE31A",
+    "secondary": "#E5363A",
+    "background": "#FCFEFF",
+    "accent": "#10A3E5"
+  },
+  "tiktok": {
+    "primary": "#FF0050",
+    "secondary": "#0B0414",
+    "background": "#FFFFFF",
+    "accent": "#150908"
+  },
+  "toy-story": {
+    "primary": "#B7CF40",
+    "secondary": "#EAF2D9",
+    "background": "#EAF2D9",
+    "accent": "#DEF0F8"
+  },
+  "unicornio-aquarelado": {
+    "primary": "#89D6F4",
+    "secondary": "#FCB9D7",
+    "background": "#CED7E6",
+    "accent": "#FDD9DC"
+  },
+  "up-altas-aventuras": {
+    "primary": "#FDEB87",
+    "secondary": "#CD6527",
+    "background": "#C5A866",
+    "accent": "#10ADE5"
+  },
+  "ursinho-pooh": {
+    "primary": "#7A2FB0",
+    "secondary": "#1BA67C",
+    "background": "#F2DDB0",
+    "accent": "#F2DDB0"
+  }
+}

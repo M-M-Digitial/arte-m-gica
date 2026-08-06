@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { selectPrintableFaces, type PrintableFace } from "./printable-faces";
+import {
+  selectPrintableFaces,
+  toSafePrintableFace,
+  type PrintableFace,
+} from "./printable-faces";
 
 const canudoFaces: PrintableFace[] = [
   { x: 778, y: 171, w: 480, h: 599, area: 255021, cx: 1017.5, cy: 470 },
@@ -41,5 +45,85 @@ describe("selecao das faces imprimiveis", () => {
     ];
 
     expect(selectPrintableFaces(faces, 400, 240)).toHaveLength(4);
+  });
+
+  it("usa o maior retangulo interno como zona segura sem alterar o contorno", () => {
+    const structuralFace: PrintableFace = {
+      x: 100,
+      y: 80,
+      w: 500,
+      h: 700,
+      cx: 350,
+      cy: 430,
+      area: 220000,
+      safeX: 220,
+      safeY: 160,
+      safeW: 260,
+      safeH: 480,
+    };
+
+    const safeFace = toSafePrintableFace(structuralFace);
+
+    expect(safeFace).toMatchObject({
+      x: 220,
+      y: 160,
+      w: 260,
+      h: 480,
+      cx: 350,
+      cy: 400,
+      area: 124800,
+    });
+    expect(structuralFace.x).toBe(100);
+  });
+
+  it("remove abas com zona segura minima da selecao semantica", () => {
+    const faces: PrintableFace[] = [
+      ...Array.from({ length: 4 }, (_, index) => ({
+        x: index * 220,
+        y: 300,
+        w: 210,
+        h: 420,
+        cx: index * 220 + 105,
+        cy: 510,
+        area: 80000,
+        safeX: index * 220 + 10,
+        safeY: 320,
+        safeW: 190,
+        safeH: 380,
+      })),
+      {
+        x: 900,
+        y: 300,
+        w: 210,
+        h: 420,
+        cx: 1005,
+        cy: 510,
+        area: 78000,
+        safeX: 930,
+        safeY: 470,
+        safeW: 150,
+        safeH: 60,
+      },
+    ];
+
+    expect(selectPrintableFaces(faces, 1200, 900)).toHaveLength(4);
+  });
+
+  it("preserva as seis superficies das forminhas", () => {
+    const faces = Array.from({ length: 6 }, (_, index) => ({
+      x: (index % 3) * 260,
+      y: Math.floor(index / 3) * 260,
+      w: 220,
+      h: 220,
+      cx: (index % 3) * 260 + 110,
+      cy: Math.floor(index / 3) * 260 + 110,
+      area: 39000 - index * 300,
+      safeX: (index % 3) * 260 + 30,
+      safeY: Math.floor(index / 3) * 260 + 30,
+      safeW: 160,
+      safeH: 160,
+    }));
+
+    expect(selectPrintableFaces(faces, 900, 700, "Forminhas")).toHaveLength(6);
   });
 });

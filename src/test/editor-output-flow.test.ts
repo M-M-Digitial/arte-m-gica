@@ -23,6 +23,13 @@ describe("fluxo final do compositor", () => {
     expect(editor).toContain('baixarMockup("jpg")');
   });
 
+  it("bloqueia exportacao e mockup sem a aprovacao deterministica do SVG", () => {
+    expect(editor).toContain("assertComposedKitQuality");
+    expect(editor).toContain("Curadoria aprovada");
+    expect(editor).toContain("disabled={!kitQuality?.approved}");
+    expect(editor).toContain("mockupBusy || !kitQuality?.approved");
+  });
+
   it("retenta uma foto rejeitada pela curadoria sem substituir a arte", () => {
     expect(imageJob).toContain('"MOCKUP_QUALITY_REJECTED"');
     expect(imageJob).toContain("qualityRetry: true");

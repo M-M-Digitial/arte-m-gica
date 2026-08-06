@@ -432,7 +432,16 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     ? await reviewMockup(b64, qualityContext, OPENAI_API_KEY)
     : null;
 
-  if (qualityReview && !qualityReview.approved) {
+  if (!qualityReview) {
+    console.warn("Mockup curator did not return a valid review. Output blocked.");
+    return jsonResponse({
+      status: "error",
+      error: "A curadoria nao conseguiu validar a foto. Nenhuma versao sem aprovacao foi entregue.",
+      code: "MOCKUP_QUALITY_UNAVAILABLE",
+    });
+  }
+
+  if (!qualityReview.approved) {
     console.warn("Mockup rejeitado pela curadoria:", qualityReview.score, qualityReview.issues.join(" | "));
     return jsonResponse({
       status: "error",
