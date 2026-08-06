@@ -1,0 +1,39 @@
+name: Bug
+description: Registrar uma falha reproduzivel no aplicativo
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: O que aconteceu e qual era o resultado esperado?
+    validations:
+      required: true
+  - type: input
+    id: route
+    attributes:
+      label: Pagina ou rota
+      placeholder: /gerador
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir
+      placeholder: Liste os passos, tema, molde, paleta, nome e idade usados.
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Ambiente
+      options:
+        - Producao
+        - Codespaces
+        - Local
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidencias
+      description: Anexe imagem, video ou mensagem de erro sem dados pessoais.
