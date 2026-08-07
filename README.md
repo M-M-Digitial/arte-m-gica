@@ -46,3 +46,14 @@ npm test
 npx tsc -b --pretty false
 npm run build:escola
 ```
+
+## Colaboracao online
+
+O codigo oficial esta no repositorio privado
+`https://github.com/M-M-Digitial/arte-m-gica`. A equipe pode trabalhar pelo
+GitHub Codespaces, sem instalar o projeto no computador:
+
+`https://codespaces.new/M-M-Digitial/arte-m-gica?quickstart=1`
+
+Crie uma branch para cada alteracao e envie um pull request. Consulte
+`CONTRIBUTING.md` e `docs/github-colaboracao.md` antes do primeiro trabalho.

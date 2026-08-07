@@ -94,7 +94,9 @@ describe("curadoria deterministica do SVG composto", () => {
   });
 
   it("bloqueia repeticao do mesmo recorte em faces diferentes", () => {
-    const svg = montarSvgKit(base).replaceAll("data:image/png;base64,HERO_2", "data:image/png;base64,HERO_1");
+    const svg = montarSvgKit(base)
+      .split("data:image/png;base64,HERO_2")
+      .join("data:image/png;base64,HERO_1");
     const report = validate(svg);
 
     expect(report.approved).toBe(false);
@@ -105,7 +107,7 @@ describe("curadoria deterministica do SVG composto", () => {
   });
 
   it("bloqueia personagem declarado grande mas com poucos pixels visiveis", () => {
-    const svg = montarSvgKit(base).replaceAll(
+    const svg = montarSvgKit(base).replace(
       /data-visible-coverage="[0-9.]+"/g,
       'data-visible-coverage="0.01"',
     );

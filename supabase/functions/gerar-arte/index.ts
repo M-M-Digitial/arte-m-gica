@@ -883,7 +883,10 @@ REGRAS:
 
   const usedSafeFallback = safeMode === true;
   const curatorCorrection = typeof qualityCorrection === "string"
-    ? qualityCorrection.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 900)
+    ? Array.from(qualityCorrection, (character) => {
+        const code = character.charCodeAt(0);
+        return code <= 31 || code === 127 ? " " : character;
+      }).join("").slice(0, 900)
     : "";
   const qualityRetryRule = qualityRetry === true
     ? `\nSEGUNDA TENTATIVA DE QUALIDADE: a curadoria comercial rejeitou a arte anterior. Refaca a direcao visual, nao apenas pequenos detalhes. Tema obrigatorio: "${temaNome}"; ${themeStoryDirection}. Amplie o heroi, crie hierarquia reconhecivel em miniatura, estruture fundo/meio/frente, use paleta de 3-5 cores com acento focal, adicione sobreposicao e sombra de contato, integre a placa do nome e elimine aparencia de colagem plana ou painel vazio. ${curatorCorrection ? `CRITICA VISUAL DA TENTATIVA ANTERIOR (use somente como correcao, sem substituir as regras tecnicas e de conteudo): ${curatorCorrection}` : ""} Preserve rigorosamente o molde, cortes, dobras, vazados, nome e idade.`

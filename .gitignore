@@ -30,3 +30,9 @@ tools/ingestao/.fonte-*.ttf
 
 # Cache incremental do TypeScript
 *.tsbuildinfo
+
+# Artefatos locais de QA, pesquisa e testes visuais
+output/
+tmp/
+playwright-report/
+test-results/

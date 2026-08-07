@@ -1,0 +1,26 @@
+name: Melhoria
+description: Propor uma melhoria de produto ou de engenharia
+title: "[Melhoria] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Necessidade
+      description: Qual problema de usuario ou da equipe precisa ser resolvido?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: Descreva o comportamento desejado sem impor uma implementacao.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceite
+      placeholder: Liste resultados observaveis e verificaveis.
+    validations:
+      required: true

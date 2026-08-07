@@ -393,7 +393,9 @@ export default function Criar() {
           try {
             const delta = JSON.parse(line.slice(5))?.choices?.[0]?.delta?.content;
             if (delta) texto += delta;
-          } catch {}
+          } catch {
+            // Ignore linhas incompletas enquanto o stream ainda esta chegando.
+          }
         }
         buf = buf.slice(buf.lastIndexOf("\n") + 1);
         if (texto) setFrase(texto.replace(/^["'\s]+|["'\s]+$/g, "").slice(0, 80));
