@@ -1,6 +1,6 @@
 # Geracao de artes: implementacao e validacao
 
-Data: 2026-09-25. Estado: acesso restaurado; backend publicado; interface liberada para o workflow de producao.
+Data: 2026-09-25. Estado: backend e interface publicados; verificacoes de entrega concluidas no dominio com www.
 
 ## Mudancas
 
@@ -55,7 +55,11 @@ Validacao visual ainda pendente: obter amostras aprovadas de estilos minimalista
 - Backend publicado no projeto qdwhwxboocplmnmczkfj: gerar-arte versao 34 e gerar-mockup versao 30, ambas ACTIVE e com verify_jwt=true.
 - Copias das funcoes anteriores foram baixadas para output/deploy-2026-09-25/backup, fora do Git, antes da atualizacao.
 - Os 112 testes passaram. A interface e publicada pelo workflow Deploy MoldePronto (gerador) da main, depois das funcoes, preservando agentes-artesaos/.
-- Destino: https://www.appateliedigital.com.br/. O resultado do workflow e a verificacao HTTP do dominio devem ser conferidos ao concluir a publicacao.
+- Destino: https://www.appateliedigital.com.br/. Workflow concluido com sucesso: https://github.com/M-M-Digitial/arte-m-gica/actions/runs/36163164666, commit d4e0e98c4c6ecf706e667892a059df006fd3864f.
+- HTTP 200 em /, /criar e /temas. /agentes-artesaos/ permanece com titulo Meu Atelie Digital e seu bundle separado.
+- O bundle /assets/index-DghleBLp.js servido em producao e identico ao build local validado: SHA-256 023B64270CFE249ABEAD61626A32C3BEE1E151262B7178744A8E5AD48316E010. Contem editablePersonalization e artLayout.
+- gerar-arte e gerar-mockup: preflight OPTIONS 200 e POST sem autenticacao 401. Nenhuma imagem paga foi gerada durante o deploy. A pagina abriu no navegador e redirecionou para o login, sem sessao do aplicativo; nao houve teste de geracao autenticado em producao.
+- Pendencia externa ao build: appateliedigital.com.br sem www resolve para 72.60.137.128 e 2.57.91.91 e apresentou RemoteCertificateNameMismatch. A verificacao HTTPS de www passou. Nao houve alteracao de DNS ou certificado.
 - O painel exibiu aviso de faturas pendentes na organizacao. Nenhuma operacao financeira foi realizada.
 
 ## Comandos
