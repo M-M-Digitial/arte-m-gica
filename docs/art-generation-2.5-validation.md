@@ -1,6 +1,6 @@
 # Geracao de artes: implementacao e validacao
 
-Data: 2026-09-25. Estado: implementado e testado; deploy de producao bloqueado por acesso ao Supabase.
+Data: 2026-09-25. Estado: acesso restaurado; backend publicado; interface liberada para o workflow de producao.
 
 ## Mudancas
 
@@ -47,13 +47,16 @@ Nao fazer deploy somente do frontend: ele exige o contrato artLayout da nova ger
 
 Validacao visual ainda pendente: obter amostras aprovadas de estilos minimalista e exuberante, conferir nomes curtos/longos nas faces reais, testar importacao no editor de destino e impressao fisica, e validar o acesso autenticado no ambiente de homologacao. A compatibilidade estrutural do SVG nao substitui teste de importacao com fontes no computador de destino.
 
-## Tentativa de deploy em 2026-09-25
+## Publicacao em 2026-09-25
 
 - O usuario solicitou a publicacao no site oficial depois do aviso sobre a amostra reprovada. O bloqueio de curadoria permanece ativo.
 - GitHub autenticado e repositorio acessivel. A main remota estava em fd572f7d3e59de09252a3d3f5e0386bfc4558968.
-- Supabase CLI retornou HTTP 403 ao listar as funcoes do projeto qdwhwxboocplmnmczkfj. Tanto o CLI quanto o plugin listam somente o projeto luana-belo-webinario, que nao e o destino deste deploy.
-- Nao houve publicacao parcial do frontend nem alteracao do site em producao. O workflow da main publica apenas a interface; as funcoes devem ser publicadas primeiro com a conta autorizada.
-- Os 112 testes passaram novamente. A versao fica preparada na branch release/art-generation-2-5 para concluir a publicacao apos restaurar o acesso ao projeto correto.
+- A primeira tentativa retornou HTTP 403 porque a conta conectada nao possuia acesso ao projeto. O usuario autenticou a conta correta no navegador; o CLI foi autenticado no perfil separado moldepronto.
+- Backend publicado no projeto qdwhwxboocplmnmczkfj: gerar-arte versao 34 e gerar-mockup versao 30, ambas ACTIVE e com verify_jwt=true.
+- Copias das funcoes anteriores foram baixadas para output/deploy-2026-09-25/backup, fora do Git, antes da atualizacao.
+- Os 112 testes passaram. A interface e publicada pelo workflow Deploy MoldePronto (gerador) da main, depois das funcoes, preservando agentes-artesaos/.
+- Destino: https://www.appateliedigital.com.br/. O resultado do workflow e a verificacao HTTP do dominio devem ser conferidos ao concluir a publicacao.
+- O painel exibiu aviso de faturas pendentes na organizacao. Nenhuma operacao financeira foi realizada.
 
 ## Comandos
 
