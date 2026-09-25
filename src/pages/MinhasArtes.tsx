@@ -9,6 +9,8 @@ import { Thumb } from "@/components/Thumb";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { baixarSvgDaArte } from "@/lib/svg-arte";
+import { loadArtRecipe, renderArtRecipe } from "@/lib/art-recipe";
+import { baixarArquivoSvg } from "@/lib/svg-file";
 import { toast } from "sonner";
 
 export interface ArteSalva {
@@ -65,12 +67,29 @@ export default function MinhasArtes() {
     }
   };
 
-  const refazer = (arte: ArteSalva) => {
-    navigate("/criar", { state: { refazer: arte } });
+  const refazer = async (arte: ArteSalva) => {
+    try {
+      const editableRecipe = await loadArtRecipe(arte.image_url);
+      if (!editableRecipe) toast.info("Esta arte antiga tem o nome na imagem. Sera necessario gerar uma nova base editavel.");
+      navigate("/criar", { state: { refazer: arte, editableRecipe } });
+    } catch {
+      toast.error("Nao foi possivel carregar a arte para reutilizacao. Tente novamente.");
+    }
   };
 
   // entrega oficial em SVG: arte + linhas vetoriais do molde
   const baixarSvg = async (arte: ArteSalva) => {
+    try {
+      const recipe = await loadArtRecipe(arte.image_url);
+      if (recipe) {
+        const { svg } = await renderArtRecipe(recipe);
+        baixarArquivoSvg(`molde-${arte.tema_nome}-${arte.nome}`, svg);
+        return;
+      }
+    } catch {
+      toast.error("Nao foi possivel carregar o SVG editavel. Tente novamente.");
+      return;
+    }
     const { data: molde } = await (supabase as any)
       .from("moldes")
       .select("svg_url")

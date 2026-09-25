@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { ArtLayout } from "../../supabase/functions/_shared/art-layout";
 
 type Frame = { dataUrl: string; isFinal: boolean };
 
@@ -11,6 +12,7 @@ export type JobMeta = {
   imageBase64?: string;
   mockupUrl?: string;
   mockupBase64?: string;
+  artLayout?: ArtLayout;
   qualityReview?: {
     score?: number;
     approved?: boolean;
@@ -22,7 +24,6 @@ export type JobMeta = {
 const POLL_INTERVAL_MS = 4000;
 const JOB_TIMEOUT_MS = 8 * 60_000;
 const RETRYABLE_GENERATION_CODES = new Set([
-  "OPENAI_MODERATION_BLOCKED",
   "MOCKUP_SOURCE_PRESERVATION_FAILED",
   "MOCKUP_QUALITY_REJECTED",
   "ART_QUALITY_REJECTED",
@@ -75,7 +76,7 @@ async function callFunction(functionName: string, payload: unknown): Promise<Job
  *
  * - `onFrame` recebe a imagem final (dataUrl) quando o job termina.
  * - `onMeta` recebe o payload final ({ imageUrl, imageBase64 } ou { mockupUrl, mockupBase64 }).
- * - Temas bloqueados pela moderação são retentados uma vez em modo seguro (safeMode).
+ * - Reprovação de qualidade admite uma correção; recusa do provedor nunca troca o tema.
  * - Lança erro em HTTP != 2xx, `{ error }` (cota, validação) ou timeout.
  */
 export async function runImageGenerationJob(
@@ -119,6 +120,7 @@ export async function runImageGenerationJob(
       idade: source.idade,
       formato: source.formato,
       partyAudience: source.partyAudience,
+      creativeBrief: source.creativeBrief,
     });
 
     if (st?.status === "done") {

@@ -7,9 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMoldes, useTemas } from "@/hooks/use-catalog";
 import { supabase } from "@/integrations/supabase/client";
-import { runImageGenerationJob } from "@/lib/image-job";
+import { runImageGenerationJob, type JobMeta } from "@/lib/image-job";
 import { Thumb } from "@/components/Thumb";
-import { baixarSvgDaArte, criarSvgDaArte } from "@/lib/svg-arte";
+import { criarSvgDaArte } from "@/lib/svg-arte";
+import { baixarArquivoSvg } from "@/lib/svg-file";
+import { ArtDirectionControls } from "@/components/ArtDirectionControls";
+import { normalizeCreativeBrief, artVisualSignature } from "../../supabase/functions/_shared/art-direction";
+import { isArtLayout } from "../../supabase/functions/_shared/art-layout";
+import { renderArtRecipe, saveArtRecipe, type ArtRecipe } from "@/lib/art-recipe";
 import { baixarFotoDivulgacao, type FormatoDivulgacao } from "@/lib/raster-file";
 import { baixarMoldePdf, baixarMoldePng } from "@/lib/mold-export";
 import { toast } from "sonner";
@@ -317,6 +322,10 @@ export default function Criar() {
   const [fonteEstilo, setFonteEstilo] = useState("divertida");
   const [desenhoEstilo, setDesenhoEstilo] = useState("cartoon");
   const [densidadeVisual, setDensidadeVisual] = useState("equilibrado");
+  const [creativeBrief, setCreativeBrief] = useState(() => normalizeCreativeBrief({}));
+  const [fontScale, setFontScale] = useState(1);
+  const [baseRecipe, setBaseRecipe] = useState<ArtRecipe | null>(null);
+  const [generatedSvg, setGeneratedSvg] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedImageBase64, setGeneratedImageBase64] = useState<string | null>(null);
@@ -352,6 +361,12 @@ export default function Criar() {
     setDesenhoEstilo(r.desenho_estilo ?? "cartoon");
     setDensidadeVisual(r.densidade_visual ?? "equilibrado");
     setQualidade(r.qualidade === "low" ? "low" : "medium");
+    const recipe = (location.state as { editableRecipe?: ArtRecipe })?.editableRecipe;
+    if (recipe) {
+      setBaseRecipe(recipe);
+      setCreativeBrief(recipe.brief);
+      setFontScale(recipe.personalization.scale);
+    }
     setRefazendo(true);
     setQuizPergunta(0);
     setStep(3);
@@ -410,12 +425,11 @@ export default function Criar() {
 
   // SVG híbrido (formato oficial de entrega): arte como fundo + linhas vetoriais
   const baixarSvgHibrido = async () => {
-    if (!generatedImageBase64) return;
-    await baixarSvgDaArte({
-      imagem: generatedImageBase64,
-      moldeSvgUrl: (selectedMolde as any)?.svg_url,
-      nomeArquivo: `arte-${nome.trim() || "molde"}`,
-    });
+    try {
+      baixarArquivoSvg(`arte-${nome.trim() || "molde"}`, await criarSvgFinal());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel baixar o SVG.");
+    }
   };
 
   const { data: moldes, isLoading: loadingMoldes } = useMoldes();
@@ -432,96 +446,85 @@ export default function Criar() {
     setStep(3);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (forceNew = false) => {
     if (!nome.trim()) {
       toast.error("Digite o nome para personalizar");
       return;
     }
+    const mold = moldes?.find((item) => item.name === selectedMolde?.name) ?? selectedMolde;
+    if (!mold?.svg_url) {
+      toast.error("Este molde ainda nao tem o arquivo SVG tecnico necessario.");
+      return;
+    }
+    const brief = normalizeCreativeBrief({ ...creativeBrief, density: densidadeVisual, drawing: desenhoEstilo });
+    const signature = artVisualSignature({
+      theme: selectedTema.name, mold: mold.name,
+      template: mold.template_png_url || mold.image_url || "",
+      colors: selectedTema.colors ?? [], dominant: corDominante, brief, quality: qualidade,
+    });
+    const personalization = {
+      name: nome.trim(), age: idade.trim(), phrase: frase.trim(), font: fonteEstilo,
+      scale: fontScale, accent: corDominante || selectedTema.colors?.[0] || "#287B94", finish: brief.finish,
+    };
+    const reuse = !forceNew && baseRecipe?.signature === signature;
     setIsGenerating(true);
     setStep(4);
     setPreviewImage(null);
     setPreviewIsFinal(false);
-    setGeneratedImage(null);
-    setGeneratedImageBase64(null);
     setArteSalvaId(null);
+    setMockupImage(null);
+    setMockupImageBase64(null);
     try {
-      let gotMeta = false;
-      let lastFrameDataUrl: string | null = null;
-      let metaFinal: any = null;
-      await runImageGenerationJob(
-        "gerar-arte",
-        {
-          moldeName: selectedMolde.name,
-          // template em alta resolução (2048px) quando existir; thumb como fallback
-          moldeTemplateUrl: (selectedMolde as any).template_png_url || (selectedMolde as any).image_url || undefined,
-          moldeMaskUrl: (selectedMolde as any).mask_url || undefined,
-          temaNome: selectedTema.name,
-          temaColors: selectedTema.colors,
-          nome: nome.trim(),
-          idade: idade.trim() || undefined,
-          frase: frase.trim() || undefined,
-          corDominante: corDominante || undefined,
-          fonteEstilo,
-          desenhoEstilo,
-          densidadeVisual,
-          quality: qualidade,
-        },
-        {
-          onFrame: ({ dataUrl, isFinal }) => {
-            lastFrameDataUrl = dataUrl;
-            flushSync(() => {
-              setPreviewImage(dataUrl);
-              setPreviewIsFinal(isFinal);
-            });
-          },
-          onMeta: (meta) => {
-            gotMeta = true;
-            metaFinal = meta;
-            if (meta.imageBase64) setGeneratedImageBase64(meta.imageBase64);
-            if (meta.imageUrl || meta.imageBase64) {
-              setGeneratedImage(meta.imageUrl ?? meta.imageBase64);
-            }
-          },
+      let recipe: ArtRecipe;
+      if (reuse && baseRecipe) {
+        recipe = { ...baseRecipe, personalization };
+      } else {
+        let metaFinal: JobMeta | undefined;
+        await runImageGenerationJob("gerar-arte", {
+          moldeName: mold.name, moldeTemplateUrl: mold.template_png_url || mold.image_url,
+          moldeMaskUrl: mold.mask_url, temaNome: selectedTema.name, temaColors: selectedTema.colors,
+          nome: nome.trim(), idade: idade.trim(), frase: frase.trim(), corDominante,
+          fonteEstilo, desenhoEstilo, densidadeVisual, creativeBrief: brief,
+          editablePersonalization: true, quality: qualidade,
+        }, { onMeta: (meta) => { metaFinal = meta; } });
+        if (!metaFinal || !isArtLayout(metaFinal.artLayout) || !(metaFinal.imageUrl || metaFinal.imageBase64)) {
+          throw new Error("A geracao nao retornou uma arte-base com areas seguras. Nenhum texto foi aplicado.");
         }
-      );
-      if (!gotMeta) {
-        if (!lastFrameDataUrl) throw new Error("A IA não terminou de gerar a imagem. Tente novamente.");
-        setGeneratedImage(lastFrameDataUrl);
-        setGeneratedImageBase64(lastFrameDataUrl);
+        recipe = {
+          version: 1, baseImage: metaFinal.imageUrl || metaFinal.imageBase64!,
+          moldSvgUrl: mold.svg_url, layout: metaFinal.artLayout, brief, signature, personalization,
+        };
       }
-      // Salva no histórico "Minhas Artes" (best-effort; não atrapalha a entrega)
-      if (metaFinal?.imageUrl) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { data: salva } = await (supabase as any)
-              .from("minhas_artes")
-              .insert({
-                user_id: user.id,
-                tema_nome: selectedTema.name,
-                tema_colors: selectedTema.colors ?? null,
-                molde_name: selectedMolde.name,
-                molde_template_url: (selectedMolde as any).template_png_url || (selectedMolde as any).image_url || null,
-                nome: nome.trim(),
-                idade: idade.trim() || null,
-                frase: frase.trim() || null,
-                cor_dominante: corDominante || null,
-                fonte_estilo: fonteEstilo,
-                desenho_estilo: desenhoEstilo,
-                densidade_visual: densidadeVisual,
-                qualidade,
-                image_url: metaFinal.imageUrl,
-              })
-              .select("id")
-              .single();
-            if (salva?.id) setArteSalvaId(salva.id);
-          }
-        } catch (e) {
-          console.warn("não consegui salvar no histórico:", e);
-        }
+      setBaseRecipe(recipe);
+      const result = await renderArtRecipe(recipe);
+      setGeneratedSvg(result.svg);
+      setGeneratedImage(result.png);
+      setGeneratedImageBase64(result.png);
+      setPreviewImage(result.png);
+      setPreviewIsFinal(true);
+      setSelectedMolde(mold);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Sessao expirada");
+        const saved = await saveArtRecipe(user.id, recipe, result);
+        setBaseRecipe(saved.recipe);
+        setGeneratedImage(saved.imageUrl);
+        const { data: salva, error } = await (supabase as any).from("minhas_artes").insert({
+          user_id: user.id, tema_nome: selectedTema.name, tema_colors: selectedTema.colors ?? null,
+          molde_name: mold.name, molde_template_url: mold.template_png_url || mold.image_url || null,
+          nome: nome.trim(), idade: idade.trim() || null, frase: frase.trim() || null,
+          cor_dominante: corDominante || null, fonte_estilo: fonteEstilo,
+          desenho_estilo: desenhoEstilo, densidade_visual: densidadeVisual, qualidade,
+          image_url: saved.imageUrl,
+        }).select("id").single();
+        if (error) throw error;
+        setArteSalvaId(salva.id);
+      } catch (error) {
+        console.warn("Nao foi possivel salvar a receita no historico:", error);
+        toast.warning("Arte pronta para baixar, mas o historico nao foi salvo. Mantenha esta pagina aberta para reutilizar a arte.");
       }
-      toast.success("Arte gerada com sucesso!");
-    } catch (err: any) {
+      toast.success(reuse ? "Personalizacao atualizada sem nova geracao de imagem." : "Arte final pronta!");
+    } catch (err) {
       console.error("Erro:", err);
       toast.error(getFunctionErrorMessage(err, "Erro ao gerar arte. Tente novamente."));
       setStep(3);
@@ -550,6 +553,8 @@ export default function Criar() {
           nome: nome.trim(),
           idade: idade.trim() || undefined,
           formato,
+          partyAudience: creativeBrief.audience,
+          creativeBrief: { ...creativeBrief, density: densidadeVisual, drawing: desenhoEstilo },
           quality: qualidade,
         },
         {
@@ -604,6 +609,7 @@ export default function Criar() {
   };
 
   const criarSvgFinal = async () => {
+    if (generatedSvg) return generatedSvg;
     if (!generatedImageBase64) throw new Error("A arte final ainda não está pronta.");
     return criarSvgDaArte({
       imagem: generatedImageBase64,
@@ -635,6 +641,10 @@ export default function Criar() {
     setFonteEstilo("divertida");
     setDesenhoEstilo("cartoon");
     setDensidadeVisual("equilibrado");
+    setCreativeBrief(normalizeCreativeBrief({}));
+    setBaseRecipe(null);
+    setGeneratedSvg(null);
+    setFontScale(1);
     setGeneratedImage(null);
     setGeneratedImageBase64(null);
     setPreviewImage(null);
@@ -983,6 +993,9 @@ export default function Criar() {
             {quizPergunta === 2 && (
               <div className="space-y-6">
                 <h1 className="font-display text-3xl font-semibold text-foreground">Como escrever "{nome.trim() || "o nome"}"?</h1>
+                <label className="block text-sm font-medium">Tamanho do nome: {Math.round(fontScale * 100)}%
+                  <input aria-label="Tamanho do nome" type="range" min="70" max="150" step="5" value={fontScale * 100} onChange={(e) => setFontScale(Number(e.target.value) / 100)} className="mt-3 block w-full accent-primary" />
+                </label>
                 <p className="text-sm text-muted-foreground -mt-4">Toque em uma opção para continuar.</p>
                 <div className="grid grid-cols-2 gap-3">
                   {FONT_STYLES.map((f) => (
@@ -1008,12 +1021,12 @@ export default function Criar() {
             {quizPergunta === 3 && (
               <div className="space-y-6">
                 <h1 className="font-display text-3xl font-semibold text-foreground">Quanto enfeite você quer?</h1>
-                <p className="text-sm text-muted-foreground -mt-4">Toque em uma opção para continuar.</p>
                 <div className="grid grid-cols-2 gap-3">
                   {DENSITY_STYLES.map((d) => (
                     <button
                       key={d.id}
-                      onClick={() => { setDensidadeVisual(d.id); setQuizPergunta(4); }}
+                      onClick={() => setDensidadeVisual(d.id)}
+                      aria-pressed={densidadeVisual === d.id}
                       className={`p-4 rounded-2xl text-left transition-all duration-200 ${
                         densidadeVisual === d.id
                           ? "gradient-hero text-white shadow-soft"
@@ -1026,6 +1039,8 @@ export default function Criar() {
                     </button>
                   ))}
                 </div>
+                <ArtDirectionControls value={creativeBrief} onChange={setCreativeBrief} />
+                <Button className="w-full" onClick={() => setQuizPergunta(4)}>Continuar <ArrowRight className="ml-2 h-4 w-4" /></Button>
               </div>
             )}
 
@@ -1144,6 +1159,8 @@ export default function Criar() {
                     <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(2)}>{FONT_STYLES.find(f => f.id === fonteEstilo)?.label}</button>
                     <span className="text-border">·</span>
                     <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(3)}>{DENSITY_STYLES.find(d => d.id === densidadeVisual)?.label}</button>
+                    <span className="text-border">·</span>
+                    <button className="bg-background px-2.5 py-1 rounded-lg hover:ring-1 hover:ring-primary/50" onClick={() => setQuizPergunta(3)}>{creativeBrief.colorMood} · {creativeBrief.finish} · {creativeBrief.audience}</button>
                     {frase.trim() && (
                       <>
                         <span className="text-border">·</span>
@@ -1192,7 +1209,7 @@ export default function Criar() {
                 {/* Generate button — fixed on mobile */}
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 glass border-t border-border/40 z-40 sm:static sm:p-0 sm:bg-transparent sm:border-0 sm:backdrop-blur-none">
                   <Button
-                    onClick={handleGenerate}
+                    onClick={() => handleGenerate()}
                     disabled={!nome.trim()}
                     className="w-full h-12 text-sm font-semibold rounded-full disabled:opacity-30 gradient-hero border-0 text-white shadow-soft hover:shadow-elevated hover:-translate-y-0.5 transition-all"
                     style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
@@ -1224,7 +1241,7 @@ export default function Criar() {
                     <Check className="h-3 w-3" /> Arte gerada
                   </div>
                   <h1 className="font-display text-3xl font-semibold text-foreground">
-                    Ficou linda!
+                    Sua arte final
                   </h1>
                   <p className="text-sm text-muted-foreground">
                     Molde pronto para imprimir, recortar e montar.
@@ -1248,6 +1265,9 @@ export default function Criar() {
                   </div>
 
                   <div className="lg:col-span-2 space-y-4">
+                    {baseRecipe && <Button variant="outline" className="w-full" onClick={() => { setRefazendo(true); setQuizPergunta(0); setStep(3); }}>
+                      <Type className="mr-2 h-4 w-4" /> Editar nome, idade ou fonte
+                    </Button>}
                     <div className="space-y-3">
                       <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                         Baixar arte
@@ -1308,7 +1328,7 @@ export default function Criar() {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        onClick={handleGenerate}
+                        onClick={() => handleGenerate(true)}
                         className="flex-1 rounded-full text-xs h-9"
                         size="sm"
                       >

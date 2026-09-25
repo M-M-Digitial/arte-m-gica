@@ -2,12 +2,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 // imagescript é nativa de Deno — o pngjs via esm.sh falhava em runtime no
 // edge (PNG.sync.read), e máscara + carimbo eram pulados em silêncio.
-import { Image } from "https://deno.land/x/imagescript@1.3.0/mod.ts";
-import {
-  ALICE_QUALITY_STANDARD,
-  buildAliceCuratorStandard,
-  buildAliceGenerationStandard,
-} from "../_shared/alice-quality-standard.ts";
+import { compositeMoldLines, buildEditMask, buildEditMaskFromInteriorMask } from "../_shared/mold-image.ts";
+import { ART_EDITOR_INSTRUCTIONS, buildArtGenerationPrompt } from "../_shared/art-prompt.ts";
+import { reviewGeneratedArt } from "../_shared/art-curator.ts";
+import { bytesToBase64 } from "../_shared/image-bytes.ts";
+import { normalizeCreativeBrief, cleanBriefText } from "../_shared/art-direction.ts";
+import { buildArtLayout, type ArtLayout } from "../_shared/art-layout.ts";
+import { IMAGE_MODELS, imageModelFor, imageOutputSize } from "../_shared/image-models.ts";
+import { packJobContext, unpackJobContext } from "../_shared/art-job-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,16 +24,6 @@ const COTA_MENSAL = 30; // artes com IA por usuário/mês (admins: ilimitado)
 // pronta. Nenhuma requisição fica presa esperando a IA — o fluxo antigo de
 // stream morria quando a conexão edge→OpenAI caía no silêncio antes do final.
 
-// extrai user id/email do JWT já verificado pelo gateway (verify_jwt=true)
-function parseJwt(authHeader: string | null): { sub: string | null; email: string | null } {
-  try {
-    const token = (authHeader ?? "").replace(/^Bearer\s+/i, "");
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return { sub: payload.sub ?? null, email: payload.email ?? null };
-  } catch {
-    return { sub: null, email: null };
-  }
-}
 
 const normalizeTheme = (value: string) =>
   value
@@ -61,275 +53,8 @@ const getThemeStoryDirection = (temaNome: string) => {
     ?? `interprete literalmente o tema "${temaNome}" e use somente personagens, cenario, objetos e simbolos que o tornem reconhecivel em ate dois segundos; nao invente ambiente de outro tema`;
 };
 
-const protectedThemeAlternatives: Array<[RegExp, string]> = [
-  [/minnie|mickey/, "tema clássico com laços, poás, luvas brancas e paleta vermelha, preta e branca"],
-  [/barbie/, "tema fashion em tons de rosa, passarela, laços, estrelas e acessórios de moda"],
-  [/frozen/, "tema reino de gelo com flocos de neve, cristais, azul claro e brilho prateado"],
-  [/encanto/, "tema jardim latino colorido com flores tropicais, borboletas e arquitetura artesanal"],
-  [/patrulha/, "tema cachorrinhos aventureiros com escudos, patinhas, veículos e cores primárias"],
-  [/aranha|vingadores|batman|herois/, "tema super-herói genérico com cidade, raios, estrelas, máscaras e ação em quadrinhos"],
-  [/carros|hot\s*wheels/, "tema corrida com pistas, bandeiras quadriculadas, troféus e cores vibrantes"],
-  [/sonic/, "tema velocidade arcade com anéis, raios, trilhas dinâmicas e azul vibrante"],
-  [/stitch/, "tema espacial tropical com estrelas, flores havaianas e criatura alienígena fofa genérica"],
-  [/monica|cocomelon|pocoyo|baby\s*shark|peppa|mundo\s*bita|galinha/, "tema musical colorido com formas geométricas, notas musicais, arco-íris e animais fofos genéricos"],
-  [/hello\s*kitty/, "tema gatinho kawaii com laços, corações, flores pequenas e tons pastel"],
-  [/moana/, "tema ilha tropical com ondas, flores, folhas, sol e textura artesanal"],
-  [/rapunzel|princesas/, "tema conto de fadas com coroa, castelo, flores delicadas e brilho dourado"],
-  [/dragon\s*ball|naruto/, "tema mangá de ação com energia, nuvens estilizadas, raios e composição dinâmica"],
-  [/minecraft/, "tema mundo de blocos pixelados com grama, ferramentas e padrão quadriculado"],
-  [/bob\s*esponja/, "tema fundo do mar com bolhas, corais, estrelas-do-mar e amarelo alegre"],
-  [/toy\s*story/, "tema brinquedos retrô com estrelas, nuvens, cowboy, espaço e cores primárias"],
-  [/snoopy/, "tema cachorrinho cartoon com patinhas, casinha, nuvens e traços minimalistas"],
-];
 
-const getSafeThemeDescription = (temaNome: string) => {
-  const normalized = normalizeTheme(temaNome);
-  const alternative = protectedThemeAlternatives.find(([pattern]) => pattern.test(normalized));
-  return alternative
-    ? alternative[1]
-    : `${temaNome}, reinterpretado como tema decorativo genérico sem marcas, personagens licenciados ou pessoas reais`;
-};
 
-// Re-estampa as linhas escuras do template por cima da arte gerada — garantia
-// determinística de que contorno, abas e linhas de dobra ficam intactos.
-// Varre o TEMPLATE e projeta cada pixel de traço na arte: no sentido inverso
-// (amostrar o template por pixel da arte) linhas de 1px caem entre as amostras
-// no downscale e o traço sai pontilhado (~44% de cobertura). O limiar 200 pega
-// também o anti-aliasing do traço, e "escurecer sem clarear" preserva a arte.
-// Validado: 100% dos pixels de linha do gabarito presentes na arte final.
-async function compositeMoldLines(templateBytes: Uint8Array, generatedBytes: Uint8Array): Promise<Uint8Array> {
-  const tpl = await Image.decode(templateBytes);
-  const gen = await Image.decode(generatedBytes);
-  const tW = tpl.width, tH = tpl.height, tData = tpl.bitmap;
-  const gW = gen.width, gH = gen.height, gData = gen.bitmap;
-
-  for (let y = 0; y < tH; y++) {
-    const gy = Math.min(gH - 1, Math.round((y * gH) / tH));
-    for (let x = 0; x < tW; x++) {
-      const tIdx = (y * tW + x) * 4;
-      const a = tData[tIdx + 3];
-      if (a < 200) continue;
-      const r = tData[tIdx];
-      const g = tData[tIdx + 1];
-      const b = tData[tIdx + 2];
-      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-      if (lum > 200) continue;
-      const gx = Math.min(gW - 1, Math.round((x * gW) / tW));
-      const gIdx = (gy * gW + gx) * 4;
-      if (0.299 * gData[gIdx] + 0.587 * gData[gIdx + 1] + 0.114 * gData[gIdx + 2] > lum) {
-        gData[gIdx] = r;
-        gData[gIdx + 1] = g;
-        gData[gIdx + 2] = b;
-        gData[gIdx + 3] = 255;
-      }
-    }
-  }
-  return await gen.encode();
-}
-
-// A4 — Máscara de edição: gera uma máscara onde SÓ as faces internas do molde
-// ficam editáveis (alpha 0). As linhas escuras (corte/dobra) e o fundo externo
-// ficam preservados (alpha 255), então a IA não desloca nem redesenha a estrutura.
-// Retorna null quando a máscara sai degenerada (nada/tudo editável) — nesse caso
-// o chamador cai no fluxo sem máscara.
-async function buildEditMask(templateBytes: Uint8Array): Promise<Uint8Array | null> {
-  const tpl = await Image.decode(templateBytes);
-  const W = tpl.width, H = tpl.height, data = tpl.bitmap;
-  const N = W * H;
-  if (N === 0) return null;
-
-  // 1) Classifica pixels de linha (opacos e escuros).
-  const isLine = new Uint8Array(N);
-  for (let i = 0; i < N; i++) {
-    const a = data[i * 4 + 3];
-    const r = data[i * 4];
-    const g = data[i * 4 + 1];
-    const b = data[i * 4 + 2];
-    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    if (a >= 200 && lum < 110) isLine[i] = 1;
-  }
-
-  // 2) Flood-fill a partir das bordas, atravessando pixels que NÃO são linha.
-  //    Tudo alcançado = fundo externo.
-  const outside = new Uint8Array(N);
-  const stack = new Int32Array(N);
-  let sp = 0;
-  const pushIf = (idx: number) => {
-    if (!outside[idx] && !isLine[idx]) {
-      outside[idx] = 1;
-      stack[sp++] = idx;
-    }
-  };
-  for (let x = 0; x < W; x++) {
-    pushIf(x);
-    pushIf((H - 1) * W + x);
-  }
-  for (let y = 0; y < H; y++) {
-    pushIf(y * W);
-    pushIf(y * W + (W - 1));
-  }
-  while (sp > 0) {
-    const idx = stack[--sp];
-    const x = idx % W;
-    const y = (idx / W) | 0;
-    if (x > 0) pushIf(idx - 1);
-    if (x < W - 1) pushIf(idx + 1);
-    if (y > 0) pushIf(idx - W);
-    if (y < H - 1) pushIf(idx + W);
-  }
-
-  // 3) Editável = não é linha E não é fundo externo (faces internas fechadas).
-  const mask = new Image(W, H);
-  let editableCount = 0;
-  for (let i = 0; i < N; i++) {
-    const editable = !isLine[i] && !outside[i];
-    if (editable) editableCount++;
-    mask.bitmap[i * 4] = 0;
-    mask.bitmap[i * 4 + 1] = 0;
-    mask.bitmap[i * 4 + 2] = 0;
-    mask.bitmap[i * 4 + 3] = editable ? 0 : 255; // alpha 0 = editar; 255 = preservar
-  }
-
-  const frac = editableCount / N;
-  if (frac < 0.04 || frac > 0.96) {
-    console.warn(`buildEditMask: fração editável ${frac.toFixed(3)} degenerada — sem máscara.`);
-    return null;
-  }
-  console.log(`buildEditMask: fração editável ${frac.toFixed(3)}.`);
-  return await mask.encode();
-}
-
-// The official mold mask marks printable paper with white/alpha. Resample it
-// to the exact template size and remove components nested inside another
-// component (handle holes, windows and other cutouts).
-async function buildEditMaskFromInteriorMask(
-  interiorMaskBytes: Uint8Array,
-  templateBytes: Uint8Array,
-): Promise<Uint8Array | null> {
-  const interior = await Image.decode(interiorMaskBytes);
-  const template = await Image.decode(templateBytes);
-  const W = template.width;
-  const H = template.height;
-  const N = W * H;
-  if (!N || !interior.width || !interior.height) return null;
-
-  const paintable = new Uint8Array(N);
-  const isLine = new Uint8Array(N);
-  const templateData = template.bitmap;
-  const interiorData = interior.bitmap;
-
-  for (let y = 0; y < H; y++) {
-    const my = Math.min(interior.height - 1, Math.round((y * interior.height) / H));
-    for (let x = 0; x < W; x++) {
-      const mx = Math.min(interior.width - 1, Math.round((x * interior.width) / W));
-      const target = y * W + x;
-      const maskIndex = (my * interior.width + mx) * 4;
-      const maskLum = 0.299 * interiorData[maskIndex]
-        + 0.587 * interiorData[maskIndex + 1]
-        + 0.114 * interiorData[maskIndex + 2];
-      paintable[target] = interiorData[maskIndex + 3] >= 128 && maskLum >= 180 ? 1 : 0;
-
-      const templateIndex = target * 4;
-      const alpha = templateData[templateIndex + 3];
-      const lum = 0.299 * templateData[templateIndex]
-        + 0.587 * templateData[templateIndex + 1]
-        + 0.114 * templateData[templateIndex + 2];
-      if (alpha >= 200 && lum <= 200) isLine[target] = 1;
-    }
-  }
-
-  const componentId = new Int32Array(N);
-  const stack = new Int32Array(N);
-  const components: Array<{
-    id: number;
-    area: number;
-    minX: number;
-    minY: number;
-    maxX: number;
-    maxY: number;
-  }> = [];
-  let componentCount = 0;
-  let stackSize = 0;
-  const visit = (idx: number, id: number) => {
-    if (!paintable[idx] || isLine[idx] || componentId[idx]) return;
-    componentId[idx] = id;
-    stack[stackSize++] = idx;
-  };
-
-  for (let start = 0; start < N; start++) {
-    if (!paintable[start] || isLine[start] || componentId[start]) continue;
-    const id = ++componentCount;
-    let area = 0;
-    let minX = W;
-    let minY = H;
-    let maxX = 0;
-    let maxY = 0;
-    stackSize = 0;
-    visit(start, id);
-    while (stackSize > 0) {
-      const idx = stack[--stackSize];
-      const x = idx % W;
-      const y = (idx / W) | 0;
-      area++;
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-      if (x > 0) visit(idx - 1, id);
-      if (x < W - 1) visit(idx + 1, id);
-      if (y > 0) visit(idx - W, id);
-      if (y < H - 1) visit(idx + W, id);
-    }
-    components.push({ id, area, minX, minY, maxX, maxY });
-  }
-
-  const holeComponents = new Uint8Array(componentCount + 1);
-  for (const inner of components) {
-    if (inner.area < N * 0.002) continue;
-    for (const outer of components) {
-      if (inner.id === outer.id || inner.area >= outer.area * 0.9) continue;
-      const nested = inner.minX > outer.minX + 2
-        && inner.minY > outer.minY + 2
-        && inner.maxX < outer.maxX - 2
-        && inner.maxY < outer.maxY - 2;
-      if (nested) {
-        holeComponents[inner.id] = 1;
-        break;
-      }
-    }
-  }
-
-  const mask = new Image(W, H);
-  let editableCount = 0;
-  for (let i = 0; i < N; i++) {
-    const editable = Boolean(
-      paintable[i] && !isLine[i] && !holeComponents[componentId[i]],
-    );
-    if (editable) editableCount++;
-    mask.bitmap[i * 4] = 0;
-    mask.bitmap[i * 4 + 1] = 0;
-    mask.bitmap[i * 4 + 2] = 0;
-    mask.bitmap[i * 4 + 3] = editable ? 0 : 255;
-  }
-
-  const frac = editableCount / N;
-  if (frac < 0.04 || frac > 0.92) {
-    console.warn(`buildEditMaskFromInteriorMask: editable fraction ${frac.toFixed(3)} is degenerate.`);
-    return null;
-  }
-  const removed = holeComponents.reduce((total, value) => total + value, 0);
-  console.log(`buildEditMaskFromInteriorMask: editable fraction ${frac.toFixed(3)}; ${removed} cutouts preserved.`);
-  return await mask.encode();
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(bin);
-}
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -337,158 +62,6 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-interface ArtQualityReview {
-  approved: boolean;
-  score: number;
-  technical_structure_ok: boolean;
-  visible_coverage_ok: boolean;
-  focal_hierarchy_ok: boolean;
-  color_system_ok: boolean;
-  depth_layering_ok: boolean;
-  theme_storytelling_ok: boolean;
-  personalization_ok: boolean;
-  commercial_impact_ok: boolean;
-  originality_ok: boolean;
-  print_finish_ok: boolean;
-  issues: string[];
-  correction_prompt: string;
-}
-
-function responseOutputText(response: Record<string, any>): string {
-  return ((response.output ?? []) as Array<Record<string, any>>)
-    .filter((item) => item.type === "message")
-    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
-    .filter((item) => item?.type === "output_text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("\n");
-}
-
-async function reviewGeneratedArt(
-  imageBytes: Uint8Array,
-  templateBytes: Uint8Array | null,
-  context: { moldeName: string; temaNome: string; nome: string; idade: string },
-  OPENAI_API_KEY: string,
-): Promise<ArtQualityReview | null> {
-  const content: Array<Record<string, unknown>> = [
-    {
-      type: "input_text",
-      text: `Avalie a arte planificada final comparando-a com o gabarito tecnico.
-Molde: ${context.moldeName || "nao informado"}.
-Tema: ${context.temaNome || "nao informado"}.
-Nome exato esperado: ${context.nome || "sem nome"}.
-Idade exata esperada: ${context.idade || "sem idade"}.
-
-Teste tambem a leitura da arte como miniatura de 320 px. Em ate dois segundos devem ser reconheciveis tema, ponto focal e personalizacao. Reprove arte apenas correta tecnicamente que ainda pareca simples, plana, generica, vazia ou uma colecao de adesivos PNG sem narrativa. Exija hierarquia clara, paleta harmonica de 3-5 cores, tres planos visuais, sobreposicao/ancoragem, riqueza de detalhes controlada, personagem sem corte e acabamento de produto premium vendavel. Respiração intencional e tema delicado sao validos, mas painel branco cru ou falta de foco nao sao. Gere um correction_prompt curto e acionavel mesmo quando aprovado.
-
-${buildAliceCuratorStandard()}`,
-    },
-  ];
-  if (templateBytes) {
-    content.push({
-      type: "input_text",
-      text: "Primeira imagem: gabarito tecnico original. Use-a somente para conferir estrutura, corte, dobra, vazados e areas externas.",
-    });
-    content.push({
-      type: "input_image",
-      image_url: `data:image/png;base64,${bytesToBase64(templateBytes)}`,
-      detail: "high",
-    });
-  }
-  content.push({
-    type: "input_text",
-    text: "Imagem final a avaliar:",
-  });
-  content.push({
-    type: "input_image",
-    image_url: `data:image/png;base64,${bytesToBase64(imageBytes)}`,
-    detail: "high",
-  });
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-5.4-mini",
-      store: false,
-      reasoning: { effort: "low" },
-      max_output_tokens: 1200,
-      instructions: `Voce e o agente curador final de um estudio brasileiro de papelaria personalizada premium. Seja rigoroso, visual e comercial. Aprove somente com nota minima ${ALICE_QUALITY_STANDARD.commercialArt.minimumApprovalScore}, todas as portas criticas preservadas e todos os criterios booleanos verdadeiros. Nao premie apenas preenchimento: diferencie elaboracao organizada de poluicao visual.`,
-      input: [{ role: "user", content }],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "art_quality_review",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              approved: { type: "boolean" },
-              score: { type: "integer", minimum: 0, maximum: 100 },
-              technical_structure_ok: { type: "boolean" },
-              visible_coverage_ok: { type: "boolean" },
-              focal_hierarchy_ok: { type: "boolean" },
-              color_system_ok: { type: "boolean" },
-              depth_layering_ok: { type: "boolean" },
-              theme_storytelling_ok: { type: "boolean" },
-              personalization_ok: { type: "boolean" },
-              commercial_impact_ok: { type: "boolean" },
-              originality_ok: { type: "boolean" },
-              print_finish_ok: { type: "boolean" },
-              issues: { type: "array", items: { type: "string" }, maxItems: 8 },
-              correction_prompt: { type: "string" },
-            },
-            required: [
-              "approved",
-              "score",
-              "technical_structure_ok",
-              "visible_coverage_ok",
-              "focal_hierarchy_ok",
-              "color_system_ok",
-              "depth_layering_ok",
-              "theme_storytelling_ok",
-              "personalization_ok",
-              "commercial_impact_ok",
-              "originality_ok",
-              "print_finish_ok",
-              "issues",
-              "correction_prompt",
-            ],
-          },
-        },
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    console.warn("Art quality review failed:", response.status, await response.text().catch(() => ""));
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(responseOutputText(await response.json())) as ArtQualityReview;
-    const allCriteria = parsed.technical_structure_ok
-      && parsed.visible_coverage_ok
-      && parsed.focal_hierarchy_ok
-      && parsed.color_system_ok
-      && parsed.depth_layering_ok
-      && parsed.theme_storytelling_ok
-      && parsed.personalization_ok
-      && parsed.commercial_impact_ok
-      && parsed.originality_ok
-      && parsed.print_finish_ok;
-    return {
-      ...parsed,
-      approved: parsed.approved
-        && parsed.score >= ALICE_QUALITY_STANDARD.commercialArt.minimumApprovalScore
-        && allCriteria,
-      issues: Array.isArray(parsed.issues) ? parsed.issues.slice(0, 8) : [],
-    };
-  } catch (error) {
-    console.warn("Art quality review parse failed:", error);
-    return null;
-  }
-}
 
 const isModerationError = (text: string) =>
   /moderation_blocked|content_policy|safety/i.test(text);
@@ -565,10 +138,8 @@ async function loadAliceReferenceImages(
   const exactTheme = (themeRows ?? []).find(
     (row: { name?: string }) => normalizeLibraryKey(row.name ?? "") === themeKey,
   );
-  const relatedTheme = exactTheme ?? (themeRows ?? []).find((row: { name?: string }) => {
-    const rowKey = normalizeLibraryKey(row.name ?? "");
-    return rowKey.includes(themeKey) || themeKey.includes(rowKey);
-  });
+  // Never silently substitute another variant (e.g. Baby Shark rosa/azul).
+  const relatedTheme = exactTheme;
   const themeSlug = relatedTheme?.slug ?? slugifyTheme(temaNome);
 
   const { data: assets, error: assetsError } = await adminDb
@@ -597,7 +168,7 @@ async function loadAliceReferenceImages(
 
   const images = (await Promise.all(ordered.map(async (candidate) => {
     try {
-      const response = await fetch(candidate.url, { headers: { Accept: "image/*" } });
+      const response = await fetch(candidate.url, { headers: { Accept: "image/*" }, signal: AbortSignal.timeout(15000) });
       if (!response.ok) {
         console.warn("Alice reference fetch failed:", response.status, candidate.url);
         return null;
@@ -633,7 +204,7 @@ async function loadAliceReferenceImages(
 
 // ---- START: cria o job em background na OpenAI ----
 async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string) {
-  const { moldeName, moldeTemplateUrl, moldeMaskUrl, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, safeMode, qualityRetry, qualityCorrection } = body as Record<string, any>;
+  const { moldeName, temaNome, temaColors, nome, idade, frase, corDominante, fonteEstilo, desenhoEstilo, densidadeVisual, quality: qualityRaw, qualityRetry, qualityCorrection } = body as Record<string, any>;
 
   const quality = qualityRaw === "low" ? "low" : "high";
 
@@ -646,9 +217,8 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
   const adminDb = createClient(supabaseUrl, supabaseKey);
 
   // ---- COTA MENSAL (admins ilimitado) ----
-  const { sub: userId, email: userEmail } = parseJwt(
-    (body.__authHeader as string | null) ?? null,
-  );
+  const userId = body.__userId as string;
+  const userEmail = body.__userEmail as string;
   if (userId) {
     const { data: roleRow } = await adminDb
       .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
@@ -669,81 +239,46 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     }
   }
 
-  const aliceLibrary = safeMode === true
-    ? { themeSlug: slugifyTheme(temaNome), images: [] as AliceReferenceImage[] }
-    : await loadAliceReferenceImages(adminDb, temaNome, supabaseUrl);
+  const aliceLibrary = await loadAliceReferenceImages(adminDb, temaNome, supabaseUrl);
   const aliceReferences = aliceLibrary.images;
   const hasAliceReferences = aliceReferences.length > 0;
 
-  const colorsDesc = corDominante
-    ? `Cor dominante/principal: ${corDominante}. Use esta cor como destaque principal.`
-    : temaColors?.length
-      ? `Paleta de cores do tema: ${temaColors.join(", ")}.`
-      : "";
-
-  const safeThemeDesc = getSafeThemeDescription(temaNome);
-  const themeStoryDirection = getThemeStoryDirection(String(temaNome));
-  const themeReferenceText = hasAliceReferences
-    ? "BIBLIOTECA DE ESTILO DA ALICE: as imagens anexadas sao componentes isolados para reconhecer paleta, linguagem de ilustracao, personagens e nivel de acabamento. Crie uma composicao nova para este molde. Nao reproduza a sequencia de faces, o fundo, as bordas, o enquadramento ou a distribuicao de qualquer kit pronto do acervo."
-    : `TEMA DECORATIVO SEGURO: ${safeThemeDesc}`;
-  const contentRestrictions = hasAliceReferences
-    ? "Nao introduza pessoas reais, celebridades, logos ou marcas que nao estejam nas referencias do acervo. Use os personagens e elementos disponiveis no Drive com ornamentos originais coerentes."
-    : "Sem criancas, pessoas reais, celebridades, personagens registrados, logotipos ou marcas.";
-  const idadeText = idade
-    ? " — incluir o número \"" + idade + "\" como numeral decorativo, sem mencionar idade ou aniversário"
-    : "";
-  const fraseText = frase
-    ? "\nFRASE DECORATIVA: \"" + frase + "\" — usar como lettering curto em uma face secundária do molde."
-    : "";
-  const isMilkMold = normalizeLibraryKey(String(moldeName)).includes("caixa milk");
-  const idadeNoNome = idade
-    ? "; o numeral \"" + idade + "\" fica logo abaixo, com cerca de 42% do corpo do nome"
-    : "";
-  let namePlacementText = "proporcional e legível, na parte inferior de uma face que continue visível depois da montagem, com área reservada e sem personagem por baixo" + idadeText;
-  let nameCompositionRule = "NOME: reserve uma área sem personagem na parte inferior da face. Use 38-58% da largura, alvo 50%; em fundo calmo prefira lettering com halo e em fundo movimentado use placa sólida simples ou a placa própria do tema. A palavra \"" + nome + "\" deve ter alto contraste" + idadeNoNome + ".";
-
-  if (isMilkMold) {
-    namePlacementText = "pequeno e delicado, na parte inferior de duas faces laterais alternadas que continuem visíveis depois da montagem" + idadeText;
-    nameCompositionRule = "NOME NA CAIXA MILK: reserve duas faces laterais alternadas, sem personagem por baixo. Use uma placa discreta com 30-44% da largura da face e tipografia delicada; posicione nome e idade na parte inferior da área visível do corpo, nunca no telhado, fechamento, fundo ou aba escondida.";
+  const brief = normalizeCreativeBrief({
+    ...((body.creativeBrief ?? {}) as Record<string, unknown>),
+    density: densidadeVisual,
+    drawing: desenhoEstilo,
+  });
+  const editable = body.editablePersonalization === true;
+  let artLayout: ArtLayout | null = null;
+  const { data: moldRecord } = await adminDb.from("moldes")
+    .select("template_png_url,mask_url,faces_url").eq("name", moldeName).maybeSingle();
+  const moldeTemplateUrl = moldRecord?.template_png_url;
+  const moldeMaskUrl = moldRecord?.mask_url;
+  if (!moldeTemplateUrl || !isAliceStorageUrl(moldeTemplateUrl, supabaseUrl)) {
+    return jsonResponse({ error: "Gabarito oficial indisponivel para este molde." }, 400);
   }
-
-  const fonteMap: Record<string, string> = {
-    divertida: "fonte arredondada, lúdica e divertida tipo cartoon",
-    elegante: "fonte fina, serifada e sofisticada",
-    negrito: "fonte grossa, bold e impactante tipo poster",
-    manuscrita: "fonte manuscrita/cursiva como escrita à mão",
-    fantasia: "fonte decorativa e fantasiosa combinando com o tema",
-    minimalista: "fonte clean, sans-serif moderna e minimalista",
-    retro: "fonte vintage/retrô com estilo nostálgico",
-  };
-  const fonteDesc = fonteMap[fonteEstilo || "divertida"] || fonteMap.divertida;
-
-  const drawMap: Record<string, string> = {
-    cartoon: "estilo cartoon colorido, desenho animado vibrante com contornos definidos",
-    aquarela: "estilo aquarela artístico com pinceladas suaves, tons delicados e textura de papel",
-    flat: "estilo flat design vetorial, formas geométricas limpas, cores sólidas, sem sombras",
-    realista: "estilo realista com ilustrações detalhadas, texturas e sombras naturais",
-    kawaii: "estilo kawaii japonês, personagens fofos com olhos grandes, cores pastel suaves",
-    handdrawn: "estilo desenhado à mão, traço manual irregular, visual artesanal e autêntico",
-    "3d": "estilo 3D com volume, profundidade, sombras e efeitos de perspectiva",
-    pixel: "estilo pixel art retro, pixels visíveis, paleta limitada, visual de jogo clássico",
-  };
-  const drawDesc = drawMap[desenhoEstilo || "cartoon"] || drawMap.cartoon;
-
-  const densityMap: Record<string, string> = {
-    minimalista: "design MINIMALISTA — todas as faces úteis recebem um elemento principal ou temático, com 35-50% de cobertura ativa e grandes áreas calmas tratadas por cor, wash ou textura sutil",
-    equilibrado: "design EQUILIBRADO — todas as faces úteis recebem arte, com 45-70% de cobertura ativa, alvo 58%, alternando herói, secundário, cenário e personalização sem deixar painéis mortos",
-    decorado: "design DECORADO — todas as faces recebem composição em três camadas (fundo, cenário e elemento principal), com 60-78% de cobertura ativa e detalhes menores coordenados",
-    maximalista: "design MAXIMALISTA — 70-85% de cobertura ativa nas faces, cores vibrantes e padrões complexos, preservando linhas técnicas e a faixa segura do nome",
-  };
-  const densityDesc = densityMap[densidadeVisual || "equilibrado"] || densityMap.equilibrado;
+  if (editable) {
+    if (!moldRecord?.faces_url || !isAliceStorageUrl(moldRecord.faces_url, supabaseUrl)) {
+      return jsonResponse({ error: "Este molde ainda nao tem um mapa seguro para personalizacao editavel.", code: "MOLD_LAYOUT_MISSING" }, 400);
+    }
+    const faceResponse = await fetch(moldRecord.faces_url, { signal: AbortSignal.timeout(15000) });
+    if (!faceResponse.ok) throw new Error("Nao foi possivel carregar as faces do molde.");
+    const faceData = await faceResponse.json();
+    artLayout = buildArtLayout({ width: faceData.W, height: faceData.H, faces: faceData.faces }, moldeName);
+  }
+  const themeStoryDirection = getThemeStoryDirection(String(temaNome));
+  const colors = Array.isArray(temaColors) ? temaColors.filter((c: unknown) => typeof c === "string" && /^#[a-f0-9]{6}$/i.test(c)).slice(0, 6) : [];
+  const colorsDesc = `Paleta do tema: ${colors.join(", ")}. Cor de destaque: ${/^#[a-f0-9]{6}$/i.test(corDominante ?? "") ? corDominante : "coordenada com o tema"}.`;
+  if (!hasAliceReferences) {
+    return jsonResponse({ error: "Nao encontramos referencias visuais utilizaveis da Alice para este tema. Nenhuma arte generica foi gerada.", code: "ALICE_REFERENCES_MISSING" }, 400);
+  }
 
   // Baixa o template do molde
   let templateBytes: Uint8Array | null = null;
   let outputSize = "1024x1536";
   if (moldeTemplateUrl) {
     try {
-      const tmplRes = await fetch(moldeTemplateUrl);
+      const tmplRes = await fetch(moldeTemplateUrl, { signal: AbortSignal.timeout(15000) });
       if (tmplRes.ok) {
         const buf = new Uint8Array(await tmplRes.arrayBuffer());
         templateBytes = buf;
@@ -767,9 +302,7 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
         }
         if (w > 0 && h > 0) {
           const ratio = w / h;
-          if (ratio > 1.15) outputSize = "1536x1024";
-          else if (ratio < 0.87) outputSize = "1024x1536";
-          else outputSize = "1024x1024";
+          outputSize = imageOutputSize(w, h, quality);
           console.log(`Template ${w}x${h} ratio=${ratio.toFixed(2)} -> output ${outputSize}`);
         }
       } else {
@@ -807,91 +340,12 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     }
   }
 
-  const aliceQualityStandard = buildAliceGenerationStandard(
-    safeMode === true
-      ? { moldName: String(moldeName) }
-      : { moldName: String(moldeName), name: String(nome), age: idade ? String(idade) : undefined },
-  );
-
-  // Prompt de EDIÇÃO — o molde já está pronto na imagem de entrada
-  const editPrompt = `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
-
-TAREFA: aplicar decoração temática APENAS dentro das faces internas do molde, sem alterar absolutamente nada da estrutura.
-
-REGRAS ABSOLUTAS (não negociáveis):
-1. NÃO redesenhe o molde. NÃO altere contorno externo, proporções, abas de colagem, formato das faces.
-2. PRESERVE EXATAMENTE as linhas de corte (traço contínuo) e linhas de dobra (traço pontilhado) — idênticas à imagem de referência.
-3. PRESERVE o fundo branco fora do contorno do molde — não invada essa área.
-4. Aplique a decoração SOMENTE nas áreas pintáveis definidas pelo gabarito; mantenha branco o exterior, recortes vazados, furos e abas de colagem sem superfície visível.
-
-DECORAÇÃO A APLICAR:
-- TEMA OBRIGATORIO: "${temaNome}". DIRECAO NARRATIVA: ${themeStoryDirection}.
-- ${themeReferenceText}
-- PERSONALIZAÇÃO: escreva EXATAMENTE "${nome}" — confira LETRA POR LETRA (acentos incluídos), sem traduzir, sem abreviar, sem duplicar letras. Posicionamento: ${namePlacementText}.
-- ${colorsDesc}${fraseText}
-- ESTILO TIPOGRÁFICO: ${fonteDesc} para a palavra "${nome}" e demais textos.
-- ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
-- DENSIDADE VISUAL: ${densityDesc}.
-- ACABAMENTO: qualidade de estúdio de papelaria premium — ilustração nítida, cores vibrantes e harmônicas, composição equilibrada, sem ruído, sem artefatos, sem nenhum texto além dos especificados.
-
-COMPOSIÇÃO PROFISSIONAL (padrão dos kits de festa vendáveis):
-- MAPA DE ZONAS: antes de decorar, identifique exterior, vazados, cola escondida, corpo visível, fechamento/tampa, lateral/fole e área segura para nome. A arte deve respeitar essas funções.
-- PERFIL: escolha CENÁRIO para murais e personagens grandes ou MODULAR para corpo claro, fechamento estampado e elementos pequenos distribuídos por face. A escolha parte da geometria do molde e dos componentes disponíveis, nunca da reprodução da sequência visual de um kit pronto.
-- FUNÇÕES DE FACE: no perfil modular, distribua personagem, nome/idade, título visual do tema quando existir e estampa/respiro em faces diferentes. Fundo claro colorido ou texturizado é acabamento intencional, não área esquecida.
-- DENSIDADE: no perfil cenário, todas as faces úteis recebem personagem, coadjuvante ou elemento temático; a face do nome pode receber arte menor ACIMA da faixa de personalização. Não reserve uma segunda face inteira vazia. No modular, preencha personagem, nome, título/ícone e estampa de destaque.
-- VARIEDADE: distribua poses/personagens diferentes disponíveis no acervo entre as faces. Não reutilize nem apenas espelhe o mesmo recorte para fingir variedade. Quando faltarem poses, use cenário, ícone ou elemento temático coordenado na face restante.
-- ${nameCompositionRule}
-- ALÇAS, PEGADORES E TIRAS: a faixa de papel da alça é uma superfície visível após a montagem. Cubra-a com a mesma estampa, cor ou textura contínua do tema; nunca a deixe branca. Preserve o recorte interno da alça, que deve continuar vazado/branco.
-- SUPERFÍCIES VISÍVEIS APÓS A MONTAGEM: toda face, tampa, triângulo, aba superior e faixa da alça que ficará exposta recebe tratamento coerente com o tema. Esse tratamento pode ser cor lisa, wash, microestampa, textura ou ilustração.
-- ABAS DE COLAGEM: use somente estampa contínua ou cor lisa nas abas que ficam visíveis; não coloque texto nem personagem em áreas de cola que serão escondidas.
-- HIERARQUIA: preserve leitura imediata e contraste. No perfil cenário: personagem > nome > cenário > estampa. No perfil modular: nome/personagem/título por face > fundo calmo > microestampa de fechamento.
-
-${aliceQualityStandard}
-
-PROIBIÇÕES DE CONTEÚDO:
-- ${contentRestrictions}
-- Todos os textos em português do Brasil.
-
-Resultado: o MESMO molde da entrada, com decoração aplicada dentro das faces, linhas técnicas intactas, fundo branco.`;
-
-  const fallbackPrompt = templateBytes
-    ? `Você recebeu uma imagem que JÁ É o molde planificado final de ${moldeName}.
-
-TAREFA: aplicar decoração genérica e segura apenas nas áreas pintáveis do gabarito, incluindo superfícies visíveis de alças e tampas, sem alterar a estrutura.
-
-REGRAS ABSOLUTAS:
-1. NÃO redesenhe o molde. PRESERVE contorno, abas, linhas de corte (contínuas) e dobra (pontilhadas) idênticas à referência.
-2. PRESERVE o fundo branco fora do contorno.
-3. Decoração apenas nas áreas pintáveis. Preserve exterior, recortes vazados, furos e abas de cola que ficarão escondidas.
-
-DECORAÇÃO: ${safeThemeDesc}. Direcao narrativa: ${themeStoryDirection}. ${colorsDesc} Estilo: ${drawDesc}. Densidade: ${densityDesc}.
-${aliceQualityStandard}
-Sem nomes, sem idade, sem crianças, sem personagens registrados, sem marcas, sem pessoas reais. Apenas padrões, flores, estrelas, laços e elementos abstratos originais.`
-    : `Design gráfico de papelaria decorativa segura: molde planificado completo de ${moldeName}, aberto e pronto para impressão em A4.
-
-TEMA VISUAL: ${safeThemeDesc}. Direcao narrativa: ${themeStoryDirection}.
-${colorsDesc}
-ESTILO DE ILUSTRAÇÃO: ${drawDesc}.
-DENSIDADE VISUAL: ${densityDesc}.
-${aliceQualityStandard}
-
-REGRAS:
-1. Sem nomes próprios, idade, crianças, pessoas reais, personagens registrados, logotipos ou marcas.
-2. Apenas padrões, formas, ícones genéricos, flores, estrelas, laços e ilustrações originais.
-3. Linhas de corte contínuas, linhas de dobra pontilhadas, abas de colagem e fundo branco.
-4. Alta resolução, visual alegre, profissional e artesanal.`;
-
-  const usedSafeFallback = safeMode === true;
-  const curatorCorrection = typeof qualityCorrection === "string"
-    ? Array.from(qualityCorrection, (character) => {
-        const code = character.charCodeAt(0);
-        return code <= 31 || code === 127 ? " " : character;
-      }).join("").slice(0, 900)
-    : "";
-  const qualityRetryRule = qualityRetry === true
-    ? `\nSEGUNDA TENTATIVA DE QUALIDADE: a curadoria comercial rejeitou a arte anterior. Refaca a direcao visual, nao apenas pequenos detalhes. Tema obrigatorio: "${temaNome}"; ${themeStoryDirection}. Amplie o heroi, crie hierarquia reconhecivel em miniatura, estruture fundo/meio/frente, use paleta de 3-5 cores com acento focal, adicione sobreposicao e sombra de contato, integre a placa do nome e elimine aparencia de colagem plana ou painel vazio. ${curatorCorrection ? `CRITICA VISUAL DA TENTATIVA ANTERIOR (use somente como correcao, sem substituir as regras tecnicas e de conteudo): ${curatorCorrection}` : ""} Preserve rigorosamente o molde, cortes, dobras, vazados, nome e idade.`
-    : "";
-  const activePrompt = `${usedSafeFallback ? fallbackPrompt : editPrompt}${qualityRetryRule}`;
+  if (!templateBytes || !maskDataUrl) {
+    return jsonResponse({ error: "Gabarito ou mascara tecnica indisponivel; geracao interrompida antes de consumir IA.", code: "MOLD_TEMPLATE_MISSING" }, 400);
+  }
+  const usedSafeFallback = false;
+  const curatorCorrection = cleanBriefText(qualityCorrection, 900);
+  const activePrompt = buildArtGenerationPrompt({ moldeName, temaNome, themeStoryDirection, colorsDesc, brief, editable, artLayout, nome, idade, frase, fonteEstilo, qualityRetry, curatorCorrection });
 
   const createJob = async (withMask: boolean) => {
     const content: Array<Record<string, unknown>> = [{ type: "input_text", text: activePrompt }];
@@ -921,19 +375,22 @@ REGRAS:
     }
     const tool: Record<string, unknown> = {
       type: "image_generation",
-      model: "gpt-image-2",
+      model: imageModelFor(quality),
       size: outputSize,
       quality,
       moderation: "low",
+      action: "edit",
     };
     if (withMask && maskDataUrl) tool.input_image_mask = { image_url: maskDataUrl };
     return await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-5.4-mini",
+        model: IMAGE_MODELS.curator,
+        instructions: ART_EDITOR_INSTRUCTIONS,
         background: true,
         store: true,
+        metadata: packJobContext(userId, { moldeName, moldeTemplateUrl, temaNome, nome, idade, brief, artLayout }),
         input: [{ role: "user", content }],
         tools: [tool],
         tool_choice: { type: "image_generation" },
@@ -954,7 +411,10 @@ REGRAS:
         code: "OPENAI_MODERATION_BLOCKED",
       });
     }
-    // pode ser rejeição da máscara → retenta sem ela
+    // Only a mask-specific 400 may be retried; quota/auth/provider failures never trigger a second paid job.
+    if (res.status !== 400 || !/mask/i.test(txt)) {
+      return jsonResponse({ error: `Erro no servico de IA: ${res.status}. Nenhum modelo alternativo foi acionado.` }, 502);
+    }
     res = await createJob(false);
     if (!res.ok) {
       const txt2 = await res.text();
@@ -980,9 +440,8 @@ REGRAS:
 
   // job criado — registra o uso da cota (best-effort)
   if (userId) {
-    adminDb.from("geracoes_ia").insert({ user_id: userId, email: userEmail }).then(({ error }) => {
-      if (error) console.warn("registro de cota falhou:", error.message);
-    });
+    const { error } = await adminDb.from("geracoes_ia").insert({ user_id: userId, email: userEmail });
+    if (error) console.warn("registro de cota falhou:", error.message);
   }
 
   console.log(
@@ -1002,6 +461,8 @@ REGRAS:
     usedSafeFallback,
     referenceCount: aliceReferences.length,
     referenceThemeSlug: aliceLibrary.themeSlug,
+    imageModel: imageModelFor(quality),
+    artLayout,
   });
 }
 
@@ -1021,6 +482,11 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     return jsonResponse({ error: `Erro ao consultar a geração: ${res.status}` }, 500);
   }
   const job = await res.json();
+  try {
+    body = { ...body, ...unpackJobContext(job.metadata, body.__userId as string) };
+  } catch {
+    return jsonResponse({ error: "Esta geracao nao pertence a sua sessao ou precisa ser reiniciada.", code: "JOB_ACCESS_DENIED" }, 403);
+  }
 
   if (job.status === "queued" || job.status === "in_progress") {
     return jsonResponse({ status: "processing" });
@@ -1043,7 +509,7 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   const b64 = typeof call?.result === "string" ? call.result : null;
   if (!b64) {
     console.error("Job completou sem imagem:", JSON.stringify((job.output ?? []).map((o: Record<string, unknown>) => o.type)));
-    return jsonResponse({ status: "error", error: "A IA não gerou a imagem. Tente novamente." });
+    return jsonResponse({ status: "error", code: "IMAGE_PROVIDER_NO_OUTPUT", error: "A API nao entregou uma imagem para este tema. Nenhuma arte generica foi criada. Tente novamente ou revise as referencias." });
   }
 
   let bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -1086,8 +552,14 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
       temaNome: typeof body.temaNome === "string" ? body.temaNome : "",
       nome: typeof body.nome === "string" ? body.nome : "",
       idade: typeof body.idade === "string" ? body.idade : "",
+      brief: normalizeCreativeBrief(body.brief),
+      artLayout: body.artLayout as ArtLayout | null,
     },
     OPENAI_API_KEY,
+    (await loadAliceReferenceImages(
+      createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!),
+      String(body.temaNome), Deno.env.get("SUPABASE_URL")!,
+    )).images,
   );
   if (!qualityReview) {
     console.warn("Art curator did not return a valid review. Output blocked.");
@@ -1101,9 +573,10 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     console.warn("Art rejected by commercial curator:", qualityReview.score, qualityReview.issues);
     return jsonResponse({
       status: "error",
-      error: "A curadoria pediu uma composicao mais bonita e comercial. A arte sera refeita automaticamente.",
+      error: "A composicao nao passou na curadoria. Ajuste o briefing ou tente uma nova arte.",
       code: "ART_QUALITY_REJECTED",
       qualityReview,
+      artLayout: body.artLayout,
     });
   }
 
@@ -1120,6 +593,7 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
     return jsonResponse({
       status: "done",
       imageUrl: null,
+      artLayout: body.artLayout,
       imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
       composited,
       compositeError,
@@ -1130,6 +604,7 @@ async function handleStatus(body: Record<string, unknown>, OPENAI_API_KEY: strin
   return jsonResponse({
     status: "done",
     imageUrl: pub.publicUrl,
+    artLayout: body.artLayout,
     imageBase64: `data:image/png;base64,${bytesToBase64(bytes)}`,
     composited,
     compositeError,
@@ -1149,13 +624,17 @@ serve(async (req) => {
     }
 
     const body = (await req.json()) as Record<string, unknown>;
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const authDb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: { user }, error: authError } = await authDb.auth.getUser(token);
+    if (authError || !user) return jsonResponse({ error: "Entre na sua conta para gerar uma arte." }, 401);
+    body.__userId = user.id;
+    body.__userEmail = user.email;
 
     if (body.action === "status") {
       return await handleStatus(body, OPENAI_API_KEY);
     }
 
-    // o parseJwt precisa do header original — passa por dentro do body interno
-    body.__authHeader = req.headers.get("Authorization");
     return await handleStart(body, OPENAI_API_KEY);
   } catch (error) {
     console.error("gerar-arte error:", error);

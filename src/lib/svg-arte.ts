@@ -1,11 +1,14 @@
 import { toast } from "sonner";
 import { baixarArquivoSvg } from "./svg-file";
+import { renderPersonalization, type ArtPersonalization } from "./art-personalization";
+import type { ArtLayout } from "../../supabase/functions/_shared/art-layout";
 
 export interface SvgArteOptions {
   imagem: string;
   moldeSvg?: string | null;
   moldeSvgUrl?: string | null;
   nomeArquivo: string;
+  personalization?: { layout: ArtLayout; value: ArtPersonalization };
 }
 
 const escapeXml = (value: string) =>
@@ -65,13 +68,19 @@ export function extrairGeometriaTecnica(moldSvg: string) {
  * sem dependências externas que quebrem ao abrir no Canva ou na impressão.
  */
 export function montarSvgHibrido(opts: SvgArteOptions) {
-  const { minX, minY, width, height } = readViewBox(opts.moldeSvg);
+  const viewport = readViewBox(opts.moldeSvg);
+  const { minX, minY, width, height } = !opts.moldeSvg && opts.personalization
+    ? { minX: 0, minY: 0, width: opts.personalization.layout.width, height: opts.personalization.layout.height }
+    : viewport;
   const geometry = opts.moldeSvg ? extrairGeometriaTecnica(opts.moldeSvg) : "";
   const technicalLayer = geometry
     ? `<g id="molde-tecnico" fill="#111111" stroke="#111111" stroke-linejoin="round">${geometry}</g>`
     : "";
   const title = escapeXml(opts.nomeArquivo.replace(/[-_]+/g, " "));
   const image = escapeXml(opts.imagem);
+  const personalization = opts.personalization
+    ? `<g transform="translate(${minX} ${minY})">${renderPersonalization(opts.personalization.layout, opts.personalization.value, width, height)}</g>`
+    : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}" preserveAspectRatio="none" role="img">
@@ -80,6 +89,7 @@ export function montarSvgHibrido(opts: SvgArteOptions) {
   <g id="arte-gerada">
     <image href="${image}" xlink:href="${image}" x="${minX}" y="${minY}" width="${width}" height="${height}" preserveAspectRatio="none"/>
   </g>
+  ${personalization}
   ${technicalLayer}
 </svg>`;
 }

@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { IMAGE_MODELS, imageModelFor } from "../_shared/image-models.ts";
+import { normalizeCreativeBrief } from "../_shared/art-direction.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { resolveMockupPersona, type PartyAudience } from "../_shared/mockup-persona.ts";
 
@@ -118,7 +120,7 @@ async function reviewMockup(
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "gpt-5.4-mini",
+      model: IMAGE_MODELS.curator,
       store: false,
       reasoning: { effort: "low" },
       max_output_tokens: 1100,
@@ -251,7 +253,8 @@ async function handleStart(body: Record<string, unknown>, OPENAI_API_KEY: string
     return jsonResponse({ error: "Campos obrigatórios: arteImageUrl, moldeName, temaNome" }, 400);
   }
 
-  const quality = qualityRaw === "low" ? "low" : qualityRaw === "high" ? "high" : "medium";
+  const quality = qualityRaw === "low" ? "low" : "high";
+  const brief = normalizeCreativeBrief(body.creativeBrief);
 
   const formatoDesc = formato === "story"
     ? "formato vertical 9:16 para Stories do Instagram"
@@ -298,6 +301,7 @@ CONSTRUÇÃO DO PRODUTO:
 - O produto deve ser o ponto de maior contraste e nitidez, sem ficar escondido por doces, balões ou outros objetos.
 
 CENÁRIO FICTÍCIO:
+- Preserve a direcao da arte aprovada: clima de cores ${brief.colorMood}, acabamento ${brief.finish}, densidade ${brief.density}. A decoracao do cenario acompanha essas escolhas sem redesenhar o produto.
 - Público e linguagem visual obrigatórios: ${persona.label}.
 - ${persona.sceneDirection}
 - ${persona.forbiddenDirection}
@@ -317,7 +321,7 @@ NÃO INCLUIR:
 - molde aberto/planificado, linhas técnicas, deformações, texto ilegível ou personalização diferente da referência;
 - lembrancinhas de apoio maiores, mais nítidas ou mais contrastantes que a unidade principal.`;
 
-  const size = formato === "story" ? "1024x1536" : "1024x1024";
+  const size = formato === "story" ? "864x1536" : "1536x1536";
 
   const content: Array<Record<string, unknown>> = [
     { type: "input_text", text: prompt },
@@ -328,13 +332,13 @@ NÃO INCLUIR:
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "gpt-5.4-mini",
+      model: IMAGE_MODELS.curator,
       background: true,
       store: true,
       input: [{ role: "user", content }],
       tools: [{
         type: "image_generation",
-        model: "gpt-image-2",
+        model: imageModelFor(quality, "mockup"),
         size,
         quality,
         moderation: "low",

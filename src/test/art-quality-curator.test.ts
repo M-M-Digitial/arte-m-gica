@@ -14,11 +14,13 @@ const composerSource = readFileSync(
   resolve(process.cwd(), "src/lib/compose-kit.ts"),
   "utf8",
 );
+const promptSource = readFileSync(resolve(process.cwd(), "supabase/functions/_shared/art-prompt.ts"), "utf8");
+const curatorSource = readFileSync(resolve(process.cwd(), "supabase/functions/_shared/art-curator.ts"), "utf8");
 
 describe("curadoria comercial da arte gerada", () => {
   it("avalia a arte final antes do upload e reprova composicao fraca", () => {
     expect(source).toContain("reviewGeneratedArt(");
-    expect(source).toContain("buildAliceCuratorStandard()");
+    expect(curatorSource).toContain("buildBriefCuratorRules(context.brief");
     expect(source).toContain('code: "ART_QUALITY_REJECTED"');
     expect(source.indexOf("reviewGeneratedArt(", source.indexOf("async function handleStatus")))
       .toBeLessThan(source.indexOf('.from("artes-geradas")', source.indexOf("async function handleStatus")));
@@ -45,13 +47,13 @@ describe("curadoria comercial da arte gerada", () => {
       "originality_ok",
       "print_finish_ok",
     ]) {
-      expect(source).toContain(criterion);
+      expect(curatorSource).toContain(criterion);
     }
-    expect(source).toContain("SEGUNDA TENTATIVA DE QUALIDADE");
-    expect(source).toContain("Refaca a direcao visual");
+    expect(promptSource).toContain("SEGUNDA TENTATIVA DE QUALIDADE");
+    expect(promptSource).toContain("Refaca a direcao visual");
     expect(source).toContain("getThemeStoryDirection");
-    expect(source).toContain("TEMA OBRIGATORIO");
-    expect(source).toContain("CRITICA VISUAL DA TENTATIVA ANTERIOR");
+    expect(promptSource).toContain("TEMA OBRIGATORIO");
+    expect(promptSource).toContain("CRITICA VISUAL DA TENTATIVA ANTERIOR");
   });
 
   it("separa a auditoria comercial da validacao visual do Google e da Shopee indexada", () => {
